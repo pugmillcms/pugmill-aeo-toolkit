@@ -1,0 +1,14 @@
+# macOS
+.DS_Store
+__MACOSX/
+
+# Zip archives
+*.zip
+
+# Node (if ever needed)
+node_modules/
+
+# WordPress dev artifacts
+*.log
+.env
+.env.local
