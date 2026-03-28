@@ -1,0 +1,58 @@
+/**
+ * Styles for the WP Pugmill sidebar resize handle.
+ */
+
+#wppugmill-resize-handle {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 4px;
+	height: 100%;
+	cursor: ew-resize;
+	z-index: 100;
+	background: transparent;
+	transition: background 0.15s ease;
+}
+
+#wppugmill-resize-handle:hover,
+#wppugmill-resize-handle:focus {
+	background: #007cba;
+	outline: none;
+}
+
+/* Barber pole loading animation for AI feature buttons. */
+@keyframes wppugmill-barber-pole {
+	0%   { background-position: 0 0; }
+	100% { background-position: 40px 0; }
+}
+
+.wppugmill-loading {
+	background-image: repeating-linear-gradient(
+		-45deg,
+		#007cba 0px,
+		#007cba 10px,
+		#005a87 10px,
+		#005a87 20px
+	) !important;
+	background-size: 40px 100% !important;
+	animation: wppugmill-barber-pole 0.6s linear infinite !important;
+	color: #fff !important;
+	border-color: transparent !important;
+	opacity: 1 !important;
+}
+
+/* WP Pugmill main panel — left accent border + header styling. */
+.wppugmill-main-panel {
+	border-left: 3px solid #7c3aed;
+}
+
+.wppugmill-main-panel > .components-panel__body-title {
+	background: #f5f0ff;
+}
+
+/* Ensure the sidebar can be positioned relative for the handle. */
+.interface-complementary-area__fill,
+.interface-interface-skeleton__sidebar,
+.edit-post-sidebar {
+	position: relative;
+}
