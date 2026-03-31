@@ -3,7 +3,7 @@
  * Plugin Name: WP Pugmill
  * Plugin URI:  https://wppugmill.com
  * Description: SEO for the answer engine era. Full on-page SEO (titles, meta, canonical, sitemaps) plus AEO tools that make your content discoverable by AI engines like ChatGPT, Perplexity, and Gemini.
- * Version:     0.5.2
+ * Version:     0.5.3
  * Author:      Janzen Works
  * Author URI:  https://janzenworks.com
  * License:     GPL-2.0-or-later

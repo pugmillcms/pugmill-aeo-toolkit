@@ -325,30 +325,6 @@ function wppugmill_build_breadcrumb_schema( $post_id ) {
 }
 
 // =========================================================================
-// Invisible Handshake — link alternate
-// =========================================================================
-
-/**
- * Output the AI context <link rel="alternate"> in <head>.
- *
- * Singular: per-post markdown endpoint (?wppugmill_llm=1)
- * Home:     site-summary endpoint (/?wppugmill_llm=1)
- */
-function wppugmill_output_link_alternate() {
-	if ( is_singular() ) {
-		$llm_url = add_query_arg( 'wppugmill_llm', '1', get_permalink() );
-		echo '<link rel="alternate" type="text/markdown" href="' . esc_url( $llm_url ) . '" title="AI Context" />' . "\n";
-		return;
-	}
-
-	if ( is_home() || is_front_page() ) {
-		$llm_url = add_query_arg( 'wppugmill_llm', '1', home_url( '/' ) );
-		echo '<link rel="alternate" type="text/markdown" href="' . esc_url( $llm_url ) . '" title="AI Site Summary" />' . "\n";
-	}
-}
-add_action( 'wp_head', 'wppugmill_output_link_alternate', 2 );
-
-// =========================================================================
 // Social meta tags (description, Open Graph, Twitter Cards)
 // =========================================================================
 

@@ -230,6 +230,12 @@ function wppugmill_filter_robots( $robots ) {
 		return $robots;
 	}
 
+	// Always allow full snippet/preview access for AI and search engines on every page.
+	$robots['max-snippet']       = '-1';
+	$robots['max-video-preview'] = '-1';
+	$robots['max-image-preview'] = 'large';
+
+	// Per-post noindex/nofollow overrides only apply on singular views.
 	if ( ! is_singular() ) {
 		return $robots;
 	}
@@ -254,11 +260,6 @@ function wppugmill_filter_robots( $robots ) {
 	} else {
 		unset( $robots['nofollow'] );
 	}
-
-	// Always allow full snippet/preview access for AI and search engines.
-	$robots['max-snippet']       = '-1';
-	$robots['max-video-preview'] = '-1';
-	$robots['max-image-preview'] = 'large';
 
 	return $robots;
 }
