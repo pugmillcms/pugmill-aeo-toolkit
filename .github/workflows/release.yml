@@ -1,6 +1,6 @@
 name: Release
 
-# Triggers when you push a version tag: git tag v0.5.1 && git push --tags
+# Triggers when you push a version tag: git tag v0.5.2 && git push --tags
 on:
   push:
     tags:
@@ -17,12 +17,6 @@ jobs:
       - name: Set version from tag
         id: version
         run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
-
-      - name: Install JS dependencies and build
-        working-directory: wp-pugmill
-        run: |
-          npm ci
-          npm run build
 
       - name: Create release zip
         run: |
