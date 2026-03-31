@@ -4,7 +4,7 @@ Tags: AEO, answer engine optimization, AI, llms.txt, schema, structured data, SE
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 0.2.0
+Stable tag: 0.4.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -124,6 +124,51 @@ Yes. WP Pugmill is focused on AEO (AI discoverability) and does not conflict wit
 
 == Changelog ==
 
+= 0.4.6 =
+* **UI consistency**: All panel action buttons standardized to purple pill style with ✓ Applied confirmation states (Tone, Headline Variants, Excerpt, Internal Links, Audit fixes)
+* **AI Summary closed by default**: Summary panel in the AEO editor now starts collapsed
+* **LICENSE file**: Added GPL-2.0 LICENSE file for WordPress.org compatibility
+* **Clean distribution build**: Build script now correctly excludes dev files (src/, tests/, node_modules/, requirements.md) from the distributed zip
+
+= 0.4.4 =
+* **Auto-save before AI reads content**: Audit, Internal Links, Reading Level, Headline Variants, Topic Focus, Tone Check, and Social Draft all pre-save the post so AI always operates on current content
+* **Auto-save after AI writes to editor**: Tone Fix, passage swap (Topic Focus), Insert Link, Rewrite from Draft, Simplify Draft, Use this Title, Apply to Excerpt, Apply Keyword Fix, and Insert Heading all save after applying changes
+* **Alt text for external/inline images**: Generate Alt Text now works on images that aren't in the media library — passes the image URL directly to the vision API and applies the result via the block attribute
+* **HTTP image support for Anthropic vision**: Images on HTTP (non-HTTPS) URLs are fetched server-side and base64-encoded before sending to Anthropic, resolving 400 errors on local and staging sites
+
+= 0.4.3 =
+* **Generate Alt Text**: New vision-API feature in the Audit panel generates descriptive alt text for the post's featured or first block image and saves it to the media library
+* **Audit: has_thumbnail field**: Audit results now include `has_thumbnail` to distinguish "no featured image" from "image present but no alt text", enabling the Generate Alt Text button to show only when relevant
+
+= 0.4.2 =
+* **SEO Generate fix**: Resolved network error caused by undefined post content variable; now correctly reads current editor content including unsaved changes
+* **Simplify Draft**: New AI Connector feature rewrites the post body at a simpler reading level with preview before applying
+
+= 0.4.1 =
+* Internal stability and error-handling improvements following 0.4.0 release
+
+= 0.4.0 =
+* **Topic Focus → Refine Focus**: AI-powered per-passage rewrite suggestions now use per-block validation matching Gutenberg's block structure, eliminating "passage not found" errors
+* **SEO Generate** button fixed — was throwing a network error due to undefined post content variable; now correctly reads the current editor content including unsaved changes
+* **User-selectable AI rate limit**: hourly call cap is now configurable in Settings → WP Pugmill → AI Provider (50 / 100 / 200 calls per hour); default remains 50
+* **Bot Analytics** page and dashboard tracking for AI crawler visits
+* **SEO Audit** sidebar with on-page SEO scoring and recommendations
+* **SEO Agent** for automated multi-step AEO improvements
+* AES-256-CBC encryption for API keys and license keys at rest
+* Full on-page SEO: title tags, meta description, canonical URL, robots meta
+* XML sitemap with IndexNow ping support
+* robots.txt customization
+
+= 0.3.0 =
+* **Topic Focus**: AI analysis identifies weak AEO passages in post content and suggests targeted rewrites; Swap Content replaces selected passages directly in the Gutenberg editor
+* **Write from Draft** improvements: more reliable content matching across entity-encoded and smart-quote variants
+* **Bot Analytics**: tracks AI crawler visits (GPTBot, ClaudeBot, PerplexityBot, Googlebot) with per-bot counts and trend data
+* **AI Provider selection**: choose between Anthropic Claude, OpenAI GPT-4o, or Google Gemini in settings
+* IndexNow integration — pings search engines on post publish/update
+* Canonical URL and robots meta tag injection
+* XML sitemap (posts, pages, categories, tags)
+* Rate limiting on AI generation (50 requests/hour/user)
+
 = 0.2.0 =
 * **Write from Draft** (AI Connector): New feature rewrites a rough draft into Answer Unit structure (Primary Question → Direct Answer → Context). Populates AEO fields and updates post content in the Gutenberg block editor; shows reformatted body for manual paste in the Classic Editor.
 * Per-post `?wppugmill_llm=1` markdown endpoint for AI crawlers
@@ -149,8 +194,20 @@ Yes. WP Pugmill is focused on AEO (AI discoverability) and does not conflict wit
 
 == Upgrade Notice ==
 
+= 0.4.6 =
+UI polish and build improvements. Safe to upgrade — no database changes.
+
+= 0.4.4 =
+Adds auto-save before and after all AI operations. Fixes alt text generation for external images and HTTP image URLs with Anthropic. Safe to upgrade — no database changes.
+
+= 0.4.0 =
+Fixes Topic Focus passage-swap errors and SEO Generate network error. Adds configurable AI rate limit in Settings. Safe to upgrade — no database changes.
+
+= 0.3.0 =
+Adds Topic Focus AI rewrite, Bot Analytics, and IndexNow. Safe to upgrade — creates one new database table for bot analytics.
+
 = 0.2.0 =
-Adds global AEO coverage for home/front page, Author Voice guide, Write from Draft AI feature, and inline script refactor. Safe to upgrade — no database changes.
+Adds Write from Draft AI feature and Twitter/Open Graph meta tags. Safe to upgrade — no database changes.
 
 = 0.1.0 =
 Initial release.

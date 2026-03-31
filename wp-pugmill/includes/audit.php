@@ -214,23 +214,67 @@ function wppugmill_run_audit( $post_id ) {
 		}
 	}
 	$kw_pct      = $kw_count > 0 ? ( $kw_in_content / $kw_count ) : 1;
+	// Identify which keywords are missing from content
+	$missing_keywords = array();
+	if ( $kw_count > 0 && ! empty( $plain ) ) {
+		$plain_lower = isset( $plain_lower ) ? $plain_lower : mb_strtolower( $plain );
+		foreach ( $keywords as $kw ) {
+			$kw_words   = preg_split( '/[\s\-\/]+/u', mb_strtolower( trim( $kw ) ), -1, PREG_SPLIT_NO_EMPTY );
+			$meaningful = array_values( array_filter( $kw_words, function( $w ) use ( $kw_stopwords ) {
+				return mb_strlen( $w ) > 3 && ! in_array( $w, $kw_stopwords, true );
+			} ) );
+			if ( empty( $meaningful ) ) {
+				if ( false === mb_stripos( $plain_lower, trim( $kw ) ) ) {
+					$missing_keywords[] = trim( $kw );
+				}
+				continue;
+			}
+			$found = 0;
+			foreach ( $meaningful as $word ) {
+				if ( false !== mb_stripos( $plain_lower, $word ) ) {
+					++$found;
+				}
+			}
+			if ( ( $found / count( $meaningful ) ) < 0.6 ) {
+				$missing_keywords[] = trim( $kw );
+			}
+		}
+	}
+
 	$kw_status   = $kw_count === 0 ? 'fail'
 		: ( $kw_pct >= 0.7 ? 'pass' : ( $kw_pct >= 0.4 ? 'warn' : 'fail' ) );
+
+	if ( ! empty( $missing_keywords ) ) {
+		$missing_list = implode( ', ', array_map( function( $k ) { return '"' . $k . '"'; }, array_slice( $missing_keywords, 0, 5 ) ) );
+		$more         = count( $missing_keywords ) > 5 ? ' and ' . ( count( $missing_keywords ) - 5 ) . ' more' : '';
+		$kw_tip       = 'Topics not yet reflected in your content: ' . $missing_list . $more . '. Worth weaving in naturally — or skip if those angles aren\'t relevant to this specific ' . $label . '.';
+	} else {
+		$kw_tip = 'Make sure the main topics from your keyword list are actually discussed in the ' . $label . ' content.';
+	}
+
 	$checks[] = array(
 		'id'      => 'keywords_in_content',
 		'status'  => $kw_status,
 		'label'   => 'Keyword topics covered in content (70%+)',
 		'message' => 'AI engines verify keyword relevance against your body text — the key concepts should appear in the ' . $label . '.',
-		'tip'     => 'Make sure the main topics from your keyword list are actually discussed in the ' . $label . ' content.',
+		'tip'     => $kw_tip,
 	);
 
 	// ── 10. Content length ────────────────────────────────────────────────────
+	$length_delta = max( 0, 400 - $words );
+	if ( $words >= 400 ) {
+		$length_tip = '';
+	} elseif ( $length_delta <= 100 ) {
+		$length_tip = 'Your ' . $label . ' has ' . number_format_i18n( $words ) . ' words — just ' . $length_delta . ' short of 400. A few more sentences would close the gap, but a tight ' . number_format_i18n( $words ) . '-word answer that directly addresses the question can outperform a padded one. Your call.';
+	} else {
+		$length_tip = 'Your ' . $label . ' has ' . number_format_i18n( $words ) . ' words. More depth generally helps AI engines extract useful answers — though concise posts that directly answer a specific question can still perform well. Add substance, not padding.';
+	}
 	$checks[] = array(
 		'id'      => 'content_length',
 		'status'  => $words >= 400 ? 'pass' : ( $words >= 200 ? 'warn' : 'fail' ),
 		'label'   => 'Content length (400+ words)',
 		'message' => 'Longer ' . $label . 's give AI engines more signal and increase the chance of being cited as a primary source.',
-		'tip'     => 'Aim for at least 400 words. Your ' . $label . ' currently has ' . number_format_i18n( $words ) . ' word(s).',
+		'tip'     => $length_tip,
 	);
 
 	// ── 11. Headings present ──────────────────────────────────────────────────
@@ -241,13 +285,20 @@ function wppugmill_run_audit( $post_id ) {
 		'status'  => $has_headings ? 'pass' : 'warn',
 		'label'   => 'Uses H2 / H3 headings',
 		'message' => 'Headings break content into answer-sized chunks that AI engines can extract independently.',
-		'tip'     => 'Add H2 or H3 subheadings to organise your content into clear sections.',
+		'tip'     => 'Subheadings help when your content covers distinct sections or questions. For a short, single-topic ' . $label . ' that flows as one argument, skipping them is a reasonable choice.',
 	);
 
 	// ── 12. Opening paragraph is concise ─────────────────────────────────────
-	// Extract first non-empty paragraph from stripped content
-	$paragraphs  = array_filter( array_map( 'trim', preg_split( '/\n{2,}/', $plain ) ) );
-	$first_para  = $paragraphs ? reset( $paragraphs ) : '';
+	// Prefer extracting the first <p> from raw HTML — Gutenberg blocks produce
+	// single-newline-separated plain text after stripping, so double-newline
+	// splitting on $plain produces one giant chunk for most posts.
+	if ( preg_match( '/<p[^>]*>(.*?)<\/p>/is', $raw_content, $first_p_match ) ) {
+		$first_para = trim( wp_strip_all_tags( $first_p_match[1] ) );
+	} else {
+		// Fallback for classic-editor content or posts starting with a heading block.
+		$paragraphs = array_filter( array_map( 'trim', preg_split( '/\n{2,}/', $plain ) ) );
+		$first_para = $paragraphs ? reset( $paragraphs ) : '';
+	}
 	$first_words = $first_para ? str_word_count( $first_para ) : 0;
 	$open_status = $first_words === 0 ? 'fail'
 		: ( $first_words <= 80 ? 'pass' : ( $first_words <= 140 ? 'warn' : 'fail' ) );
@@ -257,6 +308,37 @@ function wppugmill_run_audit( $post_id ) {
 		'label'   => 'Opening paragraph is concise (≤ 80 words)',
 		'message' => 'AI engines prefer a direct, short opener — it\'s the first thing extracted for a citation snippet.',
 		'tip'     => 'Trim your opening paragraph to 80 words or fewer. Lead with the answer, not the context.',
+	);
+
+	// ── 13. Featured image has alt text ───────────────────────────────────────
+	$thumbnail_id  = get_post_thumbnail_id( $post_id );
+	$has_thumbnail = (bool) $thumbnail_id;
+	if ( $has_thumbnail ) {
+		$img_alt    = trim( get_post_meta( $thumbnail_id, '_wp_attachment_image_alt', true ) );
+		$alt_status = ! empty( $img_alt ) ? 'pass' : 'warn';
+		$alt_tip    = ! empty( $img_alt ) ? '' : 'Add alt text to the featured image in the Media Library — it improves accessibility and is used as og:image:alt for social sharing.';
+	} else {
+		$alt_status = 'warn';
+		$alt_tip    = 'A featured image helps AI engines and social platforms represent your content visually — and provides og:image for social sharing.';
+	}
+	$checks[] = array(
+		'id'            => 'featured_image_alt',
+		'status'        => $alt_status,
+		'label'         => 'Featured image has alt text',
+		'message'       => 'Alt text describes the image to AI engines and screen readers, and populates og:image:alt for richer social sharing.',
+		'tip'           => $alt_tip,
+		'has_thumbnail' => $has_thumbnail,
+	);
+
+	// ── 14. No H1 tags inside post content ───────────────────────────────────
+	preg_match_all( '/<h1[^>]*>/i', $raw_content, $h1_matches );
+	$h1_in_content = count( $h1_matches[0] );
+	$checks[] = array(
+		'id'      => 'single_h1',
+		'status'  => $h1_in_content === 0 ? 'pass' : 'warn',
+		'label'   => 'No H1 inside post content',
+		'message' => 'Most themes output the post title as an H1 — a second H1 in the body creates a duplicate heading that can confuse both search engines and AI parsers.',
+		'tip'     => 'Change any H1 headings inside the content to H2 or H3.',
 	);
 
 	// ── Totals ────────────────────────────────────────────────────────────────

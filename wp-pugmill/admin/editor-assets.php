@@ -35,6 +35,7 @@ function wppugmill_enqueue_editor_assets() {
 		'wppugmill',
 		array(
 			'mode'          => wppugmill_mode(),
+			'hasApiKey'     => ! empty( wppugmill_get_encrypted_option( 'wppugmill_ai_api_key', '' ) ),
 			'ajaxUrl'       => admin_url( 'admin-ajax.php' ),
 			'nonce'         => wp_create_nonce( 'wppugmill_generate_aeo' ),
 			'rewriteNonce'  => wp_create_nonce( 'wppugmill_rewrite_draft' ),
@@ -52,9 +53,13 @@ function wppugmill_enqueue_editor_assets() {
 			'qaNonce'            => wp_create_nonce( 'wppugmill_generate_qa' ),
 			'entitiesNonce'      => wp_create_nonce( 'wppugmill_generate_entities' ),
 			'keywordsNonce'      => wp_create_nonce( 'wppugmill_generate_keywords' ),
+			'fixKeywordsNonce'      => wp_create_nonce( 'wppugmill_fix_keyword_coverage' ),
+			'suggestHeadingsNonce'  => wp_create_nonce( 'wppugmill_suggest_headings' ),
 		'seoNonce'           => wp_create_nonce( 'wppugmill_generate_seo' ),
 		'howtoNonce'         => wp_create_nonce( 'wppugmill_generate_howto_steps' ),
 		'schemaAiNonce'      => wp_create_nonce( 'wppugmill_suggest_schema' ),
+			'simplifyNonce'      => wp_create_nonce( 'wppugmill_simplify_draft' ),
+			'imageAltNonce'      => wp_create_nonce( 'wppugmill_generate_image_alt' ),
 			'pricingUrl'    => esc_url( 'https://wppugmill.com/pricing' ),
 		)
 	);

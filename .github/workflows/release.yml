@@ -1,0 +1,45 @@
+name: Release
+
+# Triggers when you push a version tag: git tag v0.5.1 && git push --tags
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Install JS dependencies and build
+        working-directory: wp-pugmill
+        run: |
+          npm ci
+          npm run build
+
+      - name: Create release zip
+        run: |
+          zip -r wp-pugmill.zip wp-pugmill \
+            --exclude "wp-pugmill/node_modules/*" \
+            --exclude "wp-pugmill/src/*" \
+            --exclude "wp-pugmill/build-backup/*" \
+            --exclude "wp-pugmill/tests/*" \
+            --exclude "wp-pugmill/package.json" \
+            --exclude "wp-pugmill/package-lock.json" \
+            --exclude "wp-pugmill/requirements.md" \
+            --exclude "wp-pugmill/.git/*"
+
+      - name: Create GitHub Release and upload zip
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: WP Pugmill ${{ steps.version.outputs.VERSION }}
+          files: wp-pugmill.zip
+          generate_release_notes: true

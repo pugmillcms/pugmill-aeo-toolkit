@@ -184,7 +184,8 @@ function wppugmill_serve_llms_txt() {
 		echo html_entity_decode( $site_summary, ENT_QUOTES | ENT_HTML5, 'UTF-8' ) . "\n\n";
 	}
 
-	echo "## Pages\n\n";
+	$post_entries = array();
+	$page_entries = array();
 
 	foreach ( $posts as $post ) {
 		if ( wppugmill_post_is_noindexed( $post->ID ) ) {
@@ -197,8 +198,29 @@ function wppugmill_serve_llms_txt() {
 		$summary = html_entity_decode( $summary, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
 		$url     = get_permalink( $post->ID );
 		$title   = html_entity_decode( get_the_title( $post->ID ), ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+		$line    = "- [{$title}]({$url}): {$summary}\n";
 
-		echo "- [{$title}]({$url}): {$summary}\n";
+		if ( 'page' === $post->post_type ) {
+			$page_entries[] = $line;
+		} else {
+			$post_entries[] = $line;
+		}
+	}
+
+	if ( ! empty( $post_entries ) ) {
+		echo "## Posts\n\n";
+		foreach ( $post_entries as $line ) {
+			echo $line;
+		}
+		echo "\n";
+	}
+
+	if ( ! empty( $page_entries ) ) {
+		echo "## Pages\n\n";
+		foreach ( $page_entries as $line ) {
+			echo $line;
+		}
+		echo "\n";
 	}
 
 	echo "\n---\n";
@@ -304,9 +326,8 @@ function wppugmill_serve_llms_full_txt() {
 			echo "**Keywords:** " . implode( ', ', $aeo['keywords'] ) . "\n\n";
 		}
 
-		$content = wp_strip_all_tags( apply_filters( 'the_content', $post->post_content ) );
-		$content = html_entity_decode( $content, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
-		echo $content . "\n\n";
+		$rendered = apply_filters( 'the_content', $post->post_content );
+		echo wppugmill_html_to_markdown( $rendered ) . "\n\n";
 	}
 
 	echo "---\n";

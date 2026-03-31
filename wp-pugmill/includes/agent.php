@@ -57,16 +57,6 @@ function wppugmill_rest_agent_chat( $request ) {
 	$post_id  = (int) $request['post_id'];
 	$messages = (array) $request['messages'];
 
-	// Mode + key checks
-	$mode = wppugmill_mode();
-	if ( 'free' === $mode ) {
-		return new WP_Error(
-			'license_required',
-			__( 'Pugmill Agent requires a WP Pugmill AI Connector license.', 'wp-pugmill' ),
-			array( 'status' => 403 )
-		);
-	}
-
 	$provider = get_option( 'wppugmill_ai_provider', 'anthropic' );
 	$api_key  = wppugmill_get_encrypted_option( 'wppugmill_ai_api_key', '' );
 
@@ -137,8 +127,13 @@ function wppugmill_agent_build_context( $post_id ) {
 	$health = wppugmill_health_score( $post_id );
 	$audit  = wppugmill_run_audit( $post_id );
 
-	$plain = $post ? wp_strip_all_tags( $post->post_content ) : '';
+	$plain = $post ? wp_strip_all_tags( apply_filters( 'the_content', $post->post_content ) ) : '';
+	$plain = $plain ? html_entity_decode( trim( $plain ), ENT_QUOTES | ENT_HTML5, 'UTF-8' ) : '';
 	$words = $plain ? str_word_count( $plain ) : 0;
+
+	// Include a content preview so the agent can reference what the post actually says.
+	// Capped at ~800 characters (~150 words) to keep token cost low.
+	$content_preview = $plain ? mb_substr( $plain, 0, 800 ) : '';
 
 	// Collect failing health check labels
 	$health_failing = array_values( array_map(
@@ -164,10 +159,11 @@ function wppugmill_agent_build_context( $post_id ) {
 		'plugin'  => 'WP Pugmill v' . WPPUGMILL_VERSION,
 		'mode'    => wppugmill_mode(),
 		'post'    => array(
-			'id'         => $post_id,
-			'title'      => $post ? get_the_title( $post ) : '',
-			'status'     => $post ? $post->post_status : 'unknown',
-			'word_count' => $words,
+			'id'              => $post_id,
+			'title'           => $post ? get_the_title( $post ) : '',
+			'status'          => $post ? $post->post_status : 'unknown',
+			'word_count'      => $words,
+			'content_preview' => $content_preview,
 		),
 		'aeo'     => array(
 			'summary'        => $aeo['summary'],
@@ -207,10 +203,49 @@ function wppugmill_agent_build_context( $post_id ) {
 function wppugmill_agent_system_prompt( $context ) {
 	$ctx_json = wp_json_encode( $context, JSON_PRETTY_PRINT );
 	$voice    = trim( get_option( 'wppugmill_author_voice', '' ) );
+	$mode     = $context['mode'] ?? wppugmill_mode();
 
 	$voice_section = $voice
 		? "\n\nAUTHOR VOICE (apply when generating content):\n" . $voice
 		: '';
+
+	// Mode-specific instructions injected into the system prompt so the agent
+	// can guide free users toward paid features conversationally.
+	if ( 'free' === $mode ) {
+		$mode_section = '
+
+PLAN TIER: FREE
+The user is on the free plan. AI generation requires the AI Connector plan.
+
+AVAILABLE to this user (chat and advice only — no generation actions):
+- You can answer questions about the post\'s SEO and AEO performance.
+- You can explain scores, failing checks, and what specifically needs to change.
+- You CANNOT trigger any action signals on the free plan.
+
+NOT available on the free plan (do NOT trigger these actions):
+- generate_summary   — AEO summary (paid)
+- generate_qa        — Q&A pairs (paid)
+- generate_entities  — Named entities (paid)
+- generate_keywords  — Keywords (paid)
+- generate_seo       — SEO title + meta description (paid)
+- generate_all       — One-click full generation (paid)
+- write_from_draft   — Write or rewrite post content (paid)
+- tone_check         — Tone check against author voice (paid)
+- reading_level      — Reading level analysis (paid)
+- topic_focus        — Topic focus score (paid)
+- internal_links     — Internal link suggestions (paid)
+- suggest_titles     — Suggest alternative titles (paid)
+- suggest_excerpt    — Generate excerpt (paid)
+- social_draft       — Social media post draft (paid)
+
+When the user asks for a paid feature, acknowledge what they want, explain it requires the AI Connector plan (BYOK — bring your own API key), and share this link: https://wppugmill.com/pricing
+Be friendly and specific — name the feature they asked for and what it does, so they know what they are getting.';
+	} else {
+		$mode_section = '
+
+PLAN TIER: AI CONNECTOR (BYOK — bring your own API key, all features unlocked)
+All generation actions and content tools are available to this user.';
+	}
 
 	return "You are the Pugmill Agent — a focused assistant for SEO and AEO built into the WordPress post editor.
 
@@ -220,7 +255,7 @@ Your responsibilities:
 3. Trigger plugin actions when the user asks — by embedding action signals.
 
 CURRENT POST CONTEXT:
-{$ctx_json}{$voice_section}
+{$ctx_json}{$voice_section}{$mode_section}
 
 AUDIT CHECK → ACTION MAPPING:
 When the user asks you to fix failing checks or improve the audit score, use this mapping.
@@ -231,25 +266,41 @@ Checks you CAN fix by generating (use the corresponding action):
 - entities_present, entity_specificity       → generate_entities
 - keywords_present, keywords_in_content      → generate_keywords
 - SEO title or meta description empty        → generate_seo
-- Multiple fields missing across both        → generate_all (covers all AEO + SEO)
+- Multiple fields missing across both        → generate_all (covers all AEO + SEO, paid only)
 
 Checks that require MANUAL editing — be explicit that you cannot fix these automatically:
 - content_length: the post needs more written content (400+ words minimum)
-- has_headings: the user must add H2 or H3 headings in the editor
+- has_headings: direct the user to the Audit panel — it has an AI Suggest Headings tool that proposes H2/H3 headings and lets them insert each one directly into the editor
 - opening_concise: the user must shorten the opening paragraph to 80 words or fewer
 
 AVAILABLE ACTIONS:
 When you decide to perform a plugin action, embed exactly one signal at the very end of your response.
 The signal is automatically stripped before the user sees the message.
+Only trigger actions that are available on the user's current plan (see PLAN TIER above).
 
-  <<ACTION:generate_all>>          — Generate all AEO fields (summary, Q&A, entities, keywords) + SEO title & description
+  <<ACTION:generate_all>>          — Generate all AEO fields (summary, Q&A, entities, keywords) + SEO title & description (paid only)
   <<ACTION:generate_seo>>          — Generate SEO title and meta description only
   <<ACTION:generate_summary>>      — Generate the AEO summary only
   <<ACTION:generate_qa>>           — Generate Q&A pairs only
   <<ACTION:generate_entities>>     — Generate named entities only
   <<ACTION:generate_keywords>>     — Generate keywords only
-  <<ACTION:run_audit>>             — Run the AEO content audit (reads from SAVED data)
-  <<ACTION:write_from_draft prompt=\"user brief here\">> — Write or rewrite the post content
+  <<ACTION:write_from_draft prompt=\"user brief here\">> — Write or rewrite the post content (paid only)
+  <<ACTION:tone_check>>            — Run a tone check against the author voice guide (paid only)
+  <<ACTION:reading_level>>         — Analyze the reading level and grade of the post (paid only)
+  <<ACTION:topic_focus>>           — Analyze topic focus score and flag off-topic passages (paid only)
+  <<ACTION:internal_links>>        — Find internal linking opportunities in published posts (paid only)
+  <<ACTION:suggest_titles>>        — Suggest alternative curiosity- and utility-driven titles (paid only)
+  <<ACTION:suggest_excerpt>>       — Generate a post excerpt (paid only)
+  <<ACTION:social_draft platform=\"twitter\">> — Generate a social media draft; platform can be twitter, linkedin, facebook, or instagram (paid only)
+
+REWRITE GUIDANCE (write_from_draft):
+The context includes post.content_preview — the opening text of the post. Use it.
+When the user asks to rewrite, improve, or redo the content WITHOUT a new direction:
+  - Synthesize a brief from what you already know: title + content_preview + AEO summary + keywords.
+  - Trigger write_from_draft immediately with that synthesized brief. Do NOT ask for more information.
+  - Example synthesized brief: \"Rewrite this post about [topic from title/preview] to improve clarity, structure, and SEO for [keywords].\"
+When the user gives a specific new direction (new topic, different audience, new angle), use that as the brief.
+Only ask for a brief if the post has no content at all (word_count is 0 AND no title or summary).
 
 RULES:
 - SAVE REMINDER: After triggering any generation action, always end your visible message with: \"Save the post (Ctrl+S) before running the audit — the audit reads from saved data, not the editor preview.\"
@@ -376,6 +427,9 @@ function wppugmill_call_ai_chat( $provider, $api_key, $system, $messages, $max_t
 	if ( empty( trim( $raw ) ) ) {
 		return new WP_Error( 'empty_response', __( 'AI returned an empty response. Please try again.', 'wp-pugmill' ) );
 	}
+
+	// Track token usage — same approach as wppugmill_call_ai().
+	wppugmill_record_token_usage( $provider, $data );
 
 	return $raw;
 }

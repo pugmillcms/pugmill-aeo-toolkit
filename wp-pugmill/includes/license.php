@@ -91,6 +91,16 @@ function wppugmill_validate_license_remote() {
 		return $empty;
 	}
 
+	// Test key — return synthetic active status without hitting the LS API.
+	if ( defined( 'WPPUGMILL_TEST_KEY' ) && WPPUGMILL_TEST_KEY === $key ) {
+		return array(
+			'status'         => 'active',
+			'error'          => '',
+			'customer_email' => 'test@wppugmill.local',
+			'expires_at'     => '',
+		);
+	}
+
 	$response = wp_remote_post(
 		WPPUGMILL_LS_VALIDATE_URL,
 		wppugmill_ls_request_args( array(
@@ -136,6 +146,19 @@ function wppugmill_validate_license_remote() {
 function wppugmill_activate_license( $key ) {
 	if ( empty( $key ) || strlen( $key ) < 20 ) {
 		return array( 'success' => false, 'error' => __( 'Invalid license key format.', 'wp-pugmill' ) );
+	}
+
+	// Test key — skip LS API call and return synthetic success.
+	if ( defined( 'WPPUGMILL_TEST_KEY' ) && WPPUGMILL_TEST_KEY === $key ) {
+		$result = array(
+			'status'         => 'active',
+			'error'          => '',
+			'customer_email' => 'test@wppugmill.local',
+			'expires_at'     => '',
+		);
+		set_transient( 'wppugmill_license_status', $result, WPPUGMILL_LICENSE_CACHE_TTL );
+		set_transient( 'wppugmill_license_status_last_good', $result, WEEK_IN_SECONDS );
+		return array( 'success' => true );
 	}
 
 	$response = wp_remote_post(
@@ -200,8 +223,12 @@ function wppugmill_on_license_key_update( $old_encrypted, $new_encrypted ) {
 	$old_key = wppugmill_decrypt( $old_encrypted );
 	$new_key = wppugmill_decrypt( $new_encrypted );
 
+	// Deactivate old key only if it's a real LS key (not the test key).
+	$is_test_key = defined( 'WPPUGMILL_TEST_KEY' );
 	if ( ! empty( $old_key ) && $old_key !== $new_key ) {
-		wppugmill_deactivate_license( $old_key );
+		if ( ! $is_test_key || WPPUGMILL_TEST_KEY !== $old_key ) {
+			wppugmill_deactivate_license( $old_key );
+		}
 	}
 
 	if ( ! empty( $new_key ) ) {

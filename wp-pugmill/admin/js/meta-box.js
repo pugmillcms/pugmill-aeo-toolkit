@@ -78,12 +78,11 @@
 	if ( generateBtn ) {
 		generateBtn.addEventListener( 'click', function () {
 			var label   = document.getElementById( 'wppugmill-generate-label' );
-			var spinner = document.getElementById( 'wppugmill-generate-spinner' );
 			var errorEl = document.getElementById( 'wppugmill-generate-error' );
 
-			generateBtn.disabled  = true;
-			label.style.display   = 'none';
-			spinner.style.display = 'inline';
+			generateBtn.disabled = true;
+			generateBtn.classList.add( 'wppugmill-loading' );
+			label.textContent     = 'Generating\u2026';
 			errorEl.style.display = 'none';
 
 			var formData = new FormData();
@@ -100,13 +99,13 @@
 					populateFields( json.data );
 				} )
 				.catch( function ( err ) {
-					errorEl.textContent   = 'Error: ' + err.message;
+					errorEl.innerHTML    = 'Error: ' + err.message;
 					errorEl.style.display = 'block';
 				} )
 				.finally( function () {
-					generateBtn.disabled  = false;
-					label.style.display   = 'inline';
-					spinner.style.display = 'none';
+					generateBtn.disabled = false;
+					generateBtn.classList.remove( 'wppugmill-loading' );
+					label.textContent    = '\u2728 Generate with AI';
 				} );
 		} );
 	}
@@ -137,14 +136,13 @@
 	if ( rewriteBtn ) {
 		rewriteBtn.addEventListener( 'click', function () {
 			var label     = document.getElementById( 'wppugmill-rewrite-label' );
-			var spinner   = document.getElementById( 'wppugmill-rewrite-spinner' );
 			var errorEl   = document.getElementById( 'wppugmill-rewrite-error' );
 			var contextEl = document.getElementById( 'wppugmill-rewrite-context' );
 			var contextTa = document.getElementById( 'wppugmill-rewrite-context-text' );
 
 			rewriteBtn.disabled     = true;
-			label.style.display     = 'none';
-			spinner.style.display   = 'inline';
+			rewriteBtn.classList.add( 'wppugmill-loading' );
+			label.textContent       = 'Rewriting\u2026';
 			errorEl.style.display   = 'none';
 			contextEl.style.display = 'none';
 
@@ -183,9 +181,9 @@
 					errorEl.style.display = 'block';
 				} )
 				.finally( function () {
-					rewriteBtn.disabled   = false;
-					label.style.display   = 'inline';
-					spinner.style.display = 'none';
+					rewriteBtn.disabled = false;
+					rewriteBtn.classList.remove( 'wppugmill-loading' );
+					label.textContent   = '\u270f Rewrite from Draft';
 				} );
 		} );
 	}

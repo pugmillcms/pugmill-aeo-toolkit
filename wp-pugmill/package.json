@@ -1,0 +1,13 @@
+{
+  "name": "wp-pugmill",
+  "version": "0.4.0",
+  "private": true,
+  "scripts": {
+    "build": "wp-scripts build",
+    "start": "wp-scripts start",
+    "test": "wp-scripts test-unit-jest"
+  },
+  "devDependencies": {
+    "@wordpress/scripts": "^30.0.0"
+  }
+}

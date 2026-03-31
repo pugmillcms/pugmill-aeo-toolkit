@@ -23,12 +23,19 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 function wppugmill_bot_config() {
 	return array(
-		'ChatGPT'    => array( 'label' => 'ChatGPT',    'color' => '#10a37f' ),
-		'Claude'     => array( 'label' => 'Claude',     'color' => '#d97706' ),
-		'Perplexity' => array( 'label' => 'Perplexity', 'color' => '#6366f1' ),
-		'Gemini'     => array( 'label' => 'Gemini',     'color' => '#4285f4' ),
-		'Amazonbot'  => array( 'label' => 'Amazonbot',  'color' => '#ff9900' ),
-		'Meta'       => array( 'label' => 'Meta',       'color' => '#0866ff' ),
+		// AI assistants / LLM crawlers
+		'ChatGPT'    => array( 'label' => 'ChatGPT',    'color' => '#10a37f', 'type' => 'ai' ),
+		'Claude'     => array( 'label' => 'Claude',     'color' => '#d97706', 'type' => 'ai' ),
+		'Perplexity' => array( 'label' => 'Perplexity', 'color' => '#6366f1', 'type' => 'ai' ),
+		'Gemini'     => array( 'label' => 'Gemini',     'color' => '#4285f4', 'type' => 'ai' ),
+		'Amazonbot'  => array( 'label' => 'Amazonbot',  'color' => '#ff9900', 'type' => 'ai' ),
+		'Meta'       => array( 'label' => 'Meta',       'color' => '#0866ff', 'type' => 'ai' ),
+		// Traditional search spiders (tracked separately to detect AEO endpoint usage)
+		'Googlebot'   => array( 'label' => 'Googlebot',   'color' => '#34a853', 'type' => 'search' ),
+		'Bingbot'     => array( 'label' => 'Bingbot',     'color' => '#00809d', 'type' => 'search' ),
+		'Applebot'    => array( 'label' => 'Applebot',    'color' => '#555555', 'type' => 'search' ),
+		'DuckDuckBot' => array( 'label' => 'DuckDuckBot', 'color' => '#de5833', 'type' => 'search' ),
+		'Bytespider'  => array( 'label' => 'Bytespider',  'color' => '#69c9d0', 'type' => 'search' ),
 	);
 }
 

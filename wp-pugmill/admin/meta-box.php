@@ -64,11 +64,9 @@ function wppugmill_render_meta_box( $post ) {
 				<div style="display:flex; gap:8px; flex-wrap:wrap;">
 					<button type="button" id="wppugmill-generate" class="button button-primary" style="display:flex; align-items:center; gap:6px;">
 						<span id="wppugmill-generate-label"><?php esc_html_e( '✨ Generate with AI', 'wp-pugmill' ); ?></span>
-						<span id="wppugmill-generate-spinner" style="display:none;"><?php esc_html_e( 'Generating…', 'wp-pugmill' ); ?></span>
 					</button>
 					<button type="button" id="wppugmill-rewrite" class="button" style="display:flex; align-items:center; gap:6px;" title="<?php echo esc_attr__( 'Rewrite draft into AEO Answer Unit structure', 'wp-pugmill' ); ?>">
-						<span id="wppugmill-rewrite-label"><?php esc_html_e( '✏ Write from Draft', 'wp-pugmill' ); ?></span>
-						<span id="wppugmill-rewrite-spinner" style="display:none;"><?php esc_html_e( 'Rewriting…', 'wp-pugmill' ); ?></span>
+						<span id="wppugmill-rewrite-label"><?php esc_html_e( '✏ Rewrite from Draft', 'wp-pugmill' ); ?></span>
 					</button>
 				</div>
 			<?php else : ?>
@@ -234,6 +232,13 @@ function wppugmill_enqueue_meta_box_script( $hook ) {
 	}
 
 	$aeo = wppugmill_get_aeo( $post->ID );
+
+	wp_enqueue_style(
+		'wppugmill-editor-resize',
+		WPPUGMILL_PLUGIN_URL . 'admin/css/editor-resize.css',
+		array(),
+		WPPUGMILL_VERSION
+	);
 
 	wp_enqueue_script(
 		'wppugmill-meta-box',

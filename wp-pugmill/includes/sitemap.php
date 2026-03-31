@@ -84,6 +84,16 @@ function wppugmill_sitemap_collect_urls() {
 		'priority'   => '1.0',
 	);
 
+	// llms.txt — AI content index; high priority so AI crawlers discover it via sitemap.
+	if ( ! get_option( 'wppugmill_disable_llms_txt' ) ) {
+		$urls[] = array(
+			'loc'        => home_url( '/llms.txt' ),
+			'lastmod'    => wppugmill_sitemap_date( get_lastpostmodified( 'GMT' ) ),
+			'changefreq' => 'daily',
+			'priority'   => '0.9',
+		);
+	}
+
 	// All public, published post types
 	$post_types = get_post_types( array( 'public' => true ), 'names' );
 
@@ -258,11 +268,19 @@ function wppugmill_filter_robots_txt( $output, $public ) {
 		return $custom;
 	}
 
-	// Default: append Sitemap: directive when public.
+	// Default: append Sitemap: and LLMs-Txt: directives when public.
 	if ( $public ) {
 		$sitemap_url = home_url( '/sitemap.xml' );
 		if ( strpos( $output, $sitemap_url ) === false ) {
 			$output .= "\nSitemap: " . $sitemap_url . "\n";
+		}
+
+		// AI content index — signals to AI crawlers that AEO-optimised content
+		// is available. Bots reading robots.txt in full (ClaudeBot, GPTBot, etc.)
+		// will discover llms.txt and from there the per-post ?wppugmill_llm=1 endpoints.
+		$llms_url = home_url( '/llms.txt' );
+		if ( strpos( $output, $llms_url ) === false ) {
+			$output .= "\n# AI content index\nLLMs-Txt: " . $llms_url . "\n";
 		}
 	}
 

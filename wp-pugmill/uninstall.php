@@ -25,10 +25,17 @@ $options = array(
 	'wppugmill_org_name',
 	'wppugmill_org_type',
 	'wppugmill_author_voice',
+	'wppugmill_author_same_as',
 	'wppugmill_ai_provider',
 	'wppugmill_ai_api_key',
+	'wppugmill_ai_rate_limit',
 	'wppugmill_license_key',
 	'wppugmill_instance_id',
+	'wppugmill_disable_json_ld',
+	'wppugmill_disable_llms_txt',
+	'wppugmill_disable_seo_meta',
+	'wppugmill_robots_txt_custom',
+	'wppugmill_indexnow_key',
 	'wppugmill_llms_full_page_count',
 	'wppugmill_bot_db_version',
 );
@@ -62,12 +69,11 @@ foreach ( $users as $user_id ) {
 
 global $wpdb;
 
-// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-$wpdb->delete(
-	$wpdb->postmeta,
-	array( 'meta_key' => '_wppugmill_aeo' ),
-	array( '%s' )
-);
+$meta_keys = array( '_wppugmill_aeo', '_wppugmill_seo', '_wppugmill_schema' );
+foreach ( $meta_keys as $meta_key ) {
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+	$wpdb->delete( $wpdb->postmeta, array( 'meta_key' => $meta_key ), array( '%s' ) );
+}
 
 // ── Bot analytics tables ───────────────────────────────────────────────────
 

@@ -8,7 +8,7 @@
  *     Aggregate table. One row per (bot × resource_type × day).
  *     Upserted on every bot visit. Primary key prevents bloat —
  *     max rows = bots × resource_types × days_retained.
- *     Retained for 2 years (730 days).
+ *     Retained for 90 days.
  *
  *   {prefix}wppugmill_bot_recent
  *     Ring-buffer of individual visits for the "Recent Activity" table.
@@ -16,7 +16,7 @@
  *
  * Storage notes vs v1 (single-row-per-visit):
  *   v1: unbounded growth, avg ~150–200 bytes/row, full-table-scan prune
- *   v2: bot_daily capped at ~30k rows/2 years; bot_recent trimmed to 7 days
+ *   v2: bot_daily capped at ~5k rows/90 days; bot_recent trimmed to 7 days
  *
  * @package WPPugmill
  */
@@ -37,12 +37,19 @@ define( 'WPPUGMILL_BOT_DB_VERSION', '2' );
  */
 function wppugmill_bot_ids() {
 	return array(
+		// AI assistants / LLM crawlers
 		'ChatGPT'    => 1,
 		'Claude'     => 2,
 		'Perplexity' => 3,
 		'Gemini'     => 4,
 		'Amazonbot'  => 5,
 		'Meta'       => 6,
+		// Traditional search spiders
+		'Googlebot'   => 7,
+		'Bingbot'     => 8,
+		'Applebot'    => 9,
+		'DuckDuckBot' => 10,
+		'Bytespider'  => 11,
 	);
 }
 
@@ -113,12 +120,19 @@ function wppugmill_resource_type_categories() {
  */
 function wppugmill_bot_fingerprints() {
 	return array(
+		// AI assistants — checked first so Google-Extended (Gemini) beats Googlebot
 		'ChatGPT'    => array( 'GPTBot', 'ChatGPT-User', 'OAI-SearchBot' ),
 		'Claude'     => array( 'ClaudeBot', 'anthropic-ai' ),
 		'Perplexity' => array( 'PerplexityBot' ),
 		'Gemini'     => array( 'Google-Extended' ),
 		'Amazonbot'  => array( 'Amazonbot' ),
 		'Meta'       => array( 'meta-externalagent' ),
+		// Traditional search spiders — checked after AI bots
+		'Googlebot'   => array( 'Googlebot' ),
+		'Bingbot'     => array( 'bingbot' ),
+		'Applebot'    => array( 'Applebot' ),
+		'DuckDuckBot' => array( 'DuckDuckBot' ),
+		'Bytespider'  => array( 'Bytespider' ),
 	);
 }
 
@@ -365,6 +379,18 @@ function wppugmill_log_bot_visit( $bot, $url, $resource_type = 0 ) {
 		),
 		array( '%d', '%d', '%s', '%d' )
 	);
+
+	// Hard cap: keep only the 500 most recent rows so the table stays bounded
+	// regardless of crawl frequency. Deletes the oldest rows if over the limit.
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	$count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}wppugmill_bot_recent" );
+	if ( $count > 500 ) {
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$wpdb->query( $wpdb->prepare(
+			"DELETE FROM {$wpdb->prefix}wppugmill_bot_recent ORDER BY visited_at ASC, id ASC LIMIT %d",
+			$count - 500
+		) );
+	}
 }
 
 /**
@@ -400,7 +426,7 @@ add_action( 'init', 'wppugmill_maybe_log_bot_visit', 99 );
 /**
  * Prune old data.
  *
- * - bot_daily: retain 730 days (2 years). Tiny table; long retention is cheap.
+ * - bot_daily: retain 90 days.
  * - bot_recent: retain 7 days. Recent-activity table only.
  *
  * Scheduled daily via WP cron; also called on plugin activation.
@@ -408,7 +434,7 @@ add_action( 'init', 'wppugmill_maybe_log_bot_visit', 99 );
 function wppugmill_bot_analytics_prune() {
 	global $wpdb;
 
-	$oldest_day = (int) floor( time() / DAY_IN_SECONDS ) - 730;
+	$oldest_day = (int) floor( time() / DAY_IN_SECONDS ) - 90;
 
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 	$wpdb->query( $wpdb->prepare(
@@ -573,3 +599,255 @@ function wppugmill_bot_analytics_total() {
 		"SELECT SUM(count) FROM {$wpdb->prefix}wppugmill_bot_daily"
 	);
 }
+
+/**
+ * Top posts by bot visit count from the recent ring-buffer.
+ *
+ * Aggregates HTML page (0) and Post Markdown (3) visits from bot_recent,
+ * normalises URLs (strips query strings), skips system paths, and returns
+ * the most-visited content URLs sorted by total count.
+ *
+ * @param  int $limit
+ * @return array  [ [ 'url', 'total', 'aeo', 'bots' => [ bot_name => count ] ], ... ]
+ */
+function wppugmill_bot_analytics_top_posts( $limit = 10 ) {
+	global $wpdb;
+
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	$rows = (array) $wpdb->get_results(
+		"SELECT bot_id, resource_type, url FROM {$wpdb->prefix}wppugmill_bot_recent WHERE resource_type IN (0, 3)",
+		ARRAY_A
+	);
+
+	// System path prefixes to skip — not content pages.
+	$skip_prefixes = array( '/wp-', '/feed', '/author/', '/tag/', '/category/', '/page/' );
+
+	$aggregated = array();
+
+	foreach ( $rows as $row ) {
+		$parsed_path = (string) parse_url( $row['url'], PHP_URL_PATH );
+		$path        = rtrim( $parsed_path, '/' );
+
+		if ( '' === $path || '/' === $path ) {
+			continue;
+		}
+
+		$skip = false;
+		foreach ( $skip_prefixes as $prefix ) {
+			if ( 0 === strpos( $path, $prefix ) ) {
+				$skip = true;
+				break;
+			}
+		}
+		// Skip bare /?p= style IDs — they're usually drafts.
+		if ( ! $skip && false !== strpos( $row['url'], '?p=' ) ) {
+			$skip = true;
+		}
+		if ( $skip ) {
+			continue;
+		}
+
+		$bot    = wppugmill_bot_name( $row['bot_id'] );
+		$is_aeo = ( 3 === (int) $row['resource_type'] );
+
+		if ( ! isset( $aggregated[ $path ] ) ) {
+			$aggregated[ $path ] = array( 'url' => $path, 'total' => 0, 'aeo' => false, 'bots' => array() );
+		}
+		$aggregated[ $path ]['total']++;
+		$aggregated[ $path ]['bots'][ $bot ] = ( $aggregated[ $path ]['bots'][ $bot ] ?? 0 ) + 1;
+		if ( $is_aeo ) {
+			$aggregated[ $path ]['aeo'] = true;
+		}
+	}
+
+	usort( $aggregated, function( $a, $b ) { return $b['total'] - $a['total']; } );
+
+	return array_slice( array_values( $aggregated ), 0, $limit );
+}
+
+/**
+ * Build a compact analytics context payload for the AI insights prompt.
+ *
+ * @return array
+ */
+function wppugmill_bot_analytics_insights_context() {
+	$days        = 30;
+	$summary     = wppugmill_bot_analytics_summary( $days );
+	$by_resource = wppugmill_bot_analytics_by_resource( $days );
+	$total       = wppugmill_bot_analytics_total();
+	$top_posts   = wppugmill_bot_analytics_top_posts( 5 );
+	$labels      = wppugmill_resource_type_labels();
+
+	// Flatten resource breakdown to bot → label → count.
+	$reach = array();
+	foreach ( $by_resource as $bot => $types ) {
+		foreach ( $types as $type_id => $cnt ) {
+			$reach[ $bot ][ $labels[ $type_id ] ?? 'Unknown' ] = $cnt;
+		}
+	}
+
+	return array(
+		'site'          => get_bloginfo( 'name' ),
+		'url'           => home_url(),
+		'period_days'   => $days,
+		'total_visits'  => $total,
+		'visits_by_bot' => $summary,
+		'content_reach' => $reach,
+		'top_posts'     => array_map( function( $p ) {
+			return array(
+				'url'     => $p['url'],
+				'total'   => $p['total'],
+				'aeo_hit' => $p['aeo'],
+				'by_bot'  => $p['bots'],
+			);
+		}, $top_posts ),
+	);
+}
+
+// ── AJAX: AI insights ─────────────────────────────────────────────────────────
+
+/**
+ * Return (or generate and cache) an AI-written analysis of bot analytics.
+ * Cached for 6 hours. Pass refresh=1 to bust the cache.
+ */
+function wppugmill_ajax_analytics_insights() {
+	check_ajax_referer( 'wppugmill_analytics_insights', 'nonce' );
+
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_send_json_error( __( 'Insufficient permissions.', 'wp-pugmill' ), 403 );
+	}
+
+	$provider = get_option( 'wppugmill_ai_provider', 'anthropic' );
+	$api_key  = wppugmill_get_encrypted_option( 'wppugmill_ai_api_key', '' );
+
+	if ( empty( $api_key ) ) {
+		wp_send_json_error( __( 'No API key configured. Add your key in Settings → WP Pugmill.', 'wp-pugmill' ) );
+	}
+
+	$cache_key = 'wppugmill_ai_analytics_insights';
+	$refresh   = ! empty( $_POST['refresh'] );
+
+	if ( ! $refresh ) {
+		$cached = get_transient( $cache_key );
+		if ( false !== $cached ) {
+			wp_send_json_success( $cached );
+		}
+	}
+
+	$context  = wppugmill_bot_analytics_insights_context();
+	$ctx_json = wp_json_encode( $context, JSON_PRETTY_PRINT );
+
+	$system = "You are an expert in AI search and web crawler analytics. You will receive bot traffic data from a WordPress blog using the WP Pugmill SEO+AEO plugin. Analyze the data and write a concise, insightful report.
+
+Write in plain text paragraphs only — no markdown headers, no bullet lists. Use a blank line between distinct observations. Keep the total response under 300 words.
+
+Focus on:
+1. Which bots are most active and what that signals (e.g. citation activity, indexing depth, content discovery phase).
+2. Notable patterns such as repeat visits to specific content, or AEO endpoint hits (?wppugmill_llm=1 means a bot read your optimised markdown directly — flag this as a strong positive signal).
+3. Differences between AI crawlers and traditional search spiders if both are present.
+4. Whether AI discoverability looks healthy overall.
+5. Two or three specific, actionable recommendations — one sentence each.";
+
+	$user = "Site: " . get_bloginfo( 'name' ) . " (" . home_url() . ")\n\nBot analytics data:\n\n" . $ctx_json . "\n\nProvide your analysis.";
+
+	$result = wppugmill_call_ai( $provider, $api_key, $system, $user, 600 );
+
+	if ( is_wp_error( $result ) ) {
+		wp_send_json_error( $result->get_error_message() );
+	}
+
+	$payload = array(
+		'text'      => wp_kses_post( trim( $result ) ),
+		'generated' => time(),
+	);
+
+	set_transient( $cache_key, $payload, 6 * HOUR_IN_SECONDS );
+	wp_send_json_success( $payload );
+}
+add_action( 'wp_ajax_wppugmill_analytics_insights', 'wppugmill_ajax_analytics_insights' );
+
+// ── AJAX: CSV export ──────────────────────────────────────────────────────────
+
+/**
+ * Stream a CSV of daily aggregate data (all retained data, newest first).
+ */
+function wppugmill_ajax_export_csv_daily() {
+	check_ajax_referer( 'wppugmill_export_csv', 'nonce' );
+
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( esc_html__( 'Insufficient permissions.', 'wp-pugmill' ), 403 );
+	}
+
+	global $wpdb;
+
+	$rows = (array) $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		"SELECT bot_id, resource_type, day, count
+		 FROM {$wpdb->prefix}wppugmill_bot_daily
+		 ORDER BY day DESC, bot_id ASC",
+		ARRAY_A
+	);
+
+	$labels = wppugmill_resource_type_labels();
+
+	header( 'Content-Type: text/csv; charset=UTF-8' );
+	header( 'Content-Disposition: attachment; filename="wppugmill-bot-daily-' . gmdate( 'Y-m-d' ) . '.csv"' );
+	header( 'Pragma: no-cache' );
+
+	$out = fopen( 'php://output', 'w' );
+	fputcsv( $out, array( 'Date', 'Bot', 'Resource Type', 'Count' ) );
+
+	foreach ( $rows as $row ) {
+		fputcsv( $out, array(
+			gmdate( 'Y-m-d', (int) $row['day'] * DAY_IN_SECONDS ),
+			wppugmill_bot_name( (int) $row['bot_id'] ),
+			$labels[ (int) $row['resource_type'] ] ?? 'Unknown',
+			(int) $row['count'],
+		) );
+	}
+
+	fclose( $out );
+	exit;
+}
+add_action( 'wp_ajax_wppugmill_export_csv_daily', 'wppugmill_ajax_export_csv_daily' );
+
+/**
+ * Stream a CSV of the recent visit ring-buffer.
+ */
+function wppugmill_ajax_export_csv_recent() {
+	check_ajax_referer( 'wppugmill_export_csv', 'nonce' );
+
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( esc_html__( 'Insufficient permissions.', 'wp-pugmill' ), 403 );
+	}
+
+	global $wpdb;
+
+	$rows = (array) $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		"SELECT bot_id, resource_type, url, visited_at
+		 FROM {$wpdb->prefix}wppugmill_bot_recent
+		 ORDER BY visited_at DESC",
+		ARRAY_A
+	);
+
+	$labels = wppugmill_resource_type_labels();
+
+	header( 'Content-Type: text/csv; charset=UTF-8' );
+	header( 'Content-Disposition: attachment; filename="wppugmill-bot-visits-' . gmdate( 'Y-m-d' ) . '.csv"' );
+	header( 'Pragma: no-cache' );
+
+	$out = fopen( 'php://output', 'w' );
+	fputcsv( $out, array( 'Timestamp (UTC)', 'Bot', 'Resource Type', 'URL' ) );
+
+	foreach ( $rows as $row ) {
+		fputcsv( $out, array(
+			gmdate( 'Y-m-d H:i:s', (int) $row['visited_at'] ),
+			wppugmill_bot_name( (int) $row['bot_id'] ),
+			$labels[ (int) $row['resource_type'] ] ?? 'Unknown',
+			$row['url'],
+		) );
+	}
+
+	fclose( $out );
+	exit;
+}
+add_action( 'wp_ajax_wppugmill_export_csv_recent', 'wppugmill_ajax_export_csv_recent' );

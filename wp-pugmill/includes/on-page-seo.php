@@ -159,6 +159,43 @@ function wppugmill_output_canonical() {
 }
 add_action( 'wp_head', 'wppugmill_output_canonical', 2 );
 
+// =========================================================================
+// AEO discovery link tags
+// =========================================================================
+
+/**
+ * Output <link rel="alternate" type="text/markdown"> tags in <head>.
+ *
+ * - Every page gets a site-level link to /llms.txt so AI parsers can
+ *   always find the content index from any entry point.
+ * - Singular posts/pages additionally get a per-post link pointing at
+ *   ?wppugmill_llm=1 — a clean markdown view with AEO metadata.
+ *
+ * These complement the robots.txt LLMs-Txt: directive and the sitemap
+ * entry, creating a three-signal AEO discovery system.
+ */
+function wppugmill_output_aeo_link_tags() {
+	if ( get_option( 'wppugmill_disable_llms_txt' ) ) {
+		return;
+	}
+
+	// Site-level llms.txt — present on every page.
+	echo '<link rel="alternate" type="text/markdown" href="' . esc_url( home_url( '/llms.txt' ) ) . '" title="AI Content Index" />' . "\n";
+
+	// Per-post AEO endpoint — only on singular views.
+	// Use get_queried_object() directly rather than is_singular() to avoid
+	// "called before query is run" notices in edge-case contexts.
+	$queried = get_queried_object();
+	if ( $queried instanceof WP_Post && 'publish' === $queried->post_status ) {
+		$post_id = $queried->ID;
+		if ( ! wppugmill_own_noindex( $post_id ) && ! wppugmill_post_is_noindexed( $post_id ) ) {
+			$llm_url = add_query_arg( 'wppugmill_llm', '1', get_permalink( $post_id ) );
+			echo '<link rel="alternate" type="text/markdown" href="' . esc_url( $llm_url ) . '" title="AI-Optimised Content" />' . "\n";
+		}
+	}
+}
+add_action( 'wp_head', 'wppugmill_output_aeo_link_tags', 3 );
+
 /**
  * Prevent WordPress's redirect_canonical from firing on /llms.txt and /llms-full.txt.
  *
@@ -178,18 +215,23 @@ add_action( 'template_redirect', 'wppugmill_remove_llms_canonical_redirect', 0 )
 // =========================================================================
 
 /**
- * Output a <meta name="robots"> tag for singular views.
+ * Inject robots directives via the wp_robots filter (WordPress 5.7+).
  *
- * Only outputs when noindex or nofollow is explicitly set; otherwise the
- * default (index, follow) is assumed and no tag is needed.
+ * This merges our directives into WordPress's single <meta name="robots"> tag,
+ * preventing duplicate tags from plugins like Jetpack that also use this filter.
+ * Always adds max-snippet, max-video-preview, and max-image-preview directives;
+ * overrides noindex/nofollow when explicitly set per-post.
+ *
+ * @param  array $robots Existing robots directives from WP core and other plugins.
+ * @return array
  */
-function wppugmill_output_meta_robots() {
+function wppugmill_filter_robots( $robots ) {
 	if ( get_option( 'wppugmill_disable_seo_meta' ) ) {
-		return;
+		return $robots;
 	}
 
 	if ( ! is_singular() ) {
-		return;
+		return $robots;
 	}
 
 	$post_id  = (int) get_queried_object_id();
@@ -197,18 +239,30 @@ function wppugmill_output_meta_robots() {
 	$noindex  = ! empty( $seo['noindex'] );
 	$nofollow = ! empty( $seo['nofollow'] );
 
-	// No explicit directives — let the browser use its default (index, follow).
-	if ( ! $noindex && ! $nofollow ) {
-		return;
+	// Override index/noindex.
+	if ( $noindex ) {
+		$robots['noindex'] = true;
+		unset( $robots['index'] );
+	} else {
+		unset( $robots['noindex'] );
 	}
 
-	$parts = array();
-	$parts[] = $noindex  ? 'noindex'  : 'index';
-	$parts[] = $nofollow ? 'nofollow' : 'follow';
+	// Override follow/nofollow.
+	if ( $nofollow ) {
+		$robots['nofollow'] = true;
+		unset( $robots['follow'] );
+	} else {
+		unset( $robots['nofollow'] );
+	}
 
-	echo '<meta name="robots" content="' . esc_attr( implode( ', ', $parts ) ) . '" />' . "\n";
+	// Always allow full snippet/preview access for AI and search engines.
+	$robots['max-snippet']       = '-1';
+	$robots['max-video-preview'] = '-1';
+	$robots['max-image-preview'] = 'large';
+
+	return $robots;
 }
-add_action( 'wp_head', 'wppugmill_output_meta_robots', 2 );
+add_filter( 'wp_robots', 'wppugmill_filter_robots', 20 );
 
 // =========================================================================
 // noindex helper (used by llms-txt.php and health.php)

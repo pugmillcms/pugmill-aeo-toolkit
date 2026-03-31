@@ -61,43 +61,76 @@ function wppugmill_output_singular_json_ld() {
 	// Description: SEO meta desc → AEO summary → excerpt
 	$description = wppugmill_resolve_description( $seo, $aeo, $post );
 
-	// Pages use WebPage schema; posts (and other types) use Article.
+	// Pages use WebPage schema; posts (and other types) use BlogPosting.
 	// WebPage omits datePublished and author — pages are evergreen site
 	// content, not time-stamped editorial pieces.
-	$article = array(
-		'@type'        => $is_page ? 'WebPage' : 'Article',
+	$permalink = get_permalink( $post_id );
+	$article   = array(
+		'@type'        => $is_page ? 'WebPage' : 'BlogPosting',
+		'@id'          => $permalink . ( $is_page ? '#webpage' : '#article' ),
 		'headline'     => get_the_title( $post_id ),
-		'url'          => get_permalink( $post_id ),
+		'url'          => $permalink,
 		'dateModified' => get_the_modified_date( 'c', $post ),
 	);
 
 	if ( ! $is_page ) {
-		$article['datePublished'] = get_the_date( 'c', $post );
+		$article['datePublished']    = get_the_date( 'c', $post );
+		$article['mainEntityOfPage'] = array( '@type' => 'WebPage', '@id' => $permalink );
+		$article['wordCount']        = str_word_count( strip_tags( $post->post_content ) );
+		$cats = get_the_category( $post_id );
+		if ( $cats ) {
+			$article['articleSection'] = $cats[0]->name;
+		}
 	}
 
 	if ( $description ) {
 		$article['description'] = $description;
 	}
 
-	// Featured image
-	$thumbnail_url = get_the_post_thumbnail_url( $post_id, 'large' );
+	// Featured image as ImageObject with dimensions for richer results.
+	$thumbnail_id  = get_post_thumbnail_id( $post_id );
+	$thumbnail_url = $thumbnail_id ? wp_get_attachment_image_url( (int) $thumbnail_id, 'large' ) : '';
 	if ( $thumbnail_url ) {
-		$article['image'] = $thumbnail_url;
+		$image_node = array( '@type' => 'ImageObject', 'url' => $thumbnail_url );
+		$img_meta   = wp_get_attachment_metadata( (int) $thumbnail_id );
+		if ( ! empty( $img_meta['sizes']['large'] ) ) {
+			$image_node['width']  = $img_meta['sizes']['large']['width'];
+			$image_node['height'] = $img_meta['sizes']['large']['height'];
+		} elseif ( ! empty( $img_meta['width'] ) ) {
+			$image_node['width']  = $img_meta['width'];
+			$image_node['height'] = $img_meta['height'];
+		}
+		$article['image'] = $image_node;
 	}
 
-	// Publisher (valid on both Article and WebPage)
-	$org_name = get_option( 'wppugmill_org_name', '' ) ?: get_bloginfo( 'name' );
-	$article['publisher'] = array(
-		'@type' => get_option( 'wppugmill_org_type', 'Organization' ),
+	// Publisher (valid on both BlogPosting and WebPage)
+	$org_name  = get_option( 'wppugmill_org_name', '' ) ?: get_bloginfo( 'name' );
+	$publisher = array(
+		'@type' => get_option( 'wppugmill_org_type', '' ) ?: 'Organization',
 		'name'  => $org_name,
 	);
+	$logo_url = wppugmill_get_site_image_url();
+	if ( $logo_url ) {
+		$publisher['logo'] = array( '@type' => 'ImageObject', 'url' => $logo_url );
+	}
+	$article['publisher'] = $publisher;
 
 	// Author — posts only; pages are site-level content, not author-attributed
 	if ( ! $is_page && $post->post_author ) {
-		$article['author'] = array(
+		$author_id  = (int) $post->post_author;
+		$author     = array(
 			'@type' => 'Person',
-			'name'  => get_the_author_meta( 'display_name', $post->post_author ),
+			'name'  => get_the_author_meta( 'display_name', $author_id ),
+			'url'   => get_author_posts_url( $author_id ),
 		);
+		$same_as_raw = get_option( 'wppugmill_author_same_as', '' );
+		if ( $same_as_raw ) {
+			$same_as = array_filter( array_map( 'trim', explode( "\n", $same_as_raw ) ) );
+			if ( ! empty( $same_as ) ) {
+				$author['sameAs'] = array_values( $same_as );
+			}
+		}
+		$article['author'] = $author;
 	}
 
 	// Entity mentions
@@ -137,6 +170,7 @@ function wppugmill_output_singular_json_ld() {
 	if ( ! empty( $questions ) ) {
 		$graph[] = array(
 			'@type'      => 'FAQPage',
+			'@id'        => $permalink . '#faqpage',
 			'mainEntity' => array_values( array_map( function( $q ) {
 				return array(
 					'@type'          => 'Question',
@@ -181,9 +215,17 @@ function wppugmill_output_home_json_ld() {
 	$description = get_option( 'wppugmill_site_summary', get_bloginfo( 'description' ) );
 
 	$website = array(
-		'@type' => 'WebSite',
-		'name'  => $org_name,
-		'url'   => $site_url,
+		'@type'           => 'WebSite',
+		'name'            => $org_name,
+		'url'             => $site_url,
+		'potentialAction' => array(
+			'@type'       => 'SearchAction',
+			'target'      => array(
+				'@type'       => 'EntryPoint',
+				'urlTemplate' => home_url( '/?s={search_term_string}' ),
+			),
+			'query-input' => 'required name=search_term_string',
+		),
 	);
 	if ( $description ) {
 		$website['description'] = $description;
@@ -194,7 +236,7 @@ function wppugmill_output_home_json_ld() {
 	// Organization node — only when org settings are configured
 	if ( get_option( 'wppugmill_org_name', '' ) ) {
 		$org = array(
-			'@type' => get_option( 'wppugmill_org_type', 'Organization' ),
+			'@type' => get_option( 'wppugmill_org_type', '' ) ?: 'Organization',
 			'name'  => $org_name,
 			'url'   => $site_url,
 		);
@@ -361,11 +403,21 @@ function wppugmill_output_singular_meta_tags() {
 	echo '<meta property="og:title" content="' . esc_attr( $og_title ) . '">' . "\n";
 	echo '<meta property="og:type" content="' . esc_attr( $og_type ) . '">' . "\n";
 	echo '<meta property="og:url" content="' . esc_url( $url ) . '">' . "\n";
+	echo '<meta property="og:site_name" content="' . esc_attr( get_bloginfo( 'name' ) ) . '">' . "\n";
 	if ( $og_desc ) {
 		echo '<meta property="og:description" content="' . esc_attr( $og_desc ) . '">' . "\n";
 	}
+	// OG image alt: custom OG image → featured image alt from Media Library
+	$og_image_alt = '';
 	if ( $og_image ) {
+		$thumbnail_id = get_post_thumbnail_id( $post_id );
+		if ( $thumbnail_id ) {
+			$og_image_alt = trim( get_post_meta( $thumbnail_id, '_wp_attachment_image_alt', true ) );
+		}
 		echo '<meta property="og:image" content="' . esc_url( $og_image ) . '">' . "\n";
+		if ( $og_image_alt ) {
+			echo '<meta property="og:image:alt" content="' . esc_attr( $og_image_alt ) . '">' . "\n";
+		}
 	}
 
 	$twitter_card = $og_image ? 'summary_large_image' : 'summary';
@@ -376,7 +428,16 @@ function wppugmill_output_singular_meta_tags() {
 	}
 	if ( $og_image ) {
 		echo '<meta name="twitter:image" content="' . esc_url( $og_image ) . '">' . "\n";
+		if ( $og_image_alt ) {
+			echo '<meta name="twitter:image:alt" content="' . esc_attr( $og_image_alt ) . '">' . "\n";
+		}
 	}
+
+	// Reading time estimate — surfaces in Twitter/X link previews.
+	$word_count   = str_word_count( strip_tags( $post->post_content ) );
+	$reading_time = max( 1, (int) round( $word_count / 200 ) );
+	echo '<meta name="twitter:label1" content="Reading time">' . "\n";
+	echo '<meta name="twitter:data1" content="' . esc_attr( $reading_time . ' min' ) . '">' . "\n";
 }
 
 /**
@@ -396,6 +457,7 @@ function wppugmill_output_home_meta_tags() {
 	echo '<meta property="og:title" content="' . esc_attr( $title ) . '">' . "\n";
 	echo '<meta property="og:type" content="website">' . "\n";
 	echo '<meta property="og:url" content="' . esc_url( $url ) . '">' . "\n";
+	echo '<meta property="og:site_name" content="' . esc_attr( get_bloginfo( 'name' ) ) . '">' . "\n";
 	if ( $description ) {
 		echo '<meta property="og:description" content="' . esc_attr( $description ) . '">' . "\n";
 	}

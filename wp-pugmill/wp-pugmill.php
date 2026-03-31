@@ -3,7 +3,7 @@
  * Plugin Name: WP Pugmill
  * Plugin URI:  https://wppugmill.com
  * Description: SEO for the answer engine era. Full on-page SEO (titles, meta, canonical, sitemaps) plus AEO tools that make your content discoverable by AI engines like ChatGPT, Perplexity, and Gemini.
- * Version:     0.3.0
+ * Version:     0.5.2
  * Author:      Janzen Works
  * Author URI:  https://janzenworks.com
  * License:     GPL-2.0-or-later
@@ -18,12 +18,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WPPUGMILL_VERSION',         '0.3.0' );
+define( 'WPPUGMILL_VERSION',         '0.5.2' );
 define( 'WPPUGMILL_PLUGIN_DIR',      plugin_dir_path( __FILE__ ) );
 define( 'WPPUGMILL_PLUGIN_URL',      plugin_dir_url( __FILE__ ) );
 define( 'WPPUGMILL_PLUGIN_FILE',     __FILE__ );
 define( 'WPPUGMILL_ANTHROPIC_MODEL', 'claude-sonnet-4-6' );
 define( 'WPPUGMILL_MAX_AI_INPUT',    8000 ); // ~2K tokens
+
+// Test key for QA — lets you verify AI features in production without wp-config.php access.
+// Enter this in Settings → WP Pugmill → License to enable AI mode.
+// Remove this constant before submitting to WordPress.org.
+define( 'WPPUGMILL_TEST_KEY', 'WPPUGMILL-TEST-AI-KEY' );
 
 /**
  * Detect which mode the plugin is running in.
@@ -42,6 +47,11 @@ function wppugmill_mode() {
 	}
 
 	$license_key = wppugmill_get_encrypted_option( 'wppugmill_license_key', '' );
+
+	// Test key bypass — remove before WordPress.org submission.
+	if ( WPPUGMILL_TEST_KEY === $license_key ) {
+		return 'ai';
+	}
 
 	if ( ! empty( $license_key ) ) {
 		return wppugmill_is_licensed() ? 'ai' : 'free';
@@ -66,6 +76,22 @@ require_once WPPUGMILL_PLUGIN_DIR . 'includes/health.php';
 require_once WPPUGMILL_PLUGIN_DIR . 'includes/bot-analytics.php';
 require_once WPPUGMILL_PLUGIN_DIR . 'includes/audit.php';
 require_once WPPUGMILL_PLUGIN_DIR . 'includes/agent.php';
+
+// Auto-updates via GitHub Releases (Plugin Update Checker)
+if ( is_admin() ) {
+	$puc_file = WPPUGMILL_PLUGIN_DIR . 'lib/plugin-update-checker/plugin-update-checker.php';
+	if ( file_exists( $puc_file ) ) {
+		require_once $puc_file;
+		$puc = YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChecker(
+			'https://github.com/michaelsjanzen/wppugmill/',
+			__FILE__,
+			'wp-pugmill'
+		);
+		// Use the attached release asset zip (correct folder structure) rather
+		// than GitHub's auto-generated zipball (which uses a commit-hash folder name).
+		$puc->getVcsApi()->enableReleaseAssets();
+	}
+}
 
 // Load admin UI
 if ( is_admin() ) {
