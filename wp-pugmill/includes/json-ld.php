@@ -151,6 +151,9 @@ function wppugmill_output_singular_json_ld() {
 			if ( ! empty( $entity['description'] ) ) {
 				$item['description'] = $entity['description'];
 			}
+			if ( ! empty( $entity['same_as'] ) && filter_var( $entity['same_as'], FILTER_VALIDATE_URL ) ) {
+				$item['sameAs'] = esc_url_raw( $entity['same_as'] );
+			}
 			return $item;
 		}, $aeo['entities'] );
 	}
@@ -158,6 +161,39 @@ function wppugmill_output_singular_json_ld() {
 	// Keywords
 	if ( ! empty( $aeo['keywords'] ) ) {
 		$article['keywords'] = implode( ', ', $aeo['keywords'] );
+	}
+
+	// Citations — auto-extract external links from post content (free tier).
+	if ( ! $is_page && ! empty( $post->post_content ) ) {
+		$site_host = wp_parse_url( home_url(), PHP_URL_HOST );
+		preg_match_all( '/<a\s[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)<\/a>/is', $post->post_content, $matches );
+		$citations = array();
+		foreach ( $matches[1] as $idx => $href ) {
+			$href = esc_url_raw( trim( $href ) );
+			if ( empty( $href ) ) {
+				continue;
+			}
+			$parsed = wp_parse_url( $href );
+			// Skip non-http, anchors, and same-domain links.
+			if ( empty( $parsed['scheme'] ) || ! in_array( $parsed['scheme'], array( 'http', 'https' ), true ) ) {
+				continue;
+			}
+			if ( ! empty( $parsed['host'] ) && rtrim( $parsed['host'], '.' ) === rtrim( $site_host, '.' ) ) {
+				continue;
+			}
+			// Require meaningful anchor text (not just an icon, image, or URL).
+			$anchor = wp_strip_all_tags( $matches[2][ $idx ] );
+			$anchor = trim( $anchor );
+			if ( empty( $anchor ) || strlen( $anchor ) < 3 || filter_var( $anchor, FILTER_VALIDATE_URL ) ) {
+				continue;
+			}
+			$citation = array( '@type' => 'WebPage', 'url' => $href );
+			$citation['name'] = $anchor;
+			$citations[]      = $citation;
+		}
+		if ( ! empty( $citations ) ) {
+			$article['citation'] = array_values( array_unique( $citations, SORT_REGULAR ) );
+		}
 	}
 
 	// Build graph
@@ -470,6 +506,7 @@ function wppugmill_get_schema( $post_id ) {
 		'event'          => array( 'name' => '', 'description' => '', 'start_date' => '', 'end_date' => '', 'location_name' => '', 'location_address' => '', 'organizer' => '' ),
 		'local_business' => array( 'name' => '', 'description' => '', 'address' => '', 'phone' => '', 'hours' => '', 'price_range' => '', 'business_type' => 'LocalBusiness' ),
 		'video'          => array( 'name' => '', 'description' => '', 'upload_date' => '', 'duration' => '', 'thumbnail_url' => '', 'embed_url' => '' ),
+		'review'         => array( 'item_name' => '', 'item_type' => 'Book', 'item_author' => '', 'rating_value' => '5', 'best_rating' => '5', 'review_body' => '' ),
 	);
 
 	$raw = get_post_meta( (int) $post_id, '_wppugmill_schema', true );
@@ -483,7 +520,7 @@ function wppugmill_get_schema( $post_id ) {
 	}
 
 	// Deep-merge nested type arrays so missing keys always have a default.
-	foreach ( array( 'howto', 'product', 'event', 'local_business', 'video' ) as $key ) {
+	foreach ( array( 'howto', 'product', 'event', 'local_business', 'video', 'review' ) as $key ) {
 		if ( isset( $data[ $key ] ) && is_array( $data[ $key ] ) ) {
 			$data[ $key ] = array_merge( $defaults[ $key ], $data[ $key ] );
 		}
@@ -516,6 +553,8 @@ function wppugmill_build_extended_schema_node( $post_id, $post ) {
 			return wppugmill_build_local_business_node( $post_id, $post, $schema['local_business'] );
 		case 'VideoObject':
 			return wppugmill_build_video_node( $post_id, $post, $schema['video'] );
+		case 'Review':
+			return wppugmill_build_review_node( $post_id, $post, $schema['review'] );
 		default:
 			return null;
 	}
@@ -701,6 +740,61 @@ function wppugmill_build_video_node( $post_id, $post, $data ) {
 
 	if ( ! empty( $data['embed_url'] ) ) {
 		$node['embedUrl'] = $data['embed_url'];
+	}
+
+	return $node;
+}
+
+/**
+ * Review schema node.
+ */
+function wppugmill_build_review_node( $post_id, $post, $data ) {
+	$item_type_map = array(
+		'Book'                => 'Book',
+		'Movie'               => 'Movie',
+		'Product'             => 'Product',
+		'SoftwareApplication' => 'SoftwareApplication',
+		'Course'              => 'Course',
+		'Game'                => 'Game',
+		'MusicRecording'      => 'MusicRecording',
+		'Restaurant'          => 'Restaurant',
+		'Thing'               => 'Thing',
+	);
+
+	$item_name = ! empty( $data['item_name'] ) ? $data['item_name'] : get_the_title( $post_id );
+	$item_type = isset( $item_type_map[ $data['item_type'] ?? '' ] ) ? $data['item_type'] : 'Thing';
+
+	$item = array(
+		'@type' => $item_type,
+		'name'  => $item_name,
+	);
+	if ( ! empty( $data['item_author'] ) ) {
+		$item['author'] = array( '@type' => 'Person', 'name' => $data['item_author'] );
+	}
+
+	$node = array(
+		'@type'       => 'Review',
+		'@id'         => get_permalink( $post_id ) . '#review',
+		'name'        => get_the_title( $post_id ),
+		'itemReviewed' => $item,
+		'author'      => array(
+			'@type' => 'Person',
+			'name'  => get_the_author_meta( 'display_name', (int) $post->post_author ),
+		),
+		'reviewRating' => array(
+			'@type'       => 'Rating',
+			'ratingValue' => ! empty( $data['rating_value'] ) ? $data['rating_value'] : '5',
+			'bestRating'  => ! empty( $data['best_rating'] )  ? $data['best_rating']  : '5',
+		),
+	);
+
+	if ( ! empty( $data['review_body'] ) ) {
+		$node['reviewBody'] = $data['review_body'];
+	} else {
+		$excerpt = get_the_excerpt( $post );
+		if ( $excerpt ) {
+			$node['reviewBody'] = $excerpt;
+		}
 	}
 
 	return $node;

@@ -110,6 +110,7 @@ export function useSchemaData() {
 				event:          { ...SCHEMA_DEFAULTS.event,          ...( parsed.event          || {} ) },
 				local_business: { ...SCHEMA_DEFAULTS.local_business, ...( parsed.local_business || {} ) },
 				video:          { ...SCHEMA_DEFAULTS.video,          ...( parsed.video          || {} ) },
+				review:         { ...SCHEMA_DEFAULTS.review,         ...( parsed.review         || {} ) },
 			};
 		} catch {
 			return { ...SCHEMA_DEFAULTS };

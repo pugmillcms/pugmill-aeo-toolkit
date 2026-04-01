@@ -4,7 +4,7 @@ Tags: AEO, answer engine optimization, AI, llms.txt, schema, structured data, SE
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 0.4.6
+Stable tag: 0.5.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -123,6 +123,12 @@ Yes. WP Pugmill is focused on AEO (AI discoverability) and does not conflict wit
 4. Example llms.txt output
 
 == Changelog ==
+
+= 0.5.4 =
+* **Review schema**: New "Review" schema type in the Schema panel — set item type (Book, Movie, Product, Software, Course, Game, Music, Restaurant), item name, author/creator, star rating, and review body. Outputs a valid Review + Rating node in JSON-LD, eligible for Google rich snippets.
+* **Citation auto-extraction**: BlogPosting schema now automatically includes a `citation` array populated from external links in the post content, improving AI engine trust signals and knowledge graph connectivity.
+* **sameAs on entity mentions**: Each Named Entity in the AEO panel now has an optional "sameAs URL" field. When set, the JSON-LD `mentions` node includes a `sameAs` property pointing to the canonical knowledge-graph URL (Wikipedia, Wikidata, etc.), disambiguating entities for AI parsers.
+* **Unit tests**: Added Jest test suites covering schema merge logic, AEO entity parsing (including sameAs), SEO meta merging, and all new constants (Review type options, descriptions, defaults).
 
 = 0.4.6 =
 * **UI consistency**: All panel action buttons standardized to purple pill style with ✓ Applied confirmation states (Tone, Headline Variants, Excerpt, Internal Links, Audit fixes)

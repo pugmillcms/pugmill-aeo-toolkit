@@ -129,6 +129,14 @@ export const SCHEMA_DEFAULTS = {
 		thumbnail_url: '',
 		embed_url:     '',
 	},
+	review: {
+		item_name:    '',
+		item_type:    'Book',
+		item_author:  '',
+		rating_value: '5',
+		best_rating:  '5',
+		review_body:  '',
+	},
 };
 
 /** Schema type choices for the top-level SelectControl. */
@@ -139,6 +147,7 @@ export const SCHEMA_TYPE_OPTIONS = [
 	{ label: 'Event',                   value:     'Event' },
 	{ label: 'Local Business',          value: 'LocalBusiness' },
 	{ label: 'Video',                   value: 'VideoObject' },
+	{ label: 'Review',                  value:    'Review' },
 ];
 
 /** LocalBusiness subtype options. */
@@ -163,7 +172,21 @@ export const SCHEMA_TYPE_DESCRIPTIONS = {
 	Event:         'Displays date, time, and location in search. Best for event announcements and listings.',
 	LocalBusiness: 'Adds address, hours, and contact info. Best for location or business about-pages.',
 	VideoObject:   'Marks up embedded video with duration and thumbnail for video-rich results.',
+	Review:        'Adds a star rating and review body for a book, product, movie, or other item. Eligible for rich snippets in Google Search.',
 };
+
+/** Item types for Review schema. */
+export const REVIEW_ITEM_TYPE_OPTIONS = [
+	{ label: 'Book',                 value: 'Book'                },
+	{ label: 'Movie',                value: 'Movie'               },
+	{ label: 'Product',              value: 'Product'             },
+	{ label: 'Software Application', value: 'SoftwareApplication' },
+	{ label: 'Course',               value: 'Course'              },
+	{ label: 'Game',                 value: 'Game'                },
+	{ label: 'Music Recording',      value: 'MusicRecording'      },
+	{ label: 'Restaurant',           value: 'Restaurant'          },
+	{ label: 'Thing',                value: 'Thing'               },
+];
 
 export const SEO_TITLE_MAX = 60;
 export const SEO_DESC_MAX  = 155;

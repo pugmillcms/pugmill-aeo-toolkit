@@ -19,6 +19,7 @@ import {
 	SCHEMA_TYPE_DESCRIPTIONS,
 	LOCAL_BUSINESS_TYPE_OPTIONS,
 	PRODUCT_AVAILABILITY_OPTIONS,
+	REVIEW_ITEM_TYPE_OPTIONS,
 	ajaxUrl,
 	howtoNonce,
 	schemaAiNonce,
@@ -98,6 +99,7 @@ export function SchemaBuilder() {
 								if ( suggestion.event )          updates.event          = { ...schema.event,          ...suggestion.event          };
 								if ( suggestion.local_business ) updates.local_business = { ...schema.local_business, ...suggestion.local_business };
 								if ( suggestion.video )          updates.video          = { ...schema.video,          ...suggestion.video          };
+								if ( suggestion.review )         updates.review         = { ...schema.review,         ...suggestion.review         };
 								updateSchema( updates );
 								setSuggestState( { loading: false, error: '', notice: '' } );
 							} catch {
@@ -408,6 +410,55 @@ export function SchemaBuilder() {
 						placeholder="https://www.youtube.com/embed/…"
 						value={ schema.video.embed_url }
 						onChange={ ( val ) => updateSchemaType( 'video', { embed_url: val } ) }
+					/>
+				</>
+			) }
+
+			{ /* ── Review fields ────────────────────────────────────────────── */ }
+			{ schemaType === 'Review' && (
+				<>
+					<SelectControl
+						label="Item Type"
+						value={ schema.review.item_type }
+						options={ REVIEW_ITEM_TYPE_OPTIONS }
+						onChange={ ( val ) => updateSchemaType( 'review', { item_type: val } ) }
+					/>
+					<TextControl
+						label="Item Name"
+						placeholder="Defaults to post title"
+						value={ schema.review.item_name }
+						onChange={ ( val ) => updateSchemaType( 'review', { item_name: val } ) }
+					/>
+					<TextControl
+						label="Item Author / Creator"
+						placeholder="e.g. Stephen King (for books/films)"
+						value={ schema.review.item_author }
+						onChange={ ( val ) => updateSchemaType( 'review', { item_author: val } ) }
+					/>
+					<div style={ { display: 'flex', gap: '8px' } }>
+						<div style={ { flex: 1 } }>
+							<TextControl
+								label="Rating"
+								placeholder="5"
+								value={ schema.review.rating_value }
+								onChange={ ( val ) => updateSchemaType( 'review', { rating_value: val } ) }
+							/>
+						</div>
+						<div style={ { flex: 1 } }>
+							<TextControl
+								label="Best Rating"
+								placeholder="5"
+								value={ schema.review.best_rating }
+								onChange={ ( val ) => updateSchemaType( 'review', { best_rating: val } ) }
+							/>
+						</div>
+					</div>
+					<TextareaControl
+						label="Review Body"
+						value={ schema.review.review_body }
+						onChange={ ( val ) => updateSchemaType( 'review', { review_body: val } ) }
+						rows={ 3 }
+						help="Defaults to post excerpt if blank."
 					/>
 				</>
 			) }

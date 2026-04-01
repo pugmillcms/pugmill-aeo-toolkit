@@ -1136,6 +1136,13 @@ export function MainPanel() {
 							value={ entity.description || '' }
 							onChange={ ( val ) => updateEntity( i, 'description', val ) }
 						/>
+						<TextControl
+							label="sameAs URL"
+							placeholder="e.g. https://www.wikidata.org/wiki/Q…"
+							value={ entity.same_as || '' }
+							onChange={ ( val ) => updateEntity( i, 'same_as', val ) }
+							help="Canonical knowledge-graph URL (Wikipedia, Wikidata, etc.)"
+						/>
 						<Button
 							isDestructive
 							size="small"
@@ -1145,7 +1152,7 @@ export function MainPanel() {
 						</Button>
 					</div>
 				) ) }
-				<Button variant="secondary" onClick={ () => updateAeo( { entities: [ ...aeo.entities, { name: '', type: 'Thing' } ] } ) }>
+				<Button variant="secondary" onClick={ () => updateAeo( { entities: [ ...aeo.entities, { name: '', type: 'Thing', same_as: '' } ] } ) }>
 					+ Add Entity
 				</Button>
 				{ entitiesState.error && (
