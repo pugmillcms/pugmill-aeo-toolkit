@@ -141,7 +141,7 @@ export const SCHEMA_DEFAULTS = {
 
 /** Schema type choices for the top-level SelectControl. */
 export const SCHEMA_TYPE_OPTIONS = [
-	{ label: '— None (Article only) —', value:         '' },
+	{ label: 'Article',                  value:         '' },
 	{ label: 'HowTo',                   value:     'HowTo' },
 	{ label: 'Product',                 value:   'Product' },
 	{ label: 'Event',                   value:     'Event' },
@@ -166,7 +166,7 @@ export const PRODUCT_AVAILABILITY_OPTIONS = [
 
 /** Help text shown below the schema type selector. */
 export const SCHEMA_TYPE_DESCRIPTIONS = {
-	'':            'Article, FAQPage (from your Q&A pairs), and Breadcrumb schema are output automatically on every post — no setup needed here.',
+	'':            'Outputs Article (or BlogPosting), FAQPage (from your Q&A pairs), and Breadcrumb schema automatically — no setup needed.',
 	HowTo:         'Enables step-by-step rich results in Google Search. Best for tutorials, recipes, and guides.',
 	Product:       'Adds price, availability, and brand to search results. Best for product pages and reviews.',
 	Event:         'Displays date, time, and location in search. Best for event announcements and listings.',
