@@ -4,7 +4,7 @@ Tags: AEO, answer engine optimization, AI, llms.txt, schema, structured data, SE
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 0.5.4
+Stable tag: 0.5.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -123,6 +123,9 @@ Yes. WP Pugmill is focused on AEO (AI discoverability) and does not conflict wit
 4. Example llms.txt output
 
 == Changelog ==
+
+= 0.5.5 =
+* **AI-suggested sameAs URLs**: Entity extraction now asks the AI to return a Wikidata or Wikipedia `same_as` URL for well-known public entities when it is highly confident. Blank when uncertain — no guesses. Server-side validation accepts only `*.wikidata.org` and `*.wikipedia.org` URLs, preventing hallucinated links from reaching JSON-LD output.
 
 = 0.5.4 =
 * **Review schema**: New "Review" schema type in the Schema panel — set item type (Book, Movie, Product, Software, Course, Game, Music, Restaurant), item name, author/creator, star rating, and review body. Outputs a valid Review + Rating node in JSON-LD, eligible for Google rich snippets.

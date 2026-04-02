@@ -26,6 +26,52 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // =========================================================================
+// Helpers
+// =========================================================================
+
+/**
+ * Validate and sanitize a candidate sameAs URL for entity schema.
+ *
+ * Only accepts Wikidata and Wikipedia URLs — the two authoritative knowledge-
+ * graph sources. Returns the sanitized URL on success, empty string otherwise.
+ * This prevents AI-hallucinated URLs from poisoning JSON-LD output.
+ *
+ * @param  string $url
+ * @return string
+ */
+function wppugmill_validate_same_as_url( $url ) {
+	$url = trim( (string) $url );
+	if ( empty( $url ) ) {
+		return '';
+	}
+
+	// Must be a valid URL.
+	if ( ! filter_var( $url, FILTER_VALIDATE_URL ) ) {
+		return '';
+	}
+
+	// Must use HTTPS.
+	$parsed = wp_parse_url( $url );
+	if ( empty( $parsed['scheme'] ) || 'https' !== $parsed['scheme'] ) {
+		return '';
+	}
+
+	// Host must be wikidata.org or a *.wikipedia.org subdomain.
+	$host = strtolower( $parsed['host'] ?? '' );
+	$allowed = (
+		$host === 'www.wikidata.org' ||
+		$host === 'wikidata.org'     ||
+		substr( $host, -14 ) === '.wikipedia.org'
+	);
+
+	if ( ! $allowed ) {
+		return '';
+	}
+
+	return esc_url_raw( $url );
+}
+
+// =========================================================================
 // Individual AEO Field Generators (free tier — BYOK, no license required)
 // =========================================================================
 
@@ -96,8 +142,8 @@ function wppugmill_ajax_generate_entities() {
 	}
 
 	$allowed_types = array( 'Thing', 'Person', 'Organization', 'Product', 'Place', 'Event', 'Technology', 'DefinedTerm' );
-	$system = 'You are an AEO (Answer Engine Optimization) specialist. Extract 3-8 named entities actually mentioned in this content. For each entity provide a name, type, and brief description. Type must be one of: Thing, Person, Organization, Product, Place, Event, Technology, DefinedTerm. Return ONLY a JSON object: {"entities": [{"name": "entity name", "type": "Type", "description": "brief description"}]}. No markdown, no explanation outside the JSON.';
-	$result = wppugmill_call_ai( $r['provider'], $r['api_key'], $system, wppugmill_aeo_user_prompt( $r['title'], $r['content'] ), 500 );
+	$system = 'You are an AEO (Answer Engine Optimization) specialist. Extract 3-8 named entities actually mentioned in this content. For each entity provide a name, type, and brief description. Type must be one of: Thing, Person, Organization, Product, Place, Event, Technology, DefinedTerm. For well-known public entities that have a Wikidata or Wikipedia page, include a "same_as" field with the canonical URL (https://www.wikidata.org/wiki/Q... or https://en.wikipedia.org/wiki/...). Only include same_as when you are highly confident in the exact URL — omit the field entirely rather than guess. Return ONLY a JSON object: {"entities": [{"name": "entity name", "type": "Type", "description": "brief description", "same_as": "https://..."}]}. No markdown, no explanation outside the JSON.';
+	$result = wppugmill_call_ai( $r['provider'], $r['api_key'], $system, wppugmill_aeo_user_prompt( $r['title'], $r['content'] ), 600 );
 
 	if ( is_wp_error( $result ) ) {
 		wp_send_json_error( array( 'message' => $result->get_error_message() ), 500 );
@@ -112,12 +158,17 @@ function wppugmill_ajax_generate_entities() {
 
 	$entities = array_values( array_filter(
 		array_map( function( $entity ) use ( $allowed_types ) {
-			$type = sanitize_text_field( $entity['type'] ?? 'Thing' );
-			return array(
+			$type   = sanitize_text_field( $entity['type'] ?? 'Thing' );
+			$mapped = array(
 				'name'        => sanitize_text_field( $entity['name'] ?? '' ),
 				'type'        => in_array( $type, $allowed_types, true ) ? $type : 'Thing',
 				'description' => sanitize_text_field( $entity['description'] ?? '' ),
 			);
+			$same_as = wppugmill_validate_same_as_url( $entity['same_as'] ?? '' );
+			if ( $same_as ) {
+				$mapped['same_as'] = $same_as;
+			}
+			return $mapped;
 		}, $raw_entities ),
 		function( $e ) { return ! empty( $e['name'] ); }
 	) );
@@ -166,7 +217,7 @@ Return ONLY a valid JSON object with exactly these fields:
     {"q": "A question a reader might ask", "a": "A clear, direct answer from the content"}
   ],
   "entities": [
-    {"name": "Entity name", "type": "One of: Thing, Person, Organization, Product, Place, Event, Technology", "description": "Brief description of this entity in context"}
+    {"name": "Entity name", "type": "One of: Thing, Person, Organization, Product, Place, Event, Technology, DefinedTerm", "description": "Brief description of this entity in context", "same_as": "Wikidata or Wikipedia URL if highly confident — omit field entirely if uncertain"}
   ],
   "keywords": ["keyword1", "keyword2"]
 }
@@ -344,12 +395,17 @@ function wppugmill_parse_ai_response( $response, $provider ) {
 		) ),
 		'entities'  => array_values( array_filter(
 			array_map( function( $entity ) use ( $allowed_types ) {
-				$type = sanitize_text_field( $entity['type'] ?? 'Thing' );
-				return array(
+				$type   = sanitize_text_field( $entity['type'] ?? 'Thing' );
+				$mapped = array(
 					'name'        => sanitize_text_field( $entity['name'] ?? '' ),
 					'type'        => in_array( $type, $allowed_types, true ) ? $type : 'Thing',
 					'description' => sanitize_text_field( $entity['description'] ?? '' ),
 				);
+				$same_as = wppugmill_validate_same_as_url( $entity['same_as'] ?? '' );
+				if ( $same_as ) {
+					$mapped['same_as'] = $same_as;
+				}
+				return $mapped;
 			}, is_array( $aeo['entities'] ?? null ) ? $aeo['entities'] : array() ),
 			function( $e ) { return ! empty( $e['name'] ); }
 		) ),
