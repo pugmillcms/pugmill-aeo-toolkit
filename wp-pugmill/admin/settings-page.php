@@ -481,6 +481,142 @@ function wppugmill_render_settings_page() {
 		</script>
 		<?php endif; ?>
 
+		<?php
+		// ── llms.txt Completeness Score ───────────────────────────────────────
+		global $wpdb;
+
+		$post_ids = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			"SELECT ID FROM {$wpdb->posts}
+			 WHERE post_status = 'publish'
+			 AND post_type IN ('post', 'page')
+			 ORDER BY post_modified DESC
+			 LIMIT 500"
+		);
+		$total = count( $post_ids );
+
+		$with_summary  = 0;
+		$with_qa       = 0;
+		$with_keywords = 0;
+		$with_entities = 0;
+
+		if ( $total > 0 ) {
+			// Single query for all AEO meta — avoids N+1 per-post reads.
+			$ids_in = implode( ',', array_map( 'intval', $post_ids ) );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared
+			$rows = $wpdb->get_results(
+				"SELECT meta_value FROM {$wpdb->postmeta}
+				 WHERE meta_key = '_wppugmill_aeo'
+				 AND post_id IN ({$ids_in})"
+			);
+			foreach ( (array) $rows as $row ) {
+				$aeo = json_decode( $row->meta_value, true );
+				if ( ! is_array( $aeo ) ) { continue; }
+				if ( ! empty( $aeo['summary'] ) )   { $with_summary++; }
+				if ( ! empty( $aeo['questions'] ) )  { $with_qa++; }
+				if ( ! empty( $aeo['keywords'] ) )   { $with_keywords++; }
+				if ( ! empty( $aeo['entities'] ) )   { $with_entities++; }
+			}
+		}
+
+		$has_site_summary = '' !== get_option( 'wppugmill_site_summary', '' );
+		$has_org_name     = '' !== get_option( 'wppugmill_org_name', '' );
+		$summary_pct      = $total > 0 ? round( $with_summary  / $total * 100 ) : 0;
+		$qa_pct           = $total > 0 ? round( $with_qa       / $total * 100 ) : 0;
+		$keywords_pct     = $total > 0 ? round( $with_keywords / $total * 100 ) : 0;
+		$entities_pct     = $total > 0 ? round( $with_entities / $total * 100 ) : 0;
+
+		$score  = 0;
+		$score += $has_site_summary ? 20 : 0;
+		$score += $has_org_name     ? 5  : 0;
+		$score += (int) round( $summary_pct  / 100 * 30 );
+		$score += (int) round( $qa_pct       / 100 * 20 );
+		$score += (int) round( $keywords_pct / 100 * 15 );
+		$score += (int) round( $entities_pct / 100 * 10 );
+
+		$score_color = $score >= 80 ? '#46b450' : ( $score >= 50 ? '#d97706' : '#cc1818' );
+		$score_label = $score >= 80
+			? __( 'Strong', 'wp-pugmill' )
+			: ( $score >= 50 ? __( 'Developing', 'wp-pugmill' ) : __( 'Needs Work', 'wp-pugmill' ) );
+
+		/**
+		 * Render one coverage bar row.
+		 *
+		 * @param string $label   Human label.
+		 * @param int    $pct     Percentage filled (0–100).
+		 * @param int    $count   Posts with this field set.
+		 * @param int    $total   Total published posts.
+		 */
+		$coverage_row = function( $label, $pct, $count, $total ) {
+			$bar_color = $pct >= 70 ? '#7c3aed' : ( $pct >= 40 ? '#d97706' : '#cc1818' );
+			?>
+			<div style="margin:10px 0;">
+				<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
+					<span style="font-size:12px; color:#374151;"><?php echo esc_html( $label ); ?></span>
+					<span style="font-size:12px; color:#6b7280;"><?php echo esc_html( $count . '/' . $total . ' (' . $pct . '%)' ); ?></span>
+				</div>
+				<div style="height:6px; background:#e5e7eb; border-radius:9999px; overflow:hidden;">
+					<div style="height:100%; width:<?php echo esc_attr( $pct ); ?>%; background:<?php echo esc_attr( $bar_color ); ?>; border-radius:9999px;"></div>
+				</div>
+			</div>
+			<?php
+		};
+		?>
+
+		<div style="background:#faf7ff; border:1px solid #d4c8f0; border-radius:8px; padding:20px 24px; margin:24px 0 0;">
+			<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;">
+				<div>
+					<h3 style="margin:0 0 4px; font-size:14px; font-weight:600; color:#1d2327;">
+						<?php esc_html_e( 'llms.txt Quality Score', 'wp-pugmill' ); ?>
+					</h3>
+					<p style="margin:0; font-size:12px; color:#6b7280;">
+						<?php
+						printf(
+							/* translators: %d: number of posts analysed */
+							esc_html__( 'Based on %d published posts. Higher scores mean richer content for AI crawlers.', 'wp-pugmill' ),
+							(int) $total
+						);
+						?>
+					</p>
+				</div>
+				<div style="text-align:right; flex-shrink:0;">
+					<span style="font-size:28px; font-weight:700; color:<?php echo esc_attr( $score_color ); ?>; line-height:1;"><?php echo (int) $score; ?></span>
+					<span style="font-size:14px; color:#9ca3af;">/100</span>
+					<p style="margin:2px 0 0; font-size:11px; font-weight:600; color:<?php echo esc_attr( $score_color ); ?>; text-transform:uppercase; letter-spacing:.05em;">
+						<?php echo esc_html( $score_label ); ?>
+					</p>
+				</div>
+			</div>
+
+			<div style="margin-top:16px; padding-top:16px; border-top:1px solid #e8e0f7; display:grid; grid-template-columns:1fr 1fr; gap:0 32px;">
+				<div>
+					<p style="font-size:11px; font-weight:700; color:#7c3aed; text-transform:uppercase; letter-spacing:.06em; margin:0 0 8px;">
+						<?php esc_html_e( 'Site Level', 'wp-pugmill' ); ?>
+					</p>
+					<p style="font-size:12px; margin:4px 0; color:#374151;">
+						<?php echo $has_site_summary ? '✓' : '✗'; ?>
+						<?php esc_html_e( 'Site summary', 'wp-pugmill' ); ?>
+					</p>
+					<p style="font-size:12px; margin:4px 0; color:#374151;">
+						<?php echo $has_org_name ? '✓' : '✗'; ?>
+						<?php esc_html_e( 'Organization name', 'wp-pugmill' ); ?>
+					</p>
+				</div>
+				<div>
+					<p style="font-size:11px; font-weight:700; color:#7c3aed; text-transform:uppercase; letter-spacing:.06em; margin:0 0 6px;">
+						<?php esc_html_e( 'Post Coverage', 'wp-pugmill' ); ?>
+					</p>
+					<?php if ( $total > 0 ) : ?>
+					<?php $coverage_row( __( 'Summaries', 'wp-pugmill' ),  $summary_pct,  $with_summary,  $total ); ?>
+					<?php $coverage_row( __( 'Q&A pairs', 'wp-pugmill' ),  $qa_pct,       $with_qa,       $total ); ?>
+					<?php $coverage_row( __( 'Keywords',  'wp-pugmill' ),  $keywords_pct, $with_keywords, $total ); ?>
+					<?php $coverage_row( __( 'Entities',  'wp-pugmill' ),  $entities_pct, $with_entities, $total ); ?>
+					<?php else : ?>
+					<p style="font-size:12px; color:#9ca3af;"><?php esc_html_e( 'No published posts yet.', 'wp-pugmill' ); ?></p>
+					<?php endif; ?>
+				</div>
+			</div>
+		</div>
+
 		<?php elseif ( 'author-voice' === $active_tab ) : ?>
 		<!-- ════════════════════════════════════════════════════════════
 		     AUTHOR VOICE TAB
