@@ -4,7 +4,7 @@ Tags: AEO, answer engine optimization, AI, llms.txt, schema, structured data, SE
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 0.5.6
+Stable tag: 0.5.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -123,6 +123,9 @@ Yes. WP Pugmill is focused on AEO (AI discoverability) and does not conflict wit
 4. Example llms.txt output
 
 == Changelog ==
+
+= 0.5.7 =
+* **Bot Analytics structured report**: AI Insights analysis now returns a structured report with four labeled sections (Bot Activity, Content Coverage, AI vs Search Bots, Recommendations) rendered as scannable subheadings in the dashboard.
 
 = 0.5.6 =
 * **Schema type label**: The default schema type in the Schema panel now shows "Article" instead of "— None (Article only) —" for clarity.

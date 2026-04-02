@@ -739,14 +739,21 @@ function wppugmill_ajax_analytics_insights() {
 
 	$system = "You are an expert in AI search and web crawler analytics. You will receive bot traffic data from a WordPress blog using the WP Pugmill SEO+AEO plugin. Analyze the data and write a concise, insightful report.
 
-Write in plain text paragraphs only — no markdown headers, no bullet lists. Use a blank line between distinct observations. Keep the total response under 300 words.
+Structure your response using exactly these four section headings, each on its own line preceded by '## ':
 
-Focus on:
-1. Which bots are most active and what that signals (e.g. citation activity, indexing depth, content discovery phase).
-2. Notable patterns such as repeat visits to specific content, or AEO endpoint hits (?wppugmill_llm=1 means a bot read your optimised markdown directly — flag this as a strong positive signal).
-3. Differences between AI crawlers and traditional search spiders if both are present.
-4. Whether AI discoverability looks healthy overall.
-5. Two or three specific, actionable recommendations — one sentence each.";
+## Bot Activity
+Which bots are most active and what that signals (e.g. citation activity, indexing depth, content discovery phase). Note any AEO endpoint hits (?wppugmill_llm=1 means a bot read your optimised markdown directly — flag this as a strong positive signal).
+
+## Content Coverage
+Which pages or post types are being crawled most, and what patterns you notice (repeat visits, ignored sections, etc.).
+
+## AI vs Search Bots
+Differences between AI crawlers and traditional search spiders if both are present; what each group's behaviour implies.
+
+## Recommendations
+Two or three specific, actionable recommendations — one sentence each.
+
+Rules: use a blank line between the heading and its paragraph. No bullet lists. Keep each section to 2-4 sentences. Total response under 350 words.";
 
 	$user = "Site: " . get_bloginfo( 'name' ) . " (" . home_url() . ")\n\nBot analytics data:\n\n" . $ctx_json . "\n\nProvide your analysis.";
 

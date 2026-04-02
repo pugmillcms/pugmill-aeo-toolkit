@@ -915,7 +915,31 @@ function wppugmill_render_settings_page() {
 			<?php if ( $cached_insights ) : ?>
 			<div id="wppugmill-insights-output" style="margin-top:16px; padding-top:16px; border-top:1px solid #e8e0f7;">
 				<div id="wppugmill-insights-text" style="font-size:13px; color:#374151; line-height:1.7;">
-					<?php echo wpautop( esc_html( $cached_insights['text'] ) ); ?>
+					<?php
+					$lines  = explode( "\n", $cached_insights['text'] );
+					$html   = '';
+					$para   = '';
+					foreach ( $lines as $line ) {
+						if ( preg_match( '/^## (.+)$/', $line, $m ) ) {
+							if ( '' !== $para ) {
+								$html .= '<p style="margin:4px 0 10px;">' . nl2br( esc_html( rtrim( $para ) ) ) . '</p>';
+								$para  = '';
+							}
+							$html .= '<p style="font-size:11px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:.06em;margin:14px 0 2px;">' . esc_html( $m[1] ) . '</p>';
+						} elseif ( '' === trim( $line ) ) {
+							if ( '' !== $para ) {
+								$html .= '<p style="margin:4px 0 10px;">' . nl2br( esc_html( rtrim( $para ) ) ) . '</p>';
+								$para  = '';
+							}
+						} else {
+							$para .= ( '' !== $para ? "\n" : '' ) . $line;
+						}
+					}
+					if ( '' !== $para ) {
+						$html .= '<p style="margin:4px 0 10px;">' . nl2br( esc_html( rtrim( $para ) ) ) . '</p>';
+					}
+					echo $html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped inline above
+					?>
 				</div>
 				<p style="font-size:11px; color:#9ca3af; margin:8px 0 0;">
 					<?php
@@ -1363,11 +1387,28 @@ function wppugmill_render_settings_page() {
 						btn.disabled = false;
 						if ( data.success ) {
 							btn.textContent = '✨ Refresh Analysis';
-							// Convert double newlines to paragraphs
-							var html = '<p>' + data.data.text
-								.replace( /\n\n+/g, '</p><p>' )
-								.replace( /\n/g, '<br>' ) + '</p>';
-							text.innerHTML = html;
+							// Render ## headings as styled labels, paragraphs as <p> blocks.
+							var lines    = data.data.text.split( '\n' );
+							var parts    = [];
+							var paraLines = [];
+							function flushPara() {
+								if ( paraLines.length ) {
+									parts.push( '<p style="margin:4px 0 10px;">' + paraLines.join( '<br>' ) + '</p>' );
+									paraLines = [];
+								}
+							}
+							lines.forEach( function( line ) {
+								if ( /^## /.test( line ) ) {
+									flushPara();
+									parts.push( '<p style="font-size:11px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:.06em;margin:14px 0 2px;">' + line.replace( /^## /, '' ) + '</p>' );
+								} else if ( line.trim() === '' ) {
+									flushPara();
+								} else {
+									paraLines.push( line );
+								}
+							} );
+							flushPara();
+							text.innerHTML = parts.join( '' );
 							if ( status ) {
 								var ago = Math.round( ( Date.now() / 1000 - data.data.generated ) / 60 );
 								status.textContent = ago < 1
