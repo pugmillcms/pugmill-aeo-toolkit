@@ -4,7 +4,7 @@ Tags: AEO, answer engine optimization, AI, llms.txt, schema, structured data, SE
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 0.5.7
+Stable tag: 0.6.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -123,6 +123,10 @@ Yes. WP Pugmill is focused on AEO (AI discoverability) and does not conflict wit
 4. Example llms.txt output
 
 == Changelog ==
+
+= 0.6.0 =
+* **AEO endpoint discovery in llms.txt**: Every post entry in `/llms.txt` and `/llms-full.txt` now includes a `Markdown:` line pointing directly to the post's `?wppugmill_llm=1` optimised endpoint. AI crawlers that read llms.txt (ChatGPT confirmed, others emerging) now have an explicit map to every structured content endpoint — no inference from HTML headers required.
+* **Sitemap alternate link annotations**: `/sitemap.xml` now includes `<xhtml:link rel="alternate" type="text/markdown">` inside every post and page `<url>` block. AI crawlers in structured discovery mode (ClaudeBot confirmed) can follow these directly to the AEO markdown endpoints rather than parsing raw HTML.
 
 = 0.5.7 =
 * **Bot Analytics structured report**: AI Insights analysis now returns a structured report with four labeled sections (Bot Activity, Content Coverage, AI vs Search Bots, Recommendations) rendered as scannable subheadings in the dashboard.

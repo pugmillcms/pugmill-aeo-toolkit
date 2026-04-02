@@ -198,7 +198,8 @@ function wppugmill_serve_llms_txt() {
 		$summary = html_entity_decode( $summary, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
 		$url     = get_permalink( $post->ID );
 		$title   = html_entity_decode( get_the_title( $post->ID ), ENT_QUOTES | ENT_HTML5, 'UTF-8' );
-		$line    = "- [{$title}]({$url}): {$summary}\n";
+		$llm_url = add_query_arg( 'wppugmill_llm', '1', $url );
+		$line    = "- [{$title}]({$url}): {$summary}\n  Markdown: {$llm_url}\n";
 
 		if ( 'page' === $post->post_type ) {
 			$page_entries[] = $line;
@@ -290,13 +291,15 @@ function wppugmill_serve_llms_full_txt() {
 		if ( wppugmill_post_is_noindexed( $post->ID ) ) {
 			continue;
 		}
-		$aeo   = wppugmill_get_aeo( $post->ID );
-		$url   = get_permalink( $post->ID );
-		$title = html_entity_decode( get_the_title( $post->ID ), ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+		$aeo     = wppugmill_get_aeo( $post->ID );
+		$url     = get_permalink( $post->ID );
+		$title   = html_entity_decode( get_the_title( $post->ID ), ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+		$llm_url = add_query_arg( 'wppugmill_llm', '1', $url );
 
 		echo "---\n\n";
 		echo "## {$title}\n";
 		echo "URL: {$url}\n";
+		echo "Markdown: {$llm_url}\n";
 		echo "Published: {$post->post_date}\n";
 		echo "Modified: {$post->post_modified}\n\n";
 

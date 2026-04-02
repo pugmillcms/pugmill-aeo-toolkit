@@ -48,7 +48,7 @@ function wppugmill_maybe_serve_sitemap() {
 	header( 'X-Robots-Tag: noindex, follow' );
 
 	echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
-	echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
+	echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">' . "\n";
 
 	foreach ( wppugmill_sitemap_collect_urls() as $entry ) {
 		echo "\t<url>\n";
@@ -56,6 +56,9 @@ function wppugmill_maybe_serve_sitemap() {
 		echo "\t\t<lastmod>" . esc_html( $entry['lastmod'] ) . "</lastmod>\n";
 		echo "\t\t<changefreq>" . esc_html( $entry['changefreq'] ) . "</changefreq>\n";
 		echo "\t\t<priority>" . esc_html( $entry['priority'] ) . "</priority>\n";
+		if ( ! empty( $entry['markdown'] ) ) {
+			echo "\t\t<xhtml:link rel=\"alternate\" type=\"text/markdown\" href=\"" . esc_url( $entry['markdown'] ) . "\"/>\n";
+		}
 		echo "\t</url>\n";
 	}
 
@@ -113,13 +116,15 @@ function wppugmill_sitemap_collect_urls() {
 				continue;
 			}
 
-			$is_front = ( (int) get_option( 'page_on_front' ) === $post->ID );
+			$is_front  = ( (int) get_option( 'page_on_front' ) === $post->ID );
+			$permalink = get_permalink( $post->ID );
 
 			$urls[] = array(
-				'loc'        => get_permalink( $post->ID ),
+				'loc'        => $permalink,
 				'lastmod'    => wppugmill_sitemap_date( $post->post_modified_gmt ),
 				'changefreq' => 'weekly',
 				'priority'   => $is_front ? '1.0' : ( 'post' === $post_type ? '0.8' : '0.6' ),
+				'markdown'   => add_query_arg( 'wppugmill_llm', '1', $permalink ),
 			);
 		}
 	}
