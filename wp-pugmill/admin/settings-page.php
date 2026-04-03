@@ -255,7 +255,37 @@ function wppugmill_render_settings_page() {
 		<p style="<?php echo esc_attr( $p_style ); ?> margin-top:24px;">
 			<?php esc_html_e( 'WP Pugmill uses a bring-your-own-key model — you connect directly to Anthropic, OpenAI, or Google Gemini using your own API account. Your key is encrypted and stored server-side only, never exposed to visitors or transmitted through our servers. Usage is billed directly by your chosen AI provider.', 'wp-pugmill' ); ?>
 		</p>
-		<form method="post" action="options.php" style="margin-top:16px;">
+
+		<div style="margin:20px 0 4px; max-width:700px;">
+			<p style="font-size:12px; font-weight:700; color:#1e1e1e; text-transform:uppercase; letter-spacing:.05em; margin:0 0 10px;">
+				<?php esc_html_e( 'How to connect', 'wp-pugmill' ); ?>
+			</p>
+			<ol style="font-size:13px; color:#444; margin:0 0 20px; padding-left:20px; line-height:1.8;">
+				<li><?php esc_html_e( 'Choose a provider and create a free account (you only pay for what you use).', 'wp-pugmill' ); ?></li>
+				<li><?php esc_html_e( 'Generate an API key in your provider\'s console (links below).', 'wp-pugmill' ); ?></li>
+				<li><?php esc_html_e( 'Paste the key in the form and click Save Settings.', 'wp-pugmill' ); ?></li>
+			</ol>
+
+			<div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px;">
+				<div style="padding:14px; background:#f9f6ff; border:1px solid #e8d5fd; border-radius:6px;">
+					<p style="font-size:13px; font-weight:700; color:#1e1e1e; margin:0 0 4px;">Anthropic — Claude</p>
+					<p style="font-size:12px; color:#555; margin:0 0 10px; line-height:1.5;"><?php esc_html_e( 'Excellent reasoning and long-form writing. Recommended for AEO and editorial tasks.', 'wp-pugmill' ); ?></p>
+					<a href="<?php echo esc_url( 'https://console.anthropic.com/settings/keys' ); ?>" target="_blank" style="font-size:12px; font-weight:600; color:#7c3aed; text-decoration:none;"><?php esc_html_e( 'Get API key →', 'wp-pugmill' ); ?></a>
+				</div>
+				<div style="padding:14px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:6px;">
+					<p style="font-size:13px; font-weight:700; color:#1e1e1e; margin:0 0 4px;">OpenAI — GPT</p>
+					<p style="font-size:12px; color:#555; margin:0 0 10px; line-height:1.5;"><?php esc_html_e( 'Widely used and reliable. Strong across summarization, SEO, and structured output.', 'wp-pugmill' ); ?></p>
+					<a href="<?php echo esc_url( 'https://platform.openai.com/api-keys' ); ?>" target="_blank" style="font-size:12px; font-weight:600; color:#16a34a; text-decoration:none;"><?php esc_html_e( 'Get API key →', 'wp-pugmill' ); ?></a>
+				</div>
+				<div style="padding:14px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px;">
+					<p style="font-size:13px; font-weight:700; color:#1e1e1e; margin:0 0 4px;">Google — Gemini</p>
+					<p style="font-size:12px; color:#555; margin:0 0 10px; line-height:1.5;"><?php esc_html_e( 'Google\'s multimodal model. Well-suited for search-aware content and entity recognition.', 'wp-pugmill' ); ?></p>
+					<a href="<?php echo esc_url( 'https://aistudio.google.com/apikey' ); ?>" target="_blank" style="font-size:12px; font-weight:600; color:#2563eb; text-decoration:none;"><?php esc_html_e( 'Get API key →', 'wp-pugmill' ); ?></a>
+				</div>
+			</div>
+		</div>
+
+		<form method="post" action="options.php" style="margin-top:24px;">
 			<?php settings_fields( 'wppugmill_settings' ); ?>
 			<table class="form-table">
 				<tr>
@@ -278,16 +308,7 @@ function wppugmill_render_settings_page() {
 							value="<?php echo esc_attr( wppugmill_mask_secret( $api_key ) ); ?>"
 							style="width:420px;"
 							placeholder="sk-...">
-						<?php
-						$desc_links = sprintf(
-							/* translators: 1: Anthropic link 2: OpenAI link 3: Google AI Studio link */
-							esc_html__( 'Get your key from %1$s, %2$s, or %3$s.', 'wp-pugmill' ),
-							'<a href="' . esc_url( 'https://console.anthropic.com' ) . '" target="_blank">Anthropic</a>',
-							'<a href="' . esc_url( 'https://platform.openai.com' ) . '" target="_blank">OpenAI</a>',
-							'<a href="' . esc_url( 'https://aistudio.google.com' ) . '" target="_blank">Google AI Studio</a>'
-						);
-						echo '<p class="description">' . wp_kses( $desc_links, array( 'a' => array( 'href' => array(), 'target' => array() ) ) ) . '</p>';
-						?>
+						<p class="description"><?php esc_html_e( 'Paste the API key from your chosen provider above. The key is encrypted before storage.', 'wp-pugmill' ); ?></p>
 					</td>
 				</tr>
 				<tr>
