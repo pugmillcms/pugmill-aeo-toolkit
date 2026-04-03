@@ -578,7 +578,8 @@ export function MainPanel() {
 
 			<AiInput onUsageChange={ fetchUsage } onAction={ aiPanelActions } />
 
-			{ /* ── Analyze section (AI mode only) ──────────────────────────── */ }
+			{ /* ── Content section (AI mode only) ──────────────────────────── */ }
+			{ IS_AI_MODE && <SectionHeader label="Content" /> }
 
 			{ /* Tone Check */ }
 			{ IS_AI_MODE && (
@@ -649,43 +650,6 @@ export function MainPanel() {
 						style={ { width: '100%', justifyContent: 'center', ...BUTTON_STYLE } }
 					>
 						{ toneLoading ? 'Checking…' : '🎨 Check Tone' }
-					</Button>
-				</PanelBody>
-			) }
-
-			{ /* Reading Level */ }
-			{ IS_AI_MODE && (
-				<PanelBody title="Reading Level" opened={ readingOpen } onToggle={ () => setReadingOpen( ! readingOpen ) }>
-					{ readingState.error && (
-						<Notice status="error" isDismissible={ false } style={ { marginBottom: '8px' } }>{ readingState.error }</Notice>
-					) }
-					{ readingState.result && (
-						<div style={ { marginBottom: '8px' } }>
-							<p style={ { margin: '0 0 4px', fontSize: '13px' } }>
-								<strong>{ readingState.result.level }</strong>
-								<span style={ { color: '#888', fontSize: '11px', marginLeft: '6px' } }>
-									Grade { readingState.result.gradeLevel }
-								</span>
-							</p>
-							<p style={ { margin: '0 0 4px', fontSize: '12px', color: '#555' } }>{ readingState.result.note }</p>
-							{ readingState.result.fit && (
-								<p style={ { margin: '0 0 4px', fontSize: '11px', color: '#777' } }>
-									{ readingState.result.fit }
-								</p>
-							) }
-							<p style={ { margin: '0', fontSize: '11px', color: '#999' } }>
-								To adjust the reading level, use the <strong>Ask</strong> bar with instructions like "simplify for a general audience".
-							</p>
-						</div>
-					) }
-					<Button
-						variant="secondary"
-						isBusy={ readingState.loading }
-						disabled={ readingState.loading }
-						onClick={ runReadingLevel }
-						style={ { width: '100%', justifyContent: 'center', ...BUTTON_STYLE } }
-					>
-						{ readingState.loading ? 'Analyzing…' : '📖 Analyze Reading Level' }
 					</Button>
 				</PanelBody>
 			) }
@@ -869,6 +833,43 @@ export function MainPanel() {
 				</PanelBody>
 			) }
 
+
+			{ /* Reading Level */ }
+			{ IS_AI_MODE && (
+				<PanelBody title="Reading Level" opened={ readingOpen } onToggle={ () => setReadingOpen( ! readingOpen ) }>
+					{ readingState.error && (
+						<Notice status="error" isDismissible={ false } style={ { marginBottom: '8px' } }>{ readingState.error }</Notice>
+					) }
+					{ readingState.result && (
+						<div style={ { marginBottom: '8px' } }>
+							<p style={ { margin: '0 0 4px', fontSize: '13px' } }>
+								<strong>{ readingState.result.level }</strong>
+								<span style={ { color: '#888', fontSize: '11px', marginLeft: '6px' } }>
+									Grade { readingState.result.gradeLevel }
+								</span>
+							</p>
+							<p style={ { margin: '0 0 4px', fontSize: '12px', color: '#555' } }>{ readingState.result.note }</p>
+							{ readingState.result.fit && (
+								<p style={ { margin: '0 0 4px', fontSize: '11px', color: '#777' } }>
+									{ readingState.result.fit }
+								</p>
+							) }
+							<p style={ { margin: '0', fontSize: '11px', color: '#999' } }>
+								To adjust the reading level, use the <strong>Ask</strong> bar with instructions like "simplify for a general audience".
+							</p>
+						</div>
+					) }
+					<Button
+						variant="secondary"
+						isBusy={ readingState.loading }
+						disabled={ readingState.loading }
+						onClick={ runReadingLevel }
+						style={ { width: '100%', justifyContent: 'center', ...BUTTON_STYLE } }
+					>
+						{ readingState.loading ? 'Analyzing…' : '📖 Analyze Reading Level' }
+					</Button>
+				</PanelBody>
+			) }
 
 			{ /* ── AEO Health ─────────────────────────────────────────────── */ }
 			{ ( () => {
