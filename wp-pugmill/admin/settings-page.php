@@ -636,7 +636,102 @@ function wppugmill_render_settings_page() {
 					<?php endif; ?>
 				</div>
 			</div>
+
+			<div style="margin-top:16px; padding-top:16px; border-top:1px solid #e8e0f7;">
+				<p style="font-size:11px; font-weight:700; color:#7c3aed; text-transform:uppercase; letter-spacing:.06em; margin:0 0 8px;">
+					<?php esc_html_e( 'How this is scored', 'wp-pugmill' ); ?>
+				</p>
+				<div style="display:grid; grid-template-columns:1fr 1fr; gap:3px 16px; font-size:11px; color:#6b7280; margin-bottom:10px;">
+					<span><?php esc_html_e( 'Site summary — 20 pts', 'wp-pugmill' ); ?></span>
+					<span><?php esc_html_e( 'Post summaries — up to 30 pts', 'wp-pugmill' ); ?></span>
+					<span><?php esc_html_e( 'Organization name — 5 pts', 'wp-pugmill' ); ?></span>
+					<span><?php esc_html_e( 'Q&A pairs — up to 20 pts', 'wp-pugmill' ); ?></span>
+					<span></span>
+					<span><?php esc_html_e( 'Keywords — up to 15 pts', 'wp-pugmill' ); ?></span>
+					<span></span>
+					<span><?php esc_html_e( 'Entities — up to 10 pts', 'wp-pugmill' ); ?></span>
+				</div>
+				<p style="font-size:12px; color:#6b7280; margin:0 0 12px; line-height:1.5;">
+					<?php esc_html_e( 'AI answer engines read /llms.txt to understand your site. Richer metadata means more accurate AI-generated answers and summaries that attribute content back to you.', 'wp-pugmill' ); ?>
+				</p>
+				<?php if ( $ai_available ) : ?>
+				<button id="wppugmill-improve-llms-btn" type="button"
+					data-score="<?php echo esc_attr( (int) $score ); ?>"
+					data-total="<?php echo esc_attr( (int) $total ); ?>"
+					data-has-summary="<?php echo esc_attr( $has_site_summary ? '1' : '0' ); ?>"
+					data-has-org="<?php echo esc_attr( $has_org_name ? '1' : '0' ); ?>"
+					data-summary-pct="<?php echo esc_attr( (int) $summary_pct ); ?>"
+					data-qa-pct="<?php echo esc_attr( (int) $qa_pct ); ?>"
+					data-keywords-pct="<?php echo esc_attr( (int) $keywords_pct ); ?>"
+					data-entities-pct="<?php echo esc_attr( (int) $entities_pct ); ?>"
+					style="display:inline-flex; align-items:center; gap:6px; padding:7px 16px; font-size:12px; font-weight:600; background:#7c3aed; color:#fff; border:none; border-radius:4px; cursor:pointer; white-space:nowrap;">
+					✨ <?php esc_html_e( 'Get AI Improvement Tips', 'wp-pugmill' ); ?>
+				</button>
+				<?php endif; ?>
+			</div>
 		</div>
+
+		<?php if ( $ai_available ) : ?>
+		<div id="wppugmill-improve-llms-output" style="display:none; margin-top:12px; padding:16px 20px; background:#f9f6ff; border:1px solid #d4c8f0; border-radius:8px;">
+			<p style="font-size:11px; font-weight:700; color:#7c3aed; text-transform:uppercase; letter-spacing:.06em; margin:0 0 10px;">
+				<?php esc_html_e( 'AI Improvement Tips', 'wp-pugmill' ); ?>
+			</p>
+			<div id="wppugmill-improve-llms-text" style="font-size:13px; color:#1d2327; line-height:1.6;"></div>
+		</div>
+		<script>
+		(function() {
+			var btn    = document.getElementById( 'wppugmill-improve-llms-btn' );
+			var output = document.getElementById( 'wppugmill-improve-llms-output' );
+			var text   = document.getElementById( 'wppugmill-improve-llms-text' );
+			if ( ! btn || ! output || ! text ) { return; }
+
+			btn.addEventListener( 'click', function() {
+				btn.disabled  = true;
+				btn.innerHTML = '<span class="wppugmill-btn-spinner"></span> <?php echo esc_js( __( 'Analyzing…', 'wp-pugmill' ) ); ?>';
+				output.style.display = 'block';
+				text.innerHTML = '<span style="color:#9ca3af;font-size:13px;"><?php echo esc_js( __( 'Asking AI to review your score…', 'wp-pugmill' ) ); ?></span>';
+
+				var body = new URLSearchParams( {
+					action:       'wppugmill_improve_llms_score',
+					nonce:        <?php echo wp_json_encode( wp_create_nonce( 'wppugmill_improve_llms_score' ) ); ?>,
+					score:        btn.dataset.score,
+					total:        btn.dataset.total,
+					has_summary:  btn.dataset.hasSummary,
+					has_org:      btn.dataset.hasOrg,
+					summary_pct:  btn.dataset.summaryPct,
+					qa_pct:       btn.dataset.qaPct,
+					keywords_pct: btn.dataset.keywordsPct,
+					entities_pct: btn.dataset.entitiesPct,
+				} );
+
+				fetch( <?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>, {
+					method:      'POST',
+					credentials: 'same-origin',
+					headers:     { 'Content-Type': 'application/x-www-form-urlencoded' },
+					body:        body.toString(),
+				} )
+				.then( function( r ) { return r.json(); } )
+				.then( function( data ) {
+					if ( data.success && data.data && data.data.text ) {
+						var tips = data.data.text.split( /\n\n+/ ).filter( Boolean );
+						text.innerHTML = tips.map( function( t, i ) {
+							return '<p style="margin:' + ( i === 0 ? '0' : '10px' ) + ' 0 0; font-size:13px; color:#1d2327; line-height:1.6;"><strong>' + ( i + 1 ) + '.</strong> ' + t.trim().replace( /</g, '&lt;' ).replace( />/g, '&gt;' ) + '</p>';
+						} ).join( '' );
+					} else {
+						text.innerHTML = '<span style="color:#dc3232;font-size:13px;">' + ( ( data.data && data.data.message ) || '<?php echo esc_js( __( 'Something went wrong. Please try again.', 'wp-pugmill' ) ); ?>' ) + '</span>';
+					}
+				} )
+				.catch( function() {
+					text.innerHTML = '<span style="color:#dc3232;font-size:13px;"><?php echo esc_js( __( 'Request failed. Please try again.', 'wp-pugmill' ) ); ?></span>';
+				} )
+				.finally( function() {
+					btn.disabled  = false;
+					btn.innerHTML = '✨ <?php echo esc_js( __( 'Get AI Improvement Tips', 'wp-pugmill' ) ); ?>';
+				} );
+			} );
+		}());
+		</script>
+		<?php endif; ?>
 
 		<?php elseif ( 'author-voice' === $active_tab ) : ?>
 		<!-- ════════════════════════════════════════════════════════════
