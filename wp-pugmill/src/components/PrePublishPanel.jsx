@@ -7,7 +7,7 @@
  * @package WPPugmill
  */
 
-import { PluginPrePublishPanel } from '@wordpress/editor';
+import { PluginPrePublishPanel } from '@wordpress/edit-post';
 import { useSelect } from '@wordpress/data';
 
 import { useAeoMeta } from '../hooks';
