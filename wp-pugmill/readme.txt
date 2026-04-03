@@ -4,7 +4,7 @@ Tags: AEO, answer engine optimization, AI, llms.txt, schema, structured data, SE
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 0.6.7
+Stable tag: 0.6.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -136,6 +136,10 @@ Yes. WP Pugmill is focused on AEO (AI discoverability) and does not conflict wit
 4. Example llms.txt output
 
 == Changelog ==
+
+= 0.6.8 =
+* **Cleanup**: Remove orphaned AuditPanel.jsx component file.
+* **Code quality**: Fix British-English spellings in comments and test strings (`colour` → `color`, `optimisation` → `optimization`).
 
 = 0.6.2 =
 * **Loading spinners**: Refine Focus, Swap Content, and Bot Analytics "Get AI Analysis" buttons now show a spinner animation during AI calls — consistent with the Generate All button.

@@ -24,7 +24,7 @@ import {
 } from '../constants';
 
 /**
- * Returns a colour based on how close a character count is to its limit.
+ * Returns a color based on how close a character count is to its limit.
  * Neutral at 0, warning near the limit, red over it.
  */
 function countColor( count, max ) {

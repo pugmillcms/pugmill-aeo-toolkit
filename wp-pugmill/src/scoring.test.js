@@ -357,7 +357,7 @@ describe( 'computeScore — Keywords (10 pts)', () => {
 
 describe( 'computeScore — Keywords found in content (10 pts)', () => {
 	test( 'passes when at least one keyword appears in the post body', () => {
-		const content = '<p>This post is about pugmill optimisation.</p>';
+		const content = '<p>This post is about pugmill optimization.</p>';
 		const aeo     = aeoWith( { keywords: [ 'pugmill', 'seo', 'aeo', 'content', 'strategy' ] } );
 		const { items } = computeScore( aeo, emptySeo, optsWith( { postContent: content } ) );
 		expect( items.find( ( i ) => i.id === 'keywords_in_content' ).pass ).toBe( true );

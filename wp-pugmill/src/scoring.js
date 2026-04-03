@@ -195,7 +195,7 @@ export function computeScore( aeo, seo = {}, options = {} ) {
 	} );
 	if ( hasImageAlt ) score += 5;
 
-	// ── Grade / colour ────────────────────────────────────────────────────────
+	// ── Grade / color ─────────────────────────────────────────────────────────
 	let grade, color;
 	if ( score >= 90 )      { grade = 'Excellent'; color = '#46b450'; }
 	else if ( score >= 70 ) { grade = 'Good';      color = '#00a0d2'; }
