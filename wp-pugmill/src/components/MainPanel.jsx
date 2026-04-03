@@ -8,7 +8,7 @@
  * @package WPPugmill
  */
 
-import { PluginDocumentSettingPanel } from '@wordpress/edit-post';
+import { PluginDocumentSettingPanel } from '@wordpress/editor';
 import { PanelBody, Button, Notice, TextControl, TextareaControl, SelectControl } from '@wordpress/components';
 import { useSelect, useDispatch } from '@wordpress/data';
 import { useState, useCallback, useEffect } from '@wordpress/element';
@@ -325,34 +325,39 @@ export function MainPanel() {
 		const normalize = ( s ) => s.replace( /\s+/g, ' ' ).trim().toLowerCase();
 		const stripTags = ( s ) => s.replace( /<[^>]*>/g, '' );
 		const normQuote = normalize( quote );
+		const escapeRe  = ( s ) => s.replace( /[.*+?^${}()|[\]\\]/g, '\\$&' );
 		let applied = false;
 
 		for ( const block of getBlocks() ) {
-			const content = block.attributes.content;
-			if ( ! content ) continue;
+			if ( block.name !== 'core/paragraph' ) continue;
+			const raw = block.attributes.content;
+			if ( ! raw ) continue;
 
 			// 1. Exact match — fast path for unformatted text.
-			if ( content.includes( quote ) ) {
-				updateBlockAttributes( block.clientId, { content: content.replace( quote, suggestion ) } );
+			if ( raw.includes( quote ) ) {
+				updateBlockAttributes( block.clientId, { content: raw.replace( quote, suggestion ) } );
 				applied = true;
 				break;
 			}
 
 			// 2. Tag-tolerant match — quote words present but separated by inline tags
 			//    (bold, italic, links). Replaces the matched span (tags included) with suggestion.
-			const tagMatch = buildTagTolerantRegex( quote ).exec( content );
+			const tagMatch = buildTagTolerantRegex( quote ).exec( raw );
 			if ( tagMatch ) {
-				updateBlockAttributes( block.clientId, { content: content.replace( tagMatch[ 0 ], suggestion ) } );
+				updateBlockAttributes( block.clientId, { content: raw.replace( tagMatch[ 0 ], suggestion ) } );
 				applied = true;
 				break;
 			}
 
-			// 3. Normalised plain-text fallback — handles whitespace/case differences.
-			//    Replaces the quote span in the stripped content; loses inline formatting
-			//    on that sentence but avoids a silent failure.
-			const plainContent = stripTags( content );
-			if ( normalize( plainContent ).includes( normQuote ) ) {
-				updateBlockAttributes( block.clientId, { content: plainContent.replace( new RegExp( quote.replace( /[.*+?^${}()|[\]\\]/g, '\\$&' ), 'i' ), suggestion ) } );
+			// 3. Case-insensitive fallback — handles minor case/punctuation differences.
+			//    Tries to replace in raw HTML first (preserving inline formatting);
+			//    only falls back to stripped content as a last resort.
+			const plain = stripTags( raw );
+			if ( normalize( plain ).includes( normQuote ) ) {
+				const caseRe = new RegExp( escapeRe( quote ), 'i' );
+				updateBlockAttributes( block.clientId, {
+					content: caseRe.test( raw ) ? raw.replace( caseRe, suggestion ) : plain.replace( caseRe, suggestion ),
+				} );
 				applied = true;
 				break;
 			}
@@ -441,12 +446,13 @@ export function MainPanel() {
 					window.wp.data.dispatch( 'core/editor' ).savePost();
 					return;
 				}
-				// 3. Normalised context fallback.
+				// 3. Case-insensitive fallback — context found but anchor text may differ in case.
+				//    Replaces in raw HTML first to preserve inline formatting.
 				if ( normalize( plain ).includes( normalize( link.context ) ) ) {
-					const updated = plain.includes( link.anchorText )
-						? plain.replace( link.anchorText, anchor )
-						: plain.replace( link.context, link.context.replace( link.anchorText, anchor ) );
-					updateBlockAttributes( block.clientId, { content: updated } );
+					const caseRe = new RegExp( link.anchorText.replace( /[.*+?^${}()|[\]\\]/g, '\\$&' ), 'i' );
+					updateBlockAttributes( block.clientId, {
+						content: caseRe.test( raw ) ? raw.replace( caseRe, anchor ) : plain.replace( link.anchorText, anchor ),
+					} );
 					setLinkInserted( ( prev ) => ( { ...prev, [ index ]: 'done' } ) );
 					window.wp.data.dispatch( 'core/editor' ).savePost();
 					return;
@@ -572,7 +578,8 @@ export function MainPanel() {
 
 			<AiInput onUsageChange={ fetchUsage } onAction={ aiPanelActions } />
 
-			{ /* ── Analyze section (AI mode only) ──────────────────────────── */ }
+			{ /* ── Content section (AI mode only) ──────────────────────────── */ }
+			{ IS_AI_MODE && <SectionHeader label="Content" /> }
 
 			{ /* Tone Check */ }
 			{ IS_AI_MODE && (
@@ -594,12 +601,26 @@ export function MainPanel() {
 					{ toneResults && toneResults.length > 0 && (
 						<div style={ { marginBottom: '8px' } }>
 							{ toneResults.map( ( item, i ) => (
-								<div key={ i } style={ { border: '1px solid #e0e0e0', borderRadius: '4px', padding: '10px', marginBottom: '8px', background: '#fff' } }>
-									<p style={ { fontSize: '11px', color: '#666', fontStyle: 'italic', margin: '0 0 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }>
-										"{ item.quote }"
-									</p>
-									<p style={ { fontSize: '11px', color: '#cc1818', margin: '0 0 4px' } }>{ item.issue }</p>
-									<p style={ { fontSize: '11px', color: '#333', margin: '0 0 6px' } }>{ item.suggestion }</p>
+								<div key={ i } style={ {
+									padding:      '8px',
+									background:   '#fff8e1',
+									borderLeft:   '3px solid ' + ( toneApplied[ i ] ? '#46b450' : '#d97706' ),
+									borderRadius: '0 3px 3px 0',
+									marginBottom: '6px',
+								} }>
+									<p style={ { fontSize: '12px', fontWeight: '600', color: '#1e1e1e', margin: '0 0 4px' } }>{ item.issue }</p>
+									<div style={ { display: 'flex', alignItems: 'flex-start', gap: '6px', margin: '0 0 4px' } }>
+										<p style={ { fontSize: '11px', color: '#555', fontStyle: 'italic', margin: 0, lineHeight: '1.4', flex: 1 } }>
+											"{ item.quote }"
+										</p>
+										<button
+											onClick={ () => window.find( item.quote, false, false, true ) }
+											style={ { fontSize: '10px', padding: '1px 6px', background: '#f0f0f0', border: '1px solid #ccc', borderRadius: '3px', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 } }
+										>
+											Find
+										</button>
+									</div>
+									<p style={ { fontSize: '12px', color: '#1e1e1e', margin: '0 0 6px', lineHeight: '1.4' } }>{ item.suggestion }</p>
 									{ toneApplied[ i ] ? (
 										<span style={ { fontSize: '11px', color: '#46b450', fontWeight: '600' } }>✓ Applied</span>
 									) : (
@@ -608,7 +629,7 @@ export function MainPanel() {
 											onClick={ () => applyToneFix( item.quote, item.suggestion, i ) }
 											style={ { fontSize: '11px', padding: '0 12px', ...BUTTON_STYLE } }
 										>
-											Apply fix →
+											⇄ Apply Fix
 										</Button>
 									) }
 									{ toneSwapErrs[ i ] && (
@@ -629,43 +650,6 @@ export function MainPanel() {
 						style={ { width: '100%', justifyContent: 'center', ...BUTTON_STYLE } }
 					>
 						{ toneLoading ? 'Checking…' : '🎨 Check Tone' }
-					</Button>
-				</PanelBody>
-			) }
-
-			{ /* Reading Level */ }
-			{ IS_AI_MODE && (
-				<PanelBody title="Reading Level" opened={ readingOpen } onToggle={ () => setReadingOpen( ! readingOpen ) }>
-					{ readingState.error && (
-						<Notice status="error" isDismissible={ false } style={ { marginBottom: '8px' } }>{ readingState.error }</Notice>
-					) }
-					{ readingState.result && (
-						<div style={ { marginBottom: '8px' } }>
-							<p style={ { margin: '0 0 4px', fontSize: '13px' } }>
-								<strong>{ readingState.result.level }</strong>
-								<span style={ { color: '#888', fontSize: '11px', marginLeft: '6px' } }>
-									Grade { readingState.result.gradeLevel }
-								</span>
-							</p>
-							<p style={ { margin: '0 0 4px', fontSize: '12px', color: '#555' } }>{ readingState.result.note }</p>
-							{ readingState.result.fit && (
-								<p style={ { margin: '0 0 4px', fontSize: '11px', color: '#777' } }>
-									{ readingState.result.fit }
-								</p>
-							) }
-							<p style={ { margin: '0', fontSize: '11px', color: '#999' } }>
-								To adjust the reading level, use the <strong>Ask</strong> bar with instructions like "simplify for a general audience".
-							</p>
-						</div>
-					) }
-					<Button
-						variant="secondary"
-						isBusy={ readingState.loading }
-						disabled={ readingState.loading }
-						onClick={ runReadingLevel }
-						style={ { width: '100%', justifyContent: 'center', ...BUTTON_STYLE } }
-					>
-						{ readingState.loading ? 'Analyzing…' : '📖 Analyze Reading Level' }
 					</Button>
 				</PanelBody>
 			) }
@@ -694,12 +678,12 @@ export function MainPanel() {
 								{ s < 5 && (
 									<Button
 										variant="secondary"
+										isBusy={ refineState.loading }
 										disabled={ refineState.loading }
 										onClick={ () => {
 											setSwapStates( {} );
 											ajaxFetch( 'wppugmill_refine_focus', refineFocusNonce, setRefineState );
 										} }
-										className={ refineState.loading ? 'wppugmill-loading' : '' }
 										style={ { width: '100%', justifyContent: 'center', ...BUTTON_STYLE } }
 									>
 										{ refineState.loading ? 'Working…' : '🎯 Refine Focus' }
@@ -745,6 +729,7 @@ export function MainPanel() {
 										) : (
 											<Button
 												variant="secondary"
+												isBusy={ state === 'loading' }
 												disabled={ state === 'loading' }
 												onClick={ () => swapFocusPassage( issue, i ) }
 												style={ { fontSize: '11px', padding: '0 12px', ...BUTTON_STYLE } }
@@ -792,15 +777,26 @@ export function MainPanel() {
 								const inserted = linkInserted[ i ];
 								return (
 									<div key={ i } style={ {
-										border:       `1px solid ${ inserted === 'done' ? '#46b450' : '#e0e0e0' }`,
-										borderRadius: '4px',
-										padding:      '8px 10px',
-										marginBottom: '8px',
-										background:   '#fff',
+										padding:      '8px',
+										background:   '#fff8e1',
+										borderLeft:   '3px solid ' + ( inserted === 'done' ? '#46b450' : '#ffb900' ),
+										borderRadius: '0 3px 3px 0',
+										marginBottom: '6px',
 									} }>
-										<p style={ { fontSize: '12px', fontWeight: '600', color: '#007cba', margin: '0 0 2px' } }>{ link.title }</p>
-										<p style={ { fontSize: '11px', color: '#555', margin: '0 0 4px' } }>Anchor: <em>{ link.anchorText }</em></p>
-										<p style={ { fontSize: '11px', color: '#777', margin: '0 0 6px', fontStyle: 'italic' } }>"{ link.context }"</p>
+										<p style={ { fontSize: '12px', fontWeight: '600', color: '#1e1e1e', margin: '0 0 4px' } }>
+											{ link.title } <span style={ { fontWeight: '400', color: '#555' } }>→ <em>{ link.anchorText }</em></span>
+										</p>
+										<div style={ { display: 'flex', alignItems: 'flex-start', gap: '6px', margin: '0 0 6px' } }>
+											<p style={ { fontSize: '11px', color: '#555', fontStyle: 'italic', margin: 0, lineHeight: '1.4', flex: 1 } }>
+												"{ link.context }"
+											</p>
+											<button
+												onClick={ () => window.find( link.context, false, false, true ) }
+												style={ { fontSize: '10px', padding: '1px 6px', background: '#f0f0f0', border: '1px solid #ccc', borderRadius: '3px', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 } }
+											>
+												Find
+											</button>
+										</div>
 										{ inserted === 'done' ? (
 											<span style={ { fontSize: '11px', color: '#46b450', fontWeight: '600' } }>✓ Inserted</span>
 										) : (
@@ -810,7 +806,7 @@ export function MainPanel() {
 													onClick={ () => insertLink( link, i ) }
 													style={ { fontSize: '11px', padding: '0 12px', ...BUTTON_STYLE } }
 												>
-													Insert →
+													⇄ Insert Link
 												</Button>
 												<button type="button" onClick={ () => navigator.clipboard?.writeText( `<a href="${ link.url }">${ link.anchorText }</a>` ) }
 													style={ { fontSize: '11px', color: '#555', background: 'none', border: 'none', padding: 0, cursor: 'pointer', textDecoration: 'underline' } }>
@@ -838,6 +834,43 @@ export function MainPanel() {
 				</PanelBody>
 			) }
 
+
+			{ /* Reading Level */ }
+			{ IS_AI_MODE && (
+				<PanelBody title="Reading Level" opened={ readingOpen } onToggle={ () => setReadingOpen( ! readingOpen ) }>
+					{ readingState.error && (
+						<Notice status="error" isDismissible={ false } style={ { marginBottom: '8px' } }>{ readingState.error }</Notice>
+					) }
+					{ readingState.result && (
+						<div style={ { marginBottom: '8px' } }>
+							<p style={ { margin: '0 0 4px', fontSize: '13px' } }>
+								<strong>{ readingState.result.level }</strong>
+								<span style={ { color: '#888', fontSize: '11px', marginLeft: '6px' } }>
+									Grade { readingState.result.gradeLevel }
+								</span>
+							</p>
+							<p style={ { margin: '0 0 4px', fontSize: '12px', color: '#555' } }>{ readingState.result.note }</p>
+							{ readingState.result.fit && (
+								<p style={ { margin: '0 0 4px', fontSize: '11px', color: '#777' } }>
+									{ readingState.result.fit }
+								</p>
+							) }
+							<p style={ { margin: '0', fontSize: '11px', color: '#999' } }>
+								To adjust the reading level, use the <strong>Ask</strong> bar with instructions like "simplify for a general audience".
+							</p>
+						</div>
+					) }
+					<Button
+						variant="secondary"
+						isBusy={ readingState.loading }
+						disabled={ readingState.loading }
+						onClick={ runReadingLevel }
+						style={ { width: '100%', justifyContent: 'center', ...BUTTON_STYLE } }
+					>
+						{ readingState.loading ? 'Analyzing…' : '📖 Analyze Reading Level' }
+					</Button>
+				</PanelBody>
+			) }
 
 			{ /* ── AEO Health ─────────────────────────────────────────────── */ }
 			{ ( () => {

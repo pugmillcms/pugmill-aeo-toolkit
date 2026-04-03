@@ -43,6 +43,17 @@ function wppugmill_register_meta() {
 				'auth_callback' => $auth,
 			)
 		);
+
+		register_post_meta(
+			$post_type,
+			'_wppugmill_seo',
+			array(
+				'single'        => true,
+				'type'          => 'string',
+				'show_in_rest'  => true,
+				'auth_callback' => $auth,
+			)
+		);
 	}
 }
 add_action( 'init', 'wppugmill_register_meta' );

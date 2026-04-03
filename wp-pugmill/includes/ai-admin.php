@@ -84,6 +84,72 @@ function wppugmill_ajax_generate_site_summary() {
 }
 
 // =========================================================================
+// llms.txt Score Improvement Suggestions
+//
+// 3rd-party AI service disclosure: sends the site's aggregate AEO coverage
+// percentages (no post content, no visitor data) to the configured AI
+// provider. Disclosed in readme.txt "External Services" section.
+// =========================================================================
+
+add_action( 'wp_ajax_wppugmill_improve_llms_score', 'wppugmill_ajax_improve_llms_score' );
+
+/**
+ * AJAX handler — return prioritized llms.txt improvement recommendations.
+ *
+ * Accepts the current score breakdown (already computed server-side and
+ * passed back via form POST) and returns 3–5 actionable tips ordered by
+ * impact.
+ */
+function wppugmill_ajax_improve_llms_score() {
+	check_ajax_referer( 'wppugmill_improve_llms_score', 'nonce' );
+
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_send_json_error( array( 'message' => __( 'Insufficient permissions.', 'wp-pugmill' ) ), 403 );
+	}
+
+	$rate_check = wppugmill_check_rate_limit();
+	if ( is_wp_error( $rate_check ) ) {
+		wp_send_json_error( array( 'message' => $rate_check->get_error_message() ), 429 );
+	}
+
+	$provider = get_option( 'wppugmill_ai_provider', 'anthropic' );
+	$api_key  = wppugmill_get_encrypted_option( 'wppugmill_ai_api_key', '' );
+	if ( empty( $api_key ) ) {
+		wp_send_json_error( array( 'message' => __( 'No API key configured. Add your key in Settings → WP Pugmill → AI Provider.', 'wp-pugmill' ) ), 400 );
+	}
+
+	$score        = absint( $_POST['score'] ?? 0 );         // phpcs:ignore WordPress.Security.NonceVerification.Missing
+	$total        = absint( $_POST['total'] ?? 0 );         // phpcs:ignore WordPress.Security.NonceVerification.Missing
+	$has_summary  = ! empty( $_POST['has_summary'] );       // phpcs:ignore WordPress.Security.NonceVerification.Missing
+	$has_org      = ! empty( $_POST['has_org'] );           // phpcs:ignore WordPress.Security.NonceVerification.Missing
+	$summary_pct  = absint( $_POST['summary_pct'] ?? 0 );  // phpcs:ignore WordPress.Security.NonceVerification.Missing
+	$qa_pct       = absint( $_POST['qa_pct'] ?? 0 );       // phpcs:ignore WordPress.Security.NonceVerification.Missing
+	$keywords_pct = absint( $_POST['keywords_pct'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
+	$entities_pct = absint( $_POST['entities_pct'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
+
+	$system = 'You are an AEO (Answer Engine Optimization) expert. A WordPress site owner wants to improve their llms.txt quality score — a measure of how well their site\'s AEO metadata is filled in. AI answer engines (ChatGPT, Perplexity, Claude) read /llms.txt to understand the site and attribute answers to it. Give 3–5 specific, prioritized improvement tips based on the score breakdown provided. Order them by impact (highest first). Be direct and actionable — name the specific field to fill in and explain briefly why it helps. Return plain text only: no markdown, no bullet symbols, no headers. Separate each tip with a blank line. Keep the total response under 250 words.';
+
+	$user  = "Current score: {$score}/100\n";
+	$user .= "Total published posts: {$total}\n\n";
+	$user .= "Site-level fields:\n";
+	$user .= '- Site summary: ' . ( $has_summary ? 'Set' : 'MISSING' ) . " (worth 20 pts)\n";
+	$user .= '- Organization name: ' . ( $has_org ? 'Set' : 'MISSING' ) . " (worth 5 pts)\n\n";
+	$user .= "Post coverage:\n";
+	$user .= "- Post summaries: {$summary_pct}% of posts (worth up to 30 pts)\n";
+	$user .= "- Q&A pairs: {$qa_pct}% of posts (worth up to 20 pts)\n";
+	$user .= "- Keywords: {$keywords_pct}% of posts (worth up to 15 pts)\n";
+	$user .= "- Entities: {$entities_pct}% of posts (worth up to 10 pts)\n";
+
+	$result = wppugmill_call_ai( $provider, $api_key, $system, $user, 350 );
+
+	if ( is_wp_error( $result ) ) {
+		wp_send_json_error( array( 'message' => $result->get_error_message() ), 500 );
+	}
+
+	wp_send_json_success( array( 'text' => sanitize_textarea_field( trim( $result ) ) ) );
+}
+
+// =========================================================================
 // API key connection test
 // =========================================================================
 

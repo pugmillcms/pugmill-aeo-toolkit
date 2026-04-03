@@ -147,7 +147,7 @@ Rules:
 add_action( 'wp_ajax_wppugmill_suggest_schema', 'wppugmill_ajax_suggest_schema' );
 
 /**
- * AJAX handler — analyse post content and suggest the best Schema.org type
+ * AJAX handler — analyze post content and suggest the best Schema.org type
  * plus pre-filled field values.
  */
 function wppugmill_ajax_suggest_schema() {
@@ -191,10 +191,10 @@ function wppugmill_ajax_suggest_schema() {
 	$content = mb_substr( $content, 0, WPPUGMILL_MAX_AI_INPUT );
 
 	if ( empty( trim( $content ) ) ) {
-		wp_send_json_error( array( 'message' => __( 'Post has no content to analyse.', 'wp-pugmill' ) ), 400 );
+		wp_send_json_error( array( 'message' => __( 'Post has no content to analyze.', 'wp-pugmill' ) ), 400 );
 	}
 
-	$system = 'You are a Schema.org structured data specialist. Analyse the post title and content to determine the single best additional Schema.org type — if any. Only choose a specific type if the content clearly warrants it. If it is a general article or blog post, return {"type":""}.
+	$system = 'You are a Schema.org structured data specialist. Analyze the post title and content to determine the single best additional Schema.org type — if any. Only choose a specific type if the content clearly warrants it. If it is a general article or blog post, return {"type":""}.
 
 Available types and their exact field keys:
 - "HowTo":         {"description":"string","total_time":"ISO 8601 e.g. PT30M","steps":[{"name":"string","text":"string"}]}
