@@ -215,6 +215,9 @@ function wppugmill_render_settings_page() {
 		     LICENSE TAB
 		     ════════════════════════════════════════════════════════════ -->
 		<p style="<?php echo esc_attr( $p_style ); ?> margin-top:24px;">
+			<?php esc_html_e( 'A pugmill turns slop into usable clay — de-aired, wedged, and ready to work with. This plugin does the same for your content: takes the good parts of your existing SEO and transforms them into structured, AI-ready signal that answer engines can actually consume and cite.', 'wp-pugmill' ); ?>
+		</p>
+		<p style="<?php echo esc_attr( $p_style ); ?>">
 			<?php esc_html_e( 'WP Pugmill works in Free mode out of the box — you can manually fill in AEO metadata for every post. Upgrading to AI Connector unlocks one-click AI generation for summaries, Q&A pairs, entities, keywords, SEO fields, social drafts, and more. You bring your own API key from Anthropic, OpenAI, or Google, so your content never passes through our servers.', 'wp-pugmill' ); ?>
 		</p>
 		<form method="post" action="options.php" style="margin-top:16px;">

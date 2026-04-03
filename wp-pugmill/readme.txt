@@ -8,13 +8,23 @@ Stable tag: 0.6.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Make your WordPress content natively discoverable by AI answer engines like ChatGPT, Perplexity, and Gemini.
+Transform your WordPress content from SEO slop into AI-ready clay — structured, de-aired, and built for answer engines like ChatGPT, Perplexity, and Gemini.
 
 == Description ==
 
 **WP Pugmill** is the first WordPress plugin built specifically for the age of answer engines. While traditional SEO optimizes for Google's blue links, AEO (Answer Engine Optimization) optimizes for AI systems that synthesize and cite content directly.
 
 When someone asks ChatGPT, Perplexity, or Gemini a question your content answers — WP Pugmill helps make sure they find and cite you.
+
+= The Name =
+
+In a ceramics studio, a pugmill is a machine potters use to reclaim clay. When clay gets overworked, mixed with too much water, or simply neglected, it becomes slop — raw, waterlogged, unusable. Potters call it slop for a reason. The pugmill takes that slop, compresses it, forces out the air, and extrudes it as wedged, ready-to-use clay.
+
+Old-school SEO has the same problem. Years of keyword stuffing, thin content, and chasing blue links has left most sites full of digital slop — technically published, but not structured for how AI systems actually read and cite content. The information is in there. It's just not usable yet.
+
+WP Pugmill does for your content what a ceramic pugmill does for clay. It takes what you've already built — the good parts of your existing SEO — breaks it down, removes the air, and transforms it into structured, AI-ready signal that answer engines like ChatGPT, Perplexity, and Gemini can actually consume and cite.
+
+De-aired. Wedged. Ready.
 
 = What WP Pugmill Does =
 
@@ -93,6 +103,9 @@ No visitor data, user data, or personally identifiable information is ever trans
 4. Open any post and click **Generate with AI**
 
 == Frequently Asked Questions ==
+
+= What is a pugmill? =
+In a ceramics studio, a pugmill is a machine that reclaims clay. When clay gets overworked or mixed with too much water it becomes slop — potters' shorthand for waterlogged, unusable material. The pugmill takes that slop, compresses it, forces out the air bubbles, and extrudes it as clean, wedged, ready-to-use clay. This plugin does the same thing to your content: takes the good parts of your existing SEO, removes the filler, and structures it into something AI engines can actually use.
 
 = What is AEO? =
 AEO (Answer Engine Optimization) is the practice of structuring your content so AI answer engines like ChatGPT, Perplexity, and Gemini can easily understand, cite, and surface it in response to user questions.
