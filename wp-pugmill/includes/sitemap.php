@@ -280,7 +280,7 @@ function wppugmill_filter_robots_txt( $output, $public ) {
 			$output .= "\nSitemap: " . $sitemap_url . "\n";
 		}
 
-		// AI content index — signals to AI crawlers that AEO-optimised content
+		// AI content index — signals to AI crawlers that AEO-optimized content
 		// is available. Bots reading robots.txt in full (ClaudeBot, GPTBot, etc.)
 		// will discover llms.txt and from there the per-post ?wppugmill_llm=1 endpoints.
 		$llms_url = home_url( '/llms.txt' );

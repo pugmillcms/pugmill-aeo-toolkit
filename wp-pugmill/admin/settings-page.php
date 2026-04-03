@@ -381,7 +381,7 @@ function wppugmill_render_settings_page() {
 		$ai_available     = ! empty( wppugmill_get_encrypted_option( 'wppugmill_ai_api_key', '' ) );
 		?>
 		<p style="<?php echo esc_attr( $p_style ); ?> margin-top:24px;">
-			<?php esc_html_e( 'Site AEO metadata describes your organisation to AI crawlers at a site-wide level. The summary and organisation details are published in your /llms.txt file and embedded in Organization schema in every page header. Setting these accurately gives AI answer engines — ChatGPT, Perplexity, Gemini — a reliable source of truth about who you are and what your site covers.', 'wp-pugmill' ); ?>
+			<?php esc_html_e( 'Site AEO metadata describes your organization to AI crawlers at a site-wide level. The summary and organization details are published in your /llms.txt file and embedded in Organization schema in every page header. Setting these accurately gives AI answer engines — ChatGPT, Perplexity, Gemini — a reliable source of truth about who you are and what your site covers.', 'wp-pugmill' ); ?>
 		</p>
 		<form method="post" action="options.php" style="margin-top:16px;">
 			<?php settings_fields( 'wppugmill_settings' ); ?>
@@ -571,7 +571,7 @@ function wppugmill_render_settings_page() {
 					<p style="margin:0; font-size:12px; color:#6b7280;">
 						<?php
 						printf(
-							/* translators: %d: number of posts analysed */
+							/* translators: %d: number of posts analyzed */
 							esc_html__( 'Based on %d published posts. Higher scores mean richer content for AI crawlers.', 'wp-pugmill' ),
 							(int) $total
 						);
@@ -1192,7 +1192,7 @@ function wppugmill_render_settings_page() {
 				<?php esc_html_e( 'Content Reach', 'wp-pugmill' ); ?>
 			</h3>
 			<p style="margin:0 0 16px; font-size:12px; color:#666;">
-				<?php esc_html_e( 'Which content types each bot is consuming — last 30 days. AEO endpoints show bots reading your optimised content directly.', 'wp-pugmill' ); ?>
+				<?php esc_html_e( 'Which content types each bot is consuming — last 30 days. AEO endpoints show bots reading your optimized content directly.', 'wp-pugmill' ); ?>
 			</p>
 			<div style="overflow-x:auto;">
 			<table class="widefat" style="font-size:12px; border-collapse:collapse;">
