@@ -42,6 +42,10 @@ export function SeoPanel() {
 	const postLink    = useSelect( ( s ) => s( 'core/editor' ).getEditedPostAttribute( 'link' ),    [] );
 	const postExcerpt = useSelect( ( s ) => s( 'core/editor' ).getEditedPostAttribute( 'excerpt' ), [] );
 
+	const featuredImageId     = useSelect( ( s ) => s( 'core/editor' ).getEditedPostAttribute( 'featured_media' ), [] );
+	const featuredMediaRecord = useSelect( ( s ) => featuredImageId ? s( 'core' ).getMedia( featuredImageId ) : null, [ featuredImageId ] );
+	const featuredImageUrl    = featuredMediaRecord?.source_url || '';
+
 	const titleLen = ( seo.title    || '' ).length;
 	const descLen  = ( seo.meta_desc || '' ).length;
 
@@ -148,6 +152,59 @@ export function SeoPanel() {
 				value={ seo.og_image }
 				onChange={ ( val ) => updateSeo( { og_image: val } ) }
 			/>
+
+			{ /* OG image thumbnail preview when URL is set */ }
+			{ seo.og_image && (
+				<div style={ { marginTop: '-4px', marginBottom: '8px' } }>
+					<img
+						src={ seo.og_image }
+						alt=""
+						style={ { width: '100%', maxHeight: '80px', objectFit: 'cover', borderRadius: '3px', border: '1px solid #ddd', display: 'block' } }
+					/>
+				</div>
+			) }
+
+			{ /* Offer featured image when OG field is blank */ }
+			{ ! seo.og_image && featuredImageUrl && (
+				<div style={ {
+					display:      'flex',
+					alignItems:   'center',
+					gap:          '8px',
+					marginTop:    '-4px',
+					marginBottom: '8px',
+					padding:      '6px 8px',
+					background:   '#f0f6fc',
+					borderRadius: '3px',
+					border:       '1px solid #c3dafe',
+				} }>
+					<img src={ featuredImageUrl } alt="" style={ { width: '40px', height: '40px', objectFit: 'cover', borderRadius: '2px', flexShrink: 0 } } />
+					<div style={ { flex: 1, minWidth: 0 } }>
+						<p style={ { margin: '0 0 3px', fontSize: '11px', color: '#555' } }>Using featured image as fallback</p>
+						<Button
+							variant="link"
+							onClick={ () => updateSeo( { og_image: featuredImageUrl } ) }
+							style={ { fontSize: '11px', padding: 0, height: 'auto', minHeight: 0 } }
+						>
+							Set as OG image URL
+						</Button>
+					</div>
+				</div>
+			) }
+
+			{ /* Nudge when no OG image and no featured image */ }
+			{ ! seo.og_image && ! featuredImageUrl && (
+				<p style={ {
+					fontSize:     '11px',
+					color:        '#d97706',
+					margin:       '-4px 0 8px',
+					padding:      '5px 8px',
+					background:   '#fffbeb',
+					borderRadius: '3px',
+					border:       '1px solid #fde68a',
+				} }>
+					⚠ No featured image set — social shares may show no image. Add one in Document settings.
+				</p>
+			) }
 
 			{ /* AI: Generate SEO Title & Description */ }
 			{ IS_AI_MODE && (
