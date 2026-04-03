@@ -1035,6 +1035,18 @@ function wppugmill_render_settings_page() {
 						<?php esc_html_e( 'Send your bot traffic data to your configured AI provider for analysis and recommendations.', 'wp-pugmill' ); ?>
 					</p>
 				</div>
+				<style>
+				@keyframes wppugmill-spin { to { transform: rotate(360deg); } }
+				.wppugmill-btn-spinner {
+					display: inline-block;
+					width: 12px; height: 12px;
+					border: 2px solid rgba(255,255,255,0.35);
+					border-top-color: #fff;
+					border-radius: 50%;
+					animation: wppugmill-spin 0.7s linear infinite;
+					flex-shrink: 0;
+				}
+				</style>
 				<?php if ( $has_api_key ) : ?>
 				<button id="wppugmill-insights-btn" type="button"
 					style="display:inline-flex; align-items:center; gap:6px; padding:7px 16px; font-size:12px; font-weight:600;
@@ -1504,9 +1516,9 @@ function wppugmill_render_settings_page() {
 			if ( ! btn ) { return; }
 
 			btn.addEventListener( 'click', function() {
-				var isRefresh = btn.textContent.indexOf( 'Refresh' ) !== -1;
-				btn.disabled    = true;
-				btn.textContent = 'Analyzing…';
+				var isRefresh = btn.innerHTML.indexOf( 'Refresh' ) !== -1;
+				btn.disabled  = true;
+				btn.innerHTML = '<span class="wppugmill-btn-spinner"></span> Analyzing…';
 				output.style.display = 'block';
 				text.innerHTML = '<span style="color:#9ca3af;font-size:13px;">Asking AI to analyze your bot traffic…</span>';
 				if ( status ) { status.textContent = ''; }
@@ -1520,9 +1532,9 @@ function wppugmill_render_settings_page() {
 				fetch( ajaxurl, { method: 'POST', body: body } )
 					.then( function( r ) { return r.json(); } )
 					.then( function( data ) {
-						btn.disabled = false;
+						btn.disabled  = false;
 						if ( data.success ) {
-							btn.textContent = '✨ Refresh Analysis';
+							btn.innerHTML = '✨ Refresh Analysis';
 							// Render ## headings as styled labels, paragraphs as <p> blocks.
 							var lines    = data.data.text.split( '\n' );
 							var parts    = [];
@@ -1552,13 +1564,13 @@ function wppugmill_render_settings_page() {
 									: ago + ' <?php echo esc_js( __( 'minutes ago', 'wp-pugmill' ) ); ?>';
 							}
 						} else {
-							btn.textContent = '✨ Get AI Analysis';
+							btn.innerHTML = '✨ Get AI Analysis';
 							text.innerHTML = '<span style="color:#dc3232;font-size:13px;">' + ( data.data || '<?php echo esc_js( __( 'Something went wrong. Please try again.', 'wp-pugmill' ) ); ?>' ) + '</span>';
 						}
 					} )
 					.catch( function() {
-						btn.disabled    = false;
-						btn.textContent = '✨ Get AI Analysis';
+						btn.disabled  = false;
+						btn.innerHTML = '✨ Get AI Analysis';
 						text.innerHTML  = '<span style="color:#dc3232;font-size:13px;"><?php echo esc_js( __( 'Request failed. Please try again.', 'wp-pugmill' ) ); ?></span>';
 					} );
 			} );

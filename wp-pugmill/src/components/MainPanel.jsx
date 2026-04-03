@@ -678,12 +678,12 @@ export function MainPanel() {
 								{ s < 5 && (
 									<Button
 										variant="secondary"
+										isBusy={ refineState.loading }
 										disabled={ refineState.loading }
 										onClick={ () => {
 											setSwapStates( {} );
 											ajaxFetch( 'wppugmill_refine_focus', refineFocusNonce, setRefineState );
 										} }
-										className={ refineState.loading ? 'wppugmill-loading' : '' }
 										style={ { width: '100%', justifyContent: 'center', ...BUTTON_STYLE } }
 									>
 										{ refineState.loading ? 'Working…' : '🎯 Refine Focus' }
@@ -729,6 +729,7 @@ export function MainPanel() {
 										) : (
 											<Button
 												variant="secondary"
+												isBusy={ state === 'loading' }
 												disabled={ state === 'loading' }
 												onClick={ () => swapFocusPassage( issue, i ) }
 												style={ { fontSize: '11px', padding: '0 12px', ...BUTTON_STYLE } }
