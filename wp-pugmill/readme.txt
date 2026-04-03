@@ -4,7 +4,7 @@ Tags: AEO, answer engine optimization, AI, llms.txt, schema, structured data, SE
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 0.6.1
+Stable tag: 0.6.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -136,6 +136,15 @@ Yes. WP Pugmill is focused on AEO (AI discoverability) and does not conflict wit
 4. Example llms.txt output
 
 == Changelog ==
+
+= 0.6.2 =
+* **Loading spinners**: Refine Focus, Swap Content, and Bot Analytics "Get AI Analysis" buttons now show a spinner animation during AI calls — consistent with the Generate All button.
+* **OG image / featured image integration**: The Open Graph Image field in the SEO panel now shows a thumbnail preview when a URL is set, a "Set as OG image URL" prompt when the featured image is available, and an amber nudge when neither is set.
+* **AI Provider setup guide**: Settings → AI Provider now shows three provider cards (Anthropic, OpenAI, Google Gemini) with descriptions and direct links to each API key console, plus a numbered setup guide.
+* **llms.txt score explanation**: The llms.txt Quality Score card now includes a point-value breakdown and an explanation of why the score matters. An AI "Get Improvement Tips" button (AI mode) sends your score breakdown to the AI and returns prioritized action steps.
+* **Brand narrative**: Plugin description, readme, and Settings → License tab now tell the pugmill story — how a ceramic pugmill turns slop into de-aired, wedged, ready-to-use clay, and how this plugin does the same for your SEO content.
+* **Schema panel tick**: The Schema panel title now shows a green ✓ when a schema type is selected.
+* **Tone Check and Internal Links**: Various reliability improvements to content swap matching and panel layout.
 
 = 0.6.1 =
 * **llms.txt Quality Score**: New score card on Settings → Site AEO shows a 0–100 quality score for your llms.txt output. Tracks site-level completeness (site summary, organisation name) and per-post AEO coverage (summaries, Q&A pairs, keywords, entities) with colour-coded progress bars.
