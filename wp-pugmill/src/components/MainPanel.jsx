@@ -8,7 +8,7 @@
  * @package WPPugmill
  */
 
-import { PluginDocumentSettingPanel } from '@wordpress/edit-post';
+import { PluginDocumentSettingPanel } from '@wordpress/editor';
 import { PanelBody, Button, Notice, TextControl, TextareaControl, SelectControl } from '@wordpress/components';
 import { useSelect, useDispatch } from '@wordpress/data';
 import { useState, useCallback, useEffect } from '@wordpress/element';
