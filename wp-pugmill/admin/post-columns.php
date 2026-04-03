@@ -3,7 +3,7 @@
  * Posts/Pages list table column — SEO + AEO health badge.
  *
  * Adds a "Pugmill" column to all public post type list tables showing a
- * color-coded score badge. Clicking the badge opens the post editor.
+ * colour-coded score badge. Clicking the badge opens the post editor.
  *
  * @package WPPugmill
  */

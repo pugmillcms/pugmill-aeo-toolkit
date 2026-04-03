@@ -215,9 +215,6 @@ function wppugmill_render_settings_page() {
 		     LICENSE TAB
 		     ════════════════════════════════════════════════════════════ -->
 		<p style="<?php echo esc_attr( $p_style ); ?> margin-top:24px;">
-			<?php esc_html_e( 'A pugmill turns slop into usable clay — de-aired, wedged, and ready to work with. This plugin does the same for your content: takes the good parts of your existing SEO and transforms them into structured, AI-ready signal that answer engines can actually consume and cite.', 'wp-pugmill' ); ?>
-		</p>
-		<p style="<?php echo esc_attr( $p_style ); ?>">
 			<?php esc_html_e( 'WP Pugmill works in Free mode out of the box — you can manually fill in AEO metadata for every post. Upgrading to AI Connector unlocks one-click AI generation for summaries, Q&A pairs, entities, keywords, SEO fields, social drafts, and more. You bring your own API key from Anthropic, OpenAI, or Google, so your content never passes through our servers.', 'wp-pugmill' ); ?>
 		</p>
 		<form method="post" action="options.php" style="margin-top:16px;">
@@ -258,37 +255,7 @@ function wppugmill_render_settings_page() {
 		<p style="<?php echo esc_attr( $p_style ); ?> margin-top:24px;">
 			<?php esc_html_e( 'WP Pugmill uses a bring-your-own-key model — you connect directly to Anthropic, OpenAI, or Google Gemini using your own API account. Your key is encrypted and stored server-side only, never exposed to visitors or transmitted through our servers. Usage is billed directly by your chosen AI provider.', 'wp-pugmill' ); ?>
 		</p>
-
-		<div style="margin:20px 0 4px; max-width:700px;">
-			<p style="font-size:12px; font-weight:700; color:#1e1e1e; text-transform:uppercase; letter-spacing:.05em; margin:0 0 10px;">
-				<?php esc_html_e( 'How to connect', 'wp-pugmill' ); ?>
-			</p>
-			<ol style="font-size:13px; color:#444; margin:0 0 20px; padding-left:20px; line-height:1.8;">
-				<li><?php esc_html_e( 'Choose a provider and create a free account (you only pay for what you use).', 'wp-pugmill' ); ?></li>
-				<li><?php esc_html_e( 'Generate an API key in your provider\'s console (links below).', 'wp-pugmill' ); ?></li>
-				<li><?php esc_html_e( 'Paste the key in the form and click Save Settings.', 'wp-pugmill' ); ?></li>
-			</ol>
-
-			<div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px;">
-				<div style="padding:14px; background:#f9f6ff; border:1px solid #e8d5fd; border-radius:6px;">
-					<p style="font-size:13px; font-weight:700; color:#1e1e1e; margin:0 0 4px;">Anthropic — Claude</p>
-					<p style="font-size:12px; color:#555; margin:0 0 10px; line-height:1.5;"><?php esc_html_e( 'Excellent reasoning and long-form writing. Recommended for AEO and editorial tasks.', 'wp-pugmill' ); ?></p>
-					<a href="<?php echo esc_url( 'https://console.anthropic.com/settings/keys' ); ?>" target="_blank" style="font-size:12px; font-weight:600; color:#7c3aed; text-decoration:none;"><?php esc_html_e( 'Get API key →', 'wp-pugmill' ); ?></a>
-				</div>
-				<div style="padding:14px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:6px;">
-					<p style="font-size:13px; font-weight:700; color:#1e1e1e; margin:0 0 4px;">OpenAI — GPT</p>
-					<p style="font-size:12px; color:#555; margin:0 0 10px; line-height:1.5;"><?php esc_html_e( 'Widely used and reliable. Strong across summarization, SEO, and structured output.', 'wp-pugmill' ); ?></p>
-					<a href="<?php echo esc_url( 'https://platform.openai.com/api-keys' ); ?>" target="_blank" style="font-size:12px; font-weight:600; color:#16a34a; text-decoration:none;"><?php esc_html_e( 'Get API key →', 'wp-pugmill' ); ?></a>
-				</div>
-				<div style="padding:14px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px;">
-					<p style="font-size:13px; font-weight:700; color:#1e1e1e; margin:0 0 4px;">Google — Gemini</p>
-					<p style="font-size:12px; color:#555; margin:0 0 10px; line-height:1.5;"><?php esc_html_e( 'Google\'s multimodal model. Well-suited for search-aware content and entity recognition.', 'wp-pugmill' ); ?></p>
-					<a href="<?php echo esc_url( 'https://aistudio.google.com/apikey' ); ?>" target="_blank" style="font-size:12px; font-weight:600; color:#2563eb; text-decoration:none;"><?php esc_html_e( 'Get API key →', 'wp-pugmill' ); ?></a>
-				</div>
-			</div>
-		</div>
-
-		<form method="post" action="options.php" style="margin-top:24px;">
+		<form method="post" action="options.php" style="margin-top:16px;">
 			<?php settings_fields( 'wppugmill_settings' ); ?>
 			<table class="form-table">
 				<tr>
@@ -311,7 +278,16 @@ function wppugmill_render_settings_page() {
 							value="<?php echo esc_attr( wppugmill_mask_secret( $api_key ) ); ?>"
 							style="width:420px;"
 							placeholder="sk-...">
-						<p class="description"><?php esc_html_e( 'Paste the API key from your chosen provider above. The key is encrypted before storage.', 'wp-pugmill' ); ?></p>
+						<?php
+						$desc_links = sprintf(
+							/* translators: 1: Anthropic link 2: OpenAI link 3: Google AI Studio link */
+							esc_html__( 'Get your key from %1$s, %2$s, or %3$s.', 'wp-pugmill' ),
+							'<a href="' . esc_url( 'https://console.anthropic.com' ) . '" target="_blank">Anthropic</a>',
+							'<a href="' . esc_url( 'https://platform.openai.com' ) . '" target="_blank">OpenAI</a>',
+							'<a href="' . esc_url( 'https://aistudio.google.com' ) . '" target="_blank">Google AI Studio</a>'
+						);
+						echo '<p class="description">' . wp_kses( $desc_links, array( 'a' => array( 'href' => array(), 'target' => array() ) ) ) . '</p>';
+						?>
 					</td>
 				</tr>
 				<tr>
@@ -405,7 +381,7 @@ function wppugmill_render_settings_page() {
 		$ai_available     = ! empty( wppugmill_get_encrypted_option( 'wppugmill_ai_api_key', '' ) );
 		?>
 		<p style="<?php echo esc_attr( $p_style ); ?> margin-top:24px;">
-			<?php esc_html_e( 'Site AEO metadata describes your organization to AI crawlers at a site-wide level. The summary and organization details are published in your /llms.txt file and embedded in Organization schema in every page header. Setting these accurately gives AI answer engines — ChatGPT, Perplexity, Gemini — a reliable source of truth about who you are and what your site covers.', 'wp-pugmill' ); ?>
+			<?php esc_html_e( 'Site AEO metadata describes your organisation to AI crawlers at a site-wide level. The summary and organisation details are published in your /llms.txt file and embedded in Organization schema in every page header. Setting these accurately gives AI answer engines — ChatGPT, Perplexity, Gemini — a reliable source of truth about who you are and what your site covers.', 'wp-pugmill' ); ?>
 		</p>
 		<form method="post" action="options.php" style="margin-top:16px;">
 			<?php settings_fields( 'wppugmill_settings' ); ?>
@@ -595,7 +571,7 @@ function wppugmill_render_settings_page() {
 					<p style="margin:0; font-size:12px; color:#6b7280;">
 						<?php
 						printf(
-							/* translators: %d: number of posts analyzed */
+							/* translators: %d: number of posts analysed */
 							esc_html__( 'Based on %d published posts. Higher scores mean richer content for AI crawlers.', 'wp-pugmill' ),
 							(int) $total
 						);
@@ -639,102 +615,7 @@ function wppugmill_render_settings_page() {
 					<?php endif; ?>
 				</div>
 			</div>
-
-			<div style="margin-top:16px; padding-top:16px; border-top:1px solid #e8e0f7;">
-				<p style="font-size:11px; font-weight:700; color:#7c3aed; text-transform:uppercase; letter-spacing:.06em; margin:0 0 8px;">
-					<?php esc_html_e( 'How this is scored', 'wp-pugmill' ); ?>
-				</p>
-				<div style="display:grid; grid-template-columns:1fr 1fr; gap:3px 16px; font-size:11px; color:#6b7280; margin-bottom:10px;">
-					<span><?php esc_html_e( 'Site summary — 20 pts', 'wp-pugmill' ); ?></span>
-					<span><?php esc_html_e( 'Post summaries — up to 30 pts', 'wp-pugmill' ); ?></span>
-					<span><?php esc_html_e( 'Organization name — 5 pts', 'wp-pugmill' ); ?></span>
-					<span><?php esc_html_e( 'Q&A pairs — up to 20 pts', 'wp-pugmill' ); ?></span>
-					<span></span>
-					<span><?php esc_html_e( 'Keywords — up to 15 pts', 'wp-pugmill' ); ?></span>
-					<span></span>
-					<span><?php esc_html_e( 'Entities — up to 10 pts', 'wp-pugmill' ); ?></span>
-				</div>
-				<p style="font-size:12px; color:#6b7280; margin:0 0 12px; line-height:1.5;">
-					<?php esc_html_e( 'AI answer engines read /llms.txt to understand your site. Richer metadata means more accurate AI-generated answers and summaries that attribute content back to you.', 'wp-pugmill' ); ?>
-				</p>
-				<?php if ( $ai_available ) : ?>
-				<button id="wppugmill-improve-llms-btn" type="button"
-					data-score="<?php echo esc_attr( (int) $score ); ?>"
-					data-total="<?php echo esc_attr( (int) $total ); ?>"
-					data-has-summary="<?php echo esc_attr( $has_site_summary ? '1' : '0' ); ?>"
-					data-has-org="<?php echo esc_attr( $has_org_name ? '1' : '0' ); ?>"
-					data-summary-pct="<?php echo esc_attr( (int) $summary_pct ); ?>"
-					data-qa-pct="<?php echo esc_attr( (int) $qa_pct ); ?>"
-					data-keywords-pct="<?php echo esc_attr( (int) $keywords_pct ); ?>"
-					data-entities-pct="<?php echo esc_attr( (int) $entities_pct ); ?>"
-					style="display:inline-flex; align-items:center; gap:6px; padding:7px 16px; font-size:12px; font-weight:600; background:#7c3aed; color:#fff; border:none; border-radius:4px; cursor:pointer; white-space:nowrap;">
-					✨ <?php esc_html_e( 'Get AI Improvement Tips', 'wp-pugmill' ); ?>
-				</button>
-				<?php endif; ?>
-			</div>
 		</div>
-
-		<?php if ( $ai_available ) : ?>
-		<div id="wppugmill-improve-llms-output" style="display:none; margin-top:12px; padding:16px 20px; background:#f9f6ff; border:1px solid #d4c8f0; border-radius:8px;">
-			<p style="font-size:11px; font-weight:700; color:#7c3aed; text-transform:uppercase; letter-spacing:.06em; margin:0 0 10px;">
-				<?php esc_html_e( 'AI Improvement Tips', 'wp-pugmill' ); ?>
-			</p>
-			<div id="wppugmill-improve-llms-text" style="font-size:13px; color:#1d2327; line-height:1.6;"></div>
-		</div>
-		<script>
-		(function() {
-			var btn    = document.getElementById( 'wppugmill-improve-llms-btn' );
-			var output = document.getElementById( 'wppugmill-improve-llms-output' );
-			var text   = document.getElementById( 'wppugmill-improve-llms-text' );
-			if ( ! btn || ! output || ! text ) { return; }
-
-			btn.addEventListener( 'click', function() {
-				btn.disabled  = true;
-				btn.innerHTML = '<span class="wppugmill-btn-spinner"></span> <?php echo esc_js( __( 'Analyzing…', 'wp-pugmill' ) ); ?>';
-				output.style.display = 'block';
-				text.innerHTML = '<span style="color:#9ca3af;font-size:13px;"><?php echo esc_js( __( 'Asking AI to review your score…', 'wp-pugmill' ) ); ?></span>';
-
-				var body = new URLSearchParams( {
-					action:       'wppugmill_improve_llms_score',
-					nonce:        <?php echo wp_json_encode( wp_create_nonce( 'wppugmill_improve_llms_score' ) ); ?>,
-					score:        btn.dataset.score,
-					total:        btn.dataset.total,
-					has_summary:  btn.dataset.hasSummary,
-					has_org:      btn.dataset.hasOrg,
-					summary_pct:  btn.dataset.summaryPct,
-					qa_pct:       btn.dataset.qaPct,
-					keywords_pct: btn.dataset.keywordsPct,
-					entities_pct: btn.dataset.entitiesPct,
-				} );
-
-				fetch( <?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>, {
-					method:      'POST',
-					credentials: 'same-origin',
-					headers:     { 'Content-Type': 'application/x-www-form-urlencoded' },
-					body:        body.toString(),
-				} )
-				.then( function( r ) { return r.json(); } )
-				.then( function( data ) {
-					if ( data.success && data.data && data.data.text ) {
-						var tips = data.data.text.split( /\n\n+/ ).filter( Boolean );
-						text.innerHTML = tips.map( function( t, i ) {
-							return '<p style="margin:' + ( i === 0 ? '0' : '10px' ) + ' 0 0; font-size:13px; color:#1d2327; line-height:1.6;"><strong>' + ( i + 1 ) + '.</strong> ' + t.trim().replace( /</g, '&lt;' ).replace( />/g, '&gt;' ) + '</p>';
-						} ).join( '' );
-					} else {
-						text.innerHTML = '<span style="color:#dc3232;font-size:13px;">' + ( ( data.data && data.data.message ) || '<?php echo esc_js( __( 'Something went wrong. Please try again.', 'wp-pugmill' ) ); ?>' ) + '</span>';
-					}
-				} )
-				.catch( function() {
-					text.innerHTML = '<span style="color:#dc3232;font-size:13px;"><?php echo esc_js( __( 'Request failed. Please try again.', 'wp-pugmill' ) ); ?></span>';
-				} )
-				.finally( function() {
-					btn.disabled  = false;
-					btn.innerHTML = '✨ <?php echo esc_js( __( 'Get AI Improvement Tips', 'wp-pugmill' ) ); ?>';
-				} );
-			} );
-		}());
-		</script>
-		<?php endif; ?>
 
 		<?php elseif ( 'author-voice' === $active_tab ) : ?>
 		<!-- ════════════════════════════════════════════════════════════
@@ -1154,18 +1035,6 @@ function wppugmill_render_settings_page() {
 						<?php esc_html_e( 'Send your bot traffic data to your configured AI provider for analysis and recommendations.', 'wp-pugmill' ); ?>
 					</p>
 				</div>
-				<style>
-				@keyframes wppugmill-spin { to { transform: rotate(360deg); } }
-				.wppugmill-btn-spinner {
-					display: inline-block;
-					width: 12px; height: 12px;
-					border: 2px solid rgba(255,255,255,0.35);
-					border-top-color: #fff;
-					border-radius: 50%;
-					animation: wppugmill-spin 0.7s linear infinite;
-					flex-shrink: 0;
-				}
-				</style>
 				<?php if ( $has_api_key ) : ?>
 				<button id="wppugmill-insights-btn" type="button"
 					style="display:inline-flex; align-items:center; gap:6px; padding:7px 16px; font-size:12px; font-weight:600;
@@ -1323,7 +1192,7 @@ function wppugmill_render_settings_page() {
 				<?php esc_html_e( 'Content Reach', 'wp-pugmill' ); ?>
 			</h3>
 			<p style="margin:0 0 16px; font-size:12px; color:#666;">
-				<?php esc_html_e( 'Which content types each bot is consuming — last 30 days. AEO endpoints show bots reading your optimized content directly.', 'wp-pugmill' ); ?>
+				<?php esc_html_e( 'Which content types each bot is consuming — last 30 days. AEO endpoints show bots reading your optimised content directly.', 'wp-pugmill' ); ?>
 			</p>
 			<div style="overflow-x:auto;">
 			<table class="widefat" style="font-size:12px; border-collapse:collapse;">
@@ -1635,9 +1504,9 @@ function wppugmill_render_settings_page() {
 			if ( ! btn ) { return; }
 
 			btn.addEventListener( 'click', function() {
-				var isRefresh = btn.innerHTML.indexOf( 'Refresh' ) !== -1;
-				btn.disabled  = true;
-				btn.innerHTML = '<span class="wppugmill-btn-spinner"></span> Analyzing…';
+				var isRefresh = btn.textContent.indexOf( 'Refresh' ) !== -1;
+				btn.disabled    = true;
+				btn.textContent = 'Analyzing…';
 				output.style.display = 'block';
 				text.innerHTML = '<span style="color:#9ca3af;font-size:13px;">Asking AI to analyze your bot traffic…</span>';
 				if ( status ) { status.textContent = ''; }
@@ -1651,9 +1520,9 @@ function wppugmill_render_settings_page() {
 				fetch( ajaxurl, { method: 'POST', body: body } )
 					.then( function( r ) { return r.json(); } )
 					.then( function( data ) {
-						btn.disabled  = false;
+						btn.disabled = false;
 						if ( data.success ) {
-							btn.innerHTML = '✨ Refresh Analysis';
+							btn.textContent = '✨ Refresh Analysis';
 							// Render ## headings as styled labels, paragraphs as <p> blocks.
 							var lines    = data.data.text.split( '\n' );
 							var parts    = [];
@@ -1683,13 +1552,13 @@ function wppugmill_render_settings_page() {
 									: ago + ' <?php echo esc_js( __( 'minutes ago', 'wp-pugmill' ) ); ?>';
 							}
 						} else {
-							btn.innerHTML = '✨ Get AI Analysis';
+							btn.textContent = '✨ Get AI Analysis';
 							text.innerHTML = '<span style="color:#dc3232;font-size:13px;">' + ( data.data || '<?php echo esc_js( __( 'Something went wrong. Please try again.', 'wp-pugmill' ) ); ?>' ) + '</span>';
 						}
 					} )
 					.catch( function() {
-						btn.disabled  = false;
-						btn.innerHTML = '✨ Get AI Analysis';
+						btn.disabled    = false;
+						btn.textContent = '✨ Get AI Analysis';
 						text.innerHTML  = '<span style="color:#dc3232;font-size:13px;"><?php echo esc_js( __( 'Request failed. Please try again.', 'wp-pugmill' ) ); ?></span>';
 					} );
 			} );

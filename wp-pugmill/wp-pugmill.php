@@ -2,8 +2,8 @@
 /**
  * Plugin Name: WP Pugmill
  * Plugin URI:  https://wppugmill.com
- * Description: A pugmill turns slop into usable clay. This one turns your existing SEO into structured, AI-ready content — llms.txt, AEO metadata, schema, and sitemaps for ChatGPT, Perplexity, and Gemini.
- * Version:     0.6.8
+ * Description: SEO for the answer engine era. Full on-page SEO (titles, meta, canonical, sitemaps) plus AEO tools that make your content discoverable by AI engines like ChatGPT, Perplexity, and Gemini.
+ * Version:     0.6.9
  * Author:      Janzen Works
  * Author URI:  https://janzenworks.com
  * License:     GPL-2.0-or-later
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WPPUGMILL_VERSION',         '0.6.8' );
+define( 'WPPUGMILL_VERSION',         '0.6.9' );
 define( 'WPPUGMILL_PLUGIN_DIR',      plugin_dir_path( __FILE__ ) );
 define( 'WPPUGMILL_PLUGIN_URL',      plugin_dir_url( __FILE__ ) );
 define( 'WPPUGMILL_PLUGIN_FILE',     __FILE__ );

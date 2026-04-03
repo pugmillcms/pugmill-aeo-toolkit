@@ -4,27 +4,17 @@ Tags: AEO, answer engine optimization, AI, llms.txt, schema, structured data, SE
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 0.6.8
+Stable tag: 0.6.9
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Transform your WordPress content from SEO slop into AI-ready clay — structured, de-aired, and built for answer engines like ChatGPT, Perplexity, and Gemini.
+Make your WordPress content natively discoverable by AI answer engines like ChatGPT, Perplexity, and Gemini.
 
 == Description ==
 
 **WP Pugmill** is the first WordPress plugin built specifically for the age of answer engines. While traditional SEO optimizes for Google's blue links, AEO (Answer Engine Optimization) optimizes for AI systems that synthesize and cite content directly.
 
 When someone asks ChatGPT, Perplexity, or Gemini a question your content answers — WP Pugmill helps make sure they find and cite you.
-
-= The Name =
-
-In a ceramics studio, a pugmill is a machine potters use to reclaim clay. When clay gets overworked, mixed with too much water, or simply neglected, it becomes slop — raw, waterlogged, unusable. Potters call it slop for a reason. The pugmill takes that slop, compresses it, forces out the air, and extrudes it as wedged, ready-to-use clay.
-
-Old-school SEO has the same problem. Years of keyword stuffing, thin content, and chasing blue links has left most sites full of digital slop — technically published, but not structured for how AI systems actually read and cite content. The information is in there. It's just not usable yet.
-
-WP Pugmill does for your content what a ceramic pugmill does for clay. It takes what you've already built — the good parts of your existing SEO — breaks it down, removes the air, and transforms it into structured, AI-ready signal that answer engines like ChatGPT, Perplexity, and Gemini can actually consume and cite.
-
-De-aired. Wedged. Ready.
 
 = What WP Pugmill Does =
 
@@ -104,9 +94,6 @@ No visitor data, user data, or personally identifiable information is ever trans
 
 == Frequently Asked Questions ==
 
-= What is a pugmill? =
-In a ceramics studio, a pugmill is a machine that reclaims clay. When clay gets overworked or mixed with too much water it becomes slop — potters' shorthand for waterlogged, unusable material. The pugmill takes that slop, compresses it, forces out the air bubbles, and extrudes it as clean, wedged, ready-to-use clay. This plugin does the same thing to your content: takes the good parts of your existing SEO, removes the filler, and structures it into something AI engines can actually use.
-
 = What is AEO? =
 AEO (Answer Engine Optimization) is the practice of structuring your content so AI answer engines like ChatGPT, Perplexity, and Gemini can easily understand, cite, and surface it in response to user questions.
 
@@ -136,15 +123,6 @@ Yes. WP Pugmill is focused on AEO (AI discoverability) and does not conflict wit
 4. Example llms.txt output
 
 == Changelog ==
-
-= 0.6.2 =
-* **Loading spinners**: Refine Focus, Swap Content, and Bot Analytics "Get AI Analysis" buttons now show a spinner animation during AI calls — consistent with the Generate All button.
-* **OG image / featured image integration**: The Open Graph Image field in the SEO panel now shows a thumbnail preview when a URL is set, a "Set as OG image URL" prompt when the featured image is available, and an amber nudge when neither is set.
-* **AI Provider setup guide**: Settings → AI Provider now shows three provider cards (Anthropic, OpenAI, Google Gemini) with descriptions and direct links to each API key console, plus a numbered setup guide.
-* **llms.txt score explanation**: The llms.txt Quality Score card now includes a point-value breakdown and an explanation of why the score matters. An AI "Get Improvement Tips" button (AI mode) sends your score breakdown to the AI and returns prioritized action steps.
-* **Brand narrative**: Plugin description, readme, and Settings → License tab now tell the pugmill story — how a ceramic pugmill turns slop into de-aired, wedged, ready-to-use clay, and how this plugin does the same for your SEO content.
-* **Schema panel tick**: The Schema panel title now shows a green ✓ when a schema type is selected.
-* **Tone Check and Internal Links**: Various reliability improvements to content swap matching and panel layout.
 
 = 0.6.1 =
 * **llms.txt Quality Score**: New score card on Settings → Site AEO shows a 0–100 quality score for your llms.txt output. Tracks site-level completeness (site summary, organisation name) and per-post AEO coverage (summaries, Q&A pairs, keywords, entities) with colour-coded progress bars.

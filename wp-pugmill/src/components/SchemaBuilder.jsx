@@ -29,8 +29,7 @@ export function SchemaBuilder() {
 	const { schema, updateSchema, updateSchemaType } = useSchemaData();
 	const { postId } = useAeoMeta();
 
-	const schemaType  = schema.type || '';
-	const schemaIsSet = schemaType !== '';
+	const schemaType = schema.type || '';
 
 	// Per-step field update helper for HowTo.
 	const updateStep = ( stepIndex, field, value ) => {
@@ -48,7 +47,7 @@ export function SchemaBuilder() {
 	const [ suggestState, setSuggestState ] = useState( { loading: false, error: '', notice: '' } );
 
 	return (
-		<PanelBody title={ <span>Schema{ schemaIsSet && <span style={ { color: '#46b450', fontWeight: '700', marginLeft: '3px' } }>✓</span> }</span> } initialOpen={ false }>
+		<PanelBody title="Schema" initialOpen={ false }>
 			{ /* ── AI: Suggest Schema ───────────────────────────────────────── */ }
 			{ IS_AI_MODE && (
 				<>

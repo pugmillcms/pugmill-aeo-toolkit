@@ -742,13 +742,13 @@ function wppugmill_ajax_analytics_insights() {
 Structure your response using exactly these four section headings, each on its own line preceded by '## ':
 
 ## Bot Activity
-Which bots are most active and what that signals (e.g. citation activity, indexing depth, content discovery phase). Note any AEO endpoint hits (?wppugmill_llm=1 means a bot read your optimized markdown directly — flag this as a strong positive signal).
+Which bots are most active and what that signals (e.g. citation activity, indexing depth, content discovery phase). Note any AEO endpoint hits (?wppugmill_llm=1 means a bot read your optimised markdown directly — flag this as a strong positive signal).
 
 ## Content Coverage
 Which pages or post types are being crawled most, and what patterns you notice (repeat visits, ignored sections, etc.).
 
 ## AI vs Search Bots
-Differences between AI crawlers and traditional search spiders if both are present; what each group's behavior implies.
+Differences between AI crawlers and traditional search spiders if both are present; what each group's behaviour implies.
 
 ## Recommendations
 Give 2-3 specific, actionable recommendations tailored to the bots actually present in the data. Use this guidance: if ClaudeBot is active and hitting sitemaps heavily, recommend keeping the sitemap current and ensuring all posts have AEO markup; if ChatGPT/GPTBot is active, recommend enriching the llms.txt file with more complete AEO summaries and Q&A pairs since ChatGPT is known to read it directly; if Perplexity is active, recommend prioritising AEO summaries and Q&A pairs on high-traffic posts since Perplexity cites content in real-time answers; if only traditional search bots are present with no AI crawlers, recommend completing the llms.txt and AEO metadata setup to attract AI crawlers. Only mention bots that appear in the data.
