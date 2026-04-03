@@ -208,18 +208,7 @@ function wppugmill_call_ai( $provider, $api_key, $system, $user, $max_tokens = 4
 	// against the user's own provider dashboard.
 	wppugmill_record_token_usage( $provider, $data );
 
-	// Strip markdown fences defensively
-	$raw = preg_replace( '/^```(?:json)?\s*/i', '', trim( $raw ) );
-	$raw = preg_replace( '/\s*```$/', '', $raw );
-
-	// If preamble text remains, extract the JSON object or array directly.
-	if ( null === json_decode( $raw ) ) {
-		if ( preg_match( '/(\{[\s\S]*\}|\[[\s\S]*\])/s', $raw, $m ) ) {
-			$raw = $m[1];
-		}
-	}
-
-	return $raw;
+	return wppugmill_strip_ai_json_fences( $raw );
 }
 
 // ── Vision dispatcher ────────────────────────────────────────────────────────

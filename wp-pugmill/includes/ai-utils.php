@@ -14,6 +14,33 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
+ * Strip markdown fences and extract JSON from a raw AI response string.
+ *
+ * Handles three cases where the AI wraps or prefixes the JSON:
+ *   1. Leading ```json or ``` fences.
+ *   2. Trailing ``` fences.
+ *   3. Preamble text before the JSON — extracts the first object or array.
+ *
+ * Returns the cleaned string ready for json_decode(). Does not decode.
+ *
+ * @param  string $raw Raw text returned by the AI provider.
+ * @return string
+ */
+function wppugmill_strip_ai_json_fences( $raw ) {
+	$raw = preg_replace( '/^```(?:json)?\s*/i', '', trim( $raw ) );
+	$raw = preg_replace( '/\s*```$/', '', $raw );
+
+	// If the result still isn't valid JSON, extract the first object or array.
+	if ( null === json_decode( $raw ) ) {
+		if ( preg_match( '/(\{[\s\S]*\}|\[[\s\S]*\])/s', $raw, $m ) ) {
+			$raw = $m[1];
+		}
+	}
+
+	return $raw;
+}
+
+/**
  * Decode a JSON string returned by wppugmill_call_ai().
  * Returns the decoded array, or WP_Error on invalid JSON.
  *

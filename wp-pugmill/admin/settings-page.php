@@ -114,6 +114,25 @@ function wppugmill_add_settings_page() {
 }
 add_action( 'admin_menu', 'wppugmill_add_settings_page' );
 
+/**
+ * Enqueue shared plugin CSS on the WP Pugmill settings page so the
+ * barber pole loading animation (.wppugmill-loading) is available.
+ *
+ * @param string $hook Current admin page hook suffix.
+ */
+function wppugmill_enqueue_settings_assets( $hook ) {
+	if ( 'settings_page_wp-pugmill' !== $hook ) {
+		return;
+	}
+	wp_enqueue_style(
+		'wppugmill-editor-resize',
+		WPPUGMILL_PLUGIN_URL . 'admin/css/editor-resize.css',
+		array(),
+		WPPUGMILL_VERSION
+	);
+}
+add_action( 'admin_enqueue_scripts', 'wppugmill_enqueue_settings_assets' );
+
 function wppugmill_render_settings_page() {
 	$mode           = wppugmill_mode();
 	$license_status = wppugmill_license_status();
@@ -417,7 +436,7 @@ function wppugmill_render_settings_page() {
 						<p class="description"><?php esc_html_e( 'Used in /llms.txt and Organization schema. Describe your site for AI crawlers.', 'wp-pugmill' ); ?></p>
 						<?php if ( $ai_available ) : ?>
 						<p style="margin-top:8px;">
-							<button type="button" id="wppugmill-gen-site-summary" class="button button-secondary">
+							<button type="button" id="wppugmill-gen-site-summary" style="display:inline-flex; align-items:center; gap:6px; padding:7px 16px; font-size:12px; font-weight:600; background:#7c3aed; color:#fff; border:none; border-radius:4px; cursor:pointer; white-space:nowrap;">
 								✨ <?php esc_html_e( 'Draft with AI', 'wp-pugmill' ); ?>
 							</button>
 							<span id="wppugmill-site-summary-status" style="margin-left:10px; font-size:13px; color:#666;"></span>
@@ -466,9 +485,11 @@ function wppugmill_render_settings_page() {
 			if ( ! btn || ! textarea ) { return; }
 
 			btn.addEventListener( 'click', function() {
-				btn.disabled    = true;
-				btn.textContent = '<?php echo esc_js( __( 'Drafting…', 'wp-pugmill' ) ); ?>';
+				btn.disabled  = true;
+				btn.classList.add( 'wppugmill-loading' );
+				btn.innerHTML = '<?php echo esc_js( __( 'Drafting…', 'wp-pugmill' ) ); ?>';
 				status.textContent = '';
+				status.style.color = '';
 
 				var body = new URLSearchParams();
 				body.append( 'action', 'wppugmill_generate_site_summary' );
@@ -497,8 +518,9 @@ function wppugmill_render_settings_page() {
 					status.style.color = '#dc3232';
 				} )
 				.finally( function() {
-					btn.disabled    = false;
-					btn.textContent = '✨ <?php echo esc_js( __( 'Draft with AI', 'wp-pugmill' ) ); ?>';
+					btn.disabled  = false;
+					btn.classList.remove( 'wppugmill-loading' );
+					btn.innerHTML = '✨ <?php echo esc_js( __( 'Draft with AI', 'wp-pugmill' ) ); ?>';
 				} );
 			} );
 		}());
@@ -690,7 +712,8 @@ function wppugmill_render_settings_page() {
 
 			btn.addEventListener( 'click', function() {
 				btn.disabled  = true;
-				btn.innerHTML = '<span class="wppugmill-btn-spinner"></span> <?php echo esc_js( __( 'Analyzing…', 'wp-pugmill' ) ); ?>';
+				btn.classList.add( 'wppugmill-loading' );
+				btn.innerHTML = '<?php echo esc_js( __( 'Analyzing…', 'wp-pugmill' ) ); ?>';
 				output.style.display = 'block';
 				text.innerHTML = '<span style="color:#9ca3af;font-size:13px;"><?php echo esc_js( __( 'Asking AI to review your score…', 'wp-pugmill' ) ); ?></span>';
 
@@ -729,6 +752,7 @@ function wppugmill_render_settings_page() {
 				} )
 				.finally( function() {
 					btn.disabled  = false;
+					btn.classList.remove( 'wppugmill-loading' );
 					btn.innerHTML = '✨ <?php echo esc_js( __( 'Get AI Improvement Tips', 'wp-pugmill' ) ); ?>';
 				} );
 			} );
@@ -1154,18 +1178,6 @@ function wppugmill_render_settings_page() {
 						<?php esc_html_e( 'Send your bot traffic data to your configured AI provider for analysis and recommendations.', 'wp-pugmill' ); ?>
 					</p>
 				</div>
-				<style>
-				@keyframes wppugmill-spin { to { transform: rotate(360deg); } }
-				.wppugmill-btn-spinner {
-					display: inline-block;
-					width: 12px; height: 12px;
-					border: 2px solid rgba(255,255,255,0.35);
-					border-top-color: #fff;
-					border-radius: 50%;
-					animation: wppugmill-spin 0.7s linear infinite;
-					flex-shrink: 0;
-				}
-				</style>
 				<?php if ( $has_api_key ) : ?>
 				<button id="wppugmill-insights-btn" type="button"
 					style="display:inline-flex; align-items:center; gap:6px; padding:7px 16px; font-size:12px; font-weight:600;
@@ -1637,7 +1649,8 @@ function wppugmill_render_settings_page() {
 			btn.addEventListener( 'click', function() {
 				var isRefresh = btn.innerHTML.indexOf( 'Refresh' ) !== -1;
 				btn.disabled  = true;
-				btn.innerHTML = '<span class="wppugmill-btn-spinner"></span> Analyzing…';
+				btn.classList.add( 'wppugmill-loading' );
+				btn.innerHTML = 'Analyzing…';
 				output.style.display = 'block';
 				text.innerHTML = '<span style="color:#9ca3af;font-size:13px;">Asking AI to analyze your bot traffic…</span>';
 				if ( status ) { status.textContent = ''; }
@@ -1652,6 +1665,7 @@ function wppugmill_render_settings_page() {
 					.then( function( r ) { return r.json(); } )
 					.then( function( data ) {
 						btn.disabled  = false;
+						btn.classList.remove( 'wppugmill-loading' );
 						if ( data.success ) {
 							btn.innerHTML = '✨ Refresh Analysis';
 							// Render ## headings as styled labels, paragraphs as <p> blocks.
@@ -1689,6 +1703,7 @@ function wppugmill_render_settings_page() {
 					} )
 					.catch( function() {
 						btn.disabled  = false;
+						btn.classList.remove( 'wppugmill-loading' );
 						btn.innerHTML = '✨ Get AI Analysis';
 						text.innerHTML  = '<span style="color:#dc3232;font-size:13px;"><?php echo esc_js( __( 'Request failed. Please try again.', 'wp-pugmill' ) ); ?></span>';
 					} );

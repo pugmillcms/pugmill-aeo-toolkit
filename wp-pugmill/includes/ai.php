@@ -42,86 +42,62 @@ add_action( 'wp_ajax_wppugmill_generate_aeo', 'wppugmill_ajax_generate_aeo' );
  * AJAX handler — generate AEO metadata for a post using AI.
  */
 function wppugmill_ajax_generate_aeo() {
-	check_ajax_referer( 'wppugmill_generate_aeo', 'nonce' );
+	$r = wppugmill_ai_request_setup( 'wppugmill_generate_aeo', 'AEO generation' );
 
-	if ( ! current_user_can( 'edit_posts' ) ) {
-		wp_send_json_error( array( 'message' => __( 'Insufficient permissions.', 'wp-pugmill' ) ), 403 );
-	}
-
-	// Rate limiting
-	$rate_check = wppugmill_check_rate_limit();
-	if ( is_wp_error( $rate_check ) ) {
-		wp_send_json_error( array( 'message' => $rate_check->get_error_message() ), 429 );
-	}
-
-	$post_id = absint( wp_unslash( $_POST['post_id'] ?? 0 ) );
-	if ( ! $post_id ) {
-		wp_send_json_error( array( 'message' => __( 'Missing post ID.', 'wp-pugmill' ) ), 400 );
-	}
-
-	// Verify user can edit this specific post
-	if ( ! current_user_can( 'edit_post', $post_id ) ) {
-		wp_send_json_error( array( 'message' => __( 'You do not have permission to edit this post.', 'wp-pugmill' ) ), 403 );
-	}
-
-	$post = get_post( $post_id );
-	if ( ! $post ) {
-		wp_send_json_error( array( 'message' => __( 'Post not found.', 'wp-pugmill' ) ), 404 );
-	}
-
-	$mode = wppugmill_mode();
-
-	if ( 'free' === $mode ) {
-		wp_send_json_error( array(
-			'message' => __( 'AI generation requires a WP Pugmill AI Connector license. <a href="https://wppugmill.com/pricing" target="_blank">Get your license →</a>', 'wp-pugmill' ),
-		), 403 );
-	}
-
-	if ( 'pro' === $mode ) {
-		wp_send_json_error( array( 'message' => __( 'Pro mode coming soon.', 'wp-pugmill' ) ), 501 );
-	}
-
-	// AI (licensed BYOK) mode — retrieve decrypted key
-	$provider = get_option( 'wppugmill_ai_provider', 'anthropic' );
-	$api_key  = wppugmill_get_encrypted_option( 'wppugmill_ai_api_key', '' );
-
-	if ( empty( $api_key ) ) {
-		wp_send_json_error( array( 'message' => __( 'No API key configured. Add your key in Settings → WP Pugmill.', 'wp-pugmill' ) ), 400 );
-	}
-
-	// Build content for the prompt — prefer unsaved Gutenberg editor content
-	// when passed (same pattern as rewrite_draft), fall back to saved DB content.
-	$title = get_the_title( $post );
-	if ( ! empty( $_POST['draft_content'] ) ) {
-		$content = wp_strip_all_tags( sanitize_textarea_field( wp_unslash( $_POST['draft_content'] ) ) );
-	} else {
-		$content = wp_strip_all_tags( apply_filters( 'the_content', $post->post_content ) );
-		$content = html_entity_decode( $content, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
-	}
-	$content = mb_substr( trim( $content ), 0, WPPUGMILL_MAX_AI_INPUT );
-
-	if ( empty( $content ) ) {
+	if ( empty( $r['content'] ) ) {
 		wp_send_json_error( array( 'message' => __( 'Post has no content to analyze. Add some content and try again.', 'wp-pugmill' ) ), 400 );
 	}
 
-	switch ( $provider ) {
-		case 'openai':
-			$result = wppugmill_generate_via_openai( $api_key, $title, $content );
-			break;
-		case 'gemini':
-			$result = wppugmill_generate_via_gemini( $api_key, $title, $content );
-			break;
-		case 'anthropic':
-		default:
-			$result = wppugmill_generate_via_anthropic( $api_key, $title, $content );
-			break;
+	$raw = wppugmill_call_ai(
+		$r['provider'],
+		$r['api_key'],
+		wppugmill_aeo_system_prompt(),
+		wppugmill_aeo_user_prompt( $r['title'], $r['content'] ),
+		2048
+	);
+
+	if ( is_wp_error( $raw ) ) {
+		wp_send_json_error( array( 'message' => $raw->get_error_message() ), 500 );
 	}
 
-	if ( is_wp_error( $result ) ) {
-		wp_send_json_error( array( 'message' => $result->get_error_message() ), 500 );
+	$aeo = wppugmill_decode_ai_json( $raw, $r['provider'] );
+	if ( is_wp_error( $aeo ) ) {
+		wp_send_json_error( array( 'message' => $aeo->get_error_message() ), 500 );
 	}
 
-	wp_send_json_success( $result );
+	$allowed_types = array( 'Thing', 'Person', 'Organization', 'Product', 'Place', 'Event', 'Technology', 'DefinedTerm' );
+
+	wp_send_json_success( array(
+		'summary'   => sanitize_textarea_field( $aeo['summary'] ?? '' ),
+		'questions' => array_values( array_filter(
+			array_map( function( $qa ) {
+				return array(
+					'q' => sanitize_text_field( $qa['q'] ?? '' ),
+					'a' => sanitize_textarea_field( $qa['a'] ?? '' ),
+				);
+			}, is_array( $aeo['questions'] ?? null ) ? $aeo['questions'] : array() ),
+			function( $qa ) { return ! empty( $qa['q'] ) && ! empty( $qa['a'] ); }
+		) ),
+		'entities'  => array_values( array_filter(
+			array_map( function( $entity ) use ( $allowed_types ) {
+				$type   = sanitize_text_field( $entity['type'] ?? 'Thing' );
+				$mapped = array(
+					'name'        => sanitize_text_field( $entity['name'] ?? '' ),
+					'type'        => in_array( $type, $allowed_types, true ) ? $type : 'Thing',
+					'description' => sanitize_text_field( $entity['description'] ?? '' ),
+				);
+				$same_as = wppugmill_validate_same_as_url( $entity['same_as'] ?? '' );
+				if ( $same_as ) {
+					$mapped['same_as'] = $same_as;
+				}
+				return $mapped;
+			}, is_array( $aeo['entities'] ?? null ) ? $aeo['entities'] : array() ),
+			function( $e ) { return ! empty( $e['name'] ); }
+		) ),
+		'keywords'  => array_values( array_filter(
+			array_map( 'sanitize_text_field', is_array( $aeo['keywords'] ?? null ) ? $aeo['keywords'] : array() )
+		) ),
+	) );
 }
 
 require_once __DIR__ . '/ai-content.php';

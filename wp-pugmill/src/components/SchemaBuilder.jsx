@@ -12,6 +12,7 @@ import { useState } from '@wordpress/element';
 
 import { useAeoMeta }    from '../hooks';
 import { useSchemaData } from '../hooks';
+import { Tick }          from './Tick';
 import {
 	IS_AI_MODE,
 	BUTTON_STYLE,
@@ -29,8 +30,23 @@ export function SchemaBuilder() {
 	const { schema, updateSchema, updateSchemaType } = useSchemaData();
 	const { postId } = useAeoMeta();
 
-	const schemaType  = schema.type || '';
-	const schemaIsSet = schemaType !== '';
+	const schemaType = schema.type || 'Article';
+
+	// Checkmark rules per type:
+	// - Article (default): always complete — schema is auto-generated.
+	// - Custom types: complete when the key required field is filled.
+	const schemaComplete = ( () => {
+		switch ( schemaType ) {
+			case 'Article':      return true;
+			case 'HowTo':        return schema.howto.steps.length > 0;
+			case 'Product':      return !! schema.product.price;
+			case 'Event':        return !! schema.event.start_date;
+			case 'LocalBusiness': return !! schema.local_business.address;
+			case 'VideoObject':  return !! schema.video.upload_date;
+			case 'Review':       return !! schema.review.item_name || !! schema.review.review_body;
+			default:             return false;
+		}
+	} )();
 
 	// Per-step field update helper for HowTo.
 	const updateStep = ( stepIndex, field, value ) => {
@@ -48,7 +64,7 @@ export function SchemaBuilder() {
 	const [ suggestState, setSuggestState ] = useState( { loading: false, error: '', notice: '' } );
 
 	return (
-		<PanelBody title={ <span>Schema{ schemaIsSet && <span style={ { color: '#46b450', fontWeight: '700', marginLeft: '3px' } }>✓</span> }</span> } initialOpen={ false }>
+		<PanelBody title={ <span>Schema<Tick show={ schemaComplete } /></span> } initialOpen={ false }>
 			{ /* ── AI: Suggest Schema ───────────────────────────────────────── */ }
 			{ IS_AI_MODE && (
 				<>

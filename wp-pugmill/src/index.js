@@ -8,17 +8,45 @@
  */
 
 import { registerPlugin } from '@wordpress/plugins';
+import { Component }      from '@wordpress/element';
 
 import { MainPanel }       from './components/MainPanel';
 import { PrePublishPanel } from './components/PrePublishPanel';
 
+/**
+ * Catches JavaScript errors anywhere in the Pugmill panel tree and renders
+ * a minimal fallback so a crash doesn't blank the entire Document sidebar.
+ */
+class PugmillErrorBoundary extends Component {
+	constructor( props ) {
+		super( props );
+		this.state = { error: null };
+	}
+
+	static getDerivedStateFromError( error ) {
+		return { error };
+	}
+
+	render() {
+		if ( this.state.error ) {
+			return (
+				<div style={ { padding: '12px 16px', color: '#dc3232', fontSize: '12px', lineHeight: '1.5' } }>
+					<strong>WP Pugmill</strong> encountered an error and could not render.
+					Please reload the editor. If this persists, check the browser console for details.
+				</div>
+			);
+		}
+		return this.props.children;
+	}
+}
+
 registerPlugin( 'wppugmill', {
 	render: function() {
 		return (
-			<>
+			<PugmillErrorBoundary>
 				<MainPanel />
 				<PrePublishPanel />
-			</>
+			</PugmillErrorBoundary>
 		);
 	},
 } );

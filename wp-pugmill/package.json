@@ -1,13 +1,17 @@
 {
   "name": "wp-pugmill",
-  "version": "0.4.0",
+  "version": "0.6.9",
   "private": true,
   "scripts": {
     "build": "wp-scripts build",
     "start": "wp-scripts start",
-    "test": "wp-scripts test-unit-jest"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "devDependencies": {
-    "@wordpress/scripts": "^30.0.0"
+    "@vitest/coverage-v8": "^4.1.2",
+    "@wordpress/scripts": "^30.0.0",
+    "vitest": "^4.1.2"
   }
 }

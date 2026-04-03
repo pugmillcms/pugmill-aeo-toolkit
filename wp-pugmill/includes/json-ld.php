@@ -48,24 +48,57 @@ add_action( 'wp_head', 'wppugmill_output_json_ld' );
 /**
  * Single @graph block for singular post/page views.
  *
- * Nodes: Article, FAQPage (conditional), BreadcrumbList
+ * Assembles the graph from composable builders and outputs the script tag.
+ * Nodes: Article/WebPage, FAQPage (conditional), extended schema (conditional),
+ *        BreadcrumbList.
  */
 function wppugmill_output_singular_json_ld() {
-	$post_id   = get_the_ID();
-	$post      = get_post( $post_id );
+	$post_id = get_the_ID();
+	$post    = get_post( $post_id );
+	$aeo     = wppugmill_get_aeo( $post_id );
+	$seo     = wppugmill_get_seo( $post_id );
+
+	$graph = array( wppugmill_build_article_node( $post_id, $post, $aeo, $seo ) );
+
+	$faq = wppugmill_build_faq_node( get_permalink( $post_id ), $aeo['questions'] );
+	if ( $faq ) {
+		$graph[] = $faq;
+	}
+
+	$extended = wppugmill_build_extended_schema_node( $post_id, $post );
+	if ( $extended ) {
+		$graph[] = $extended;
+	}
+
+	$breadcrumbs = wppugmill_build_breadcrumb_schema( $post_id );
+	if ( ! empty( $breadcrumbs['itemListElement'] ) ) {
+		$graph[] = $breadcrumbs;
+	}
+
+	echo '<script type="application/ld+json">' . wp_json_encode(
+		array( '@context' => 'https://schema.org', '@graph' => $graph ),
+		JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG
+	) . '</script>' . "\n";
+}
+
+/**
+ * Build the Article or WebPage schema node for a singular post/page.
+ *
+ * Pages use WebPage — evergreen site content, not time-stamped editorial.
+ * Posts use BlogPosting and include datePublished, author, wordCount, citations.
+ *
+ * @param  int     $post_id
+ * @param  WP_Post $post
+ * @param  array   $aeo     AEO metadata (summary, entities, keywords, questions).
+ * @param  array   $seo     SEO metadata (meta_desc, og_*, etc.).
+ * @return array
+ */
+function wppugmill_build_article_node( $post_id, $post, $aeo, $seo ) {
 	$post_type = get_post_type( $post_id );
 	$is_page   = ( 'page' === $post_type );
-	$aeo       = wppugmill_get_aeo( $post_id );
-	$seo       = wppugmill_get_seo( $post_id );
-
-	// Description: SEO meta desc → AEO summary → excerpt
-	$description = wppugmill_resolve_description( $seo, $aeo, $post );
-
-	// Pages use WebPage schema; posts (and other types) use BlogPosting.
-	// WebPage omits datePublished and author — pages are evergreen site
-	// content, not time-stamped editorial pieces.
 	$permalink = get_permalink( $post_id );
-	$article   = array(
+
+	$article = array(
 		'@type'        => $is_page ? 'WebPage' : 'BlogPosting',
 		'@id'          => $permalink . ( $is_page ? '#webpage' : '#article' ),
 		'headline'     => get_the_title( $post_id ),
@@ -83,6 +116,7 @@ function wppugmill_output_singular_json_ld() {
 		}
 	}
 
+	$description = wppugmill_resolve_description( $seo, $aeo, $post );
 	if ( $description ) {
 		$article['description'] = $description;
 	}
@@ -103,7 +137,7 @@ function wppugmill_output_singular_json_ld() {
 		$article['image'] = $image_node;
 	}
 
-	// Publisher (valid on both BlogPosting and WebPage)
+	// Publisher (valid on both BlogPosting and WebPage).
 	$org_name  = get_option( 'wppugmill_org_name', '' ) ?: get_bloginfo( 'name' );
 	$publisher = array(
 		'@type' => get_option( 'wppugmill_org_type', '' ) ?: 'Organization',
@@ -115,10 +149,10 @@ function wppugmill_output_singular_json_ld() {
 	}
 	$article['publisher'] = $publisher;
 
-	// Author — posts only; pages are site-level content, not author-attributed
+	// Author — posts only; pages are site-level content, not author-attributed.
 	if ( ! $is_page && $post->post_author ) {
-		$author_id  = (int) $post->post_author;
-		$author     = array(
+		$author_id = (int) $post->post_author;
+		$author    = array(
 			'@type' => 'Person',
 			'name'  => get_the_author_meta( 'display_name', $author_id ),
 			'url'   => get_author_posts_url( $author_id ),
@@ -133,9 +167,9 @@ function wppugmill_output_singular_json_ld() {
 		$article['author'] = $author;
 	}
 
-	// Entity mentions
+	// Entity mentions.
 	if ( ! empty( $aeo['entities'] ) ) {
-		$schema_types    = array(
+		$schema_types = array(
 			'Person'       => 'Person',
 			'Organization' => 'Organization',
 			'Product'      => 'Product',
@@ -158,86 +192,69 @@ function wppugmill_output_singular_json_ld() {
 		}, $aeo['entities'] );
 	}
 
-	// Keywords
+	// Keywords.
 	if ( ! empty( $aeo['keywords'] ) ) {
 		$article['keywords'] = implode( ', ', $aeo['keywords'] );
 	}
 
-	// Citations — auto-extract external links from post content (free tier).
+	// Citations — auto-extract external links from post content.
 	if ( ! $is_page && ! empty( $post->post_content ) ) {
 		$site_host = wp_parse_url( home_url(), PHP_URL_HOST );
 		preg_match_all( '/<a\s[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)<\/a>/is', $post->post_content, $matches );
 		$citations = array();
 		foreach ( $matches[1] as $idx => $href ) {
-			$href = esc_url_raw( trim( $href ) );
-			if ( empty( $href ) ) {
-				continue;
-			}
+			$href   = esc_url_raw( trim( $href ) );
 			$parsed = wp_parse_url( $href );
-			// Skip non-http, anchors, and same-domain links.
-			if ( empty( $parsed['scheme'] ) || ! in_array( $parsed['scheme'], array( 'http', 'https' ), true ) ) {
+			if ( empty( $href ) || empty( $parsed['scheme'] ) || ! in_array( $parsed['scheme'], array( 'http', 'https' ), true ) ) {
 				continue;
 			}
 			if ( ! empty( $parsed['host'] ) && rtrim( $parsed['host'], '.' ) === rtrim( $site_host, '.' ) ) {
 				continue;
 			}
-			// Require meaningful anchor text (not just an icon, image, or URL).
-			$anchor = wp_strip_all_tags( $matches[2][ $idx ] );
-			$anchor = trim( $anchor );
+			$anchor = trim( wp_strip_all_tags( $matches[2][ $idx ] ) );
 			if ( empty( $anchor ) || strlen( $anchor ) < 3 || filter_var( $anchor, FILTER_VALIDATE_URL ) ) {
 				continue;
 			}
-			$citation = array( '@type' => 'WebPage', 'url' => $href );
-			$citation['name'] = $anchor;
-			$citations[]      = $citation;
+			$citations[] = array( '@type' => 'WebPage', 'url' => $href, 'name' => $anchor );
 		}
 		if ( ! empty( $citations ) ) {
 			$article['citation'] = array_values( array_unique( $citations, SORT_REGULAR ) );
 		}
 	}
 
-	// Build graph
-	$graph = array( $article );
+	return $article;
+}
 
-	// FAQPage node — only when valid Q&A pairs exist
-	$questions = array_filter( $aeo['questions'], function( $q ) {
+/**
+ * Build a FAQPage schema node from a post's Q&A pairs.
+ *
+ * Returns null when no valid pairs exist so the caller can skip adding it
+ * to the graph without a separate empty-check.
+ *
+ * @param  string $permalink Post permalink (used for the @id anchor).
+ * @param  array  $questions Raw questions array from AEO metadata.
+ * @return array|null
+ */
+function wppugmill_build_faq_node( $permalink, $questions ) {
+	$valid = array_values( array_filter( $questions, function( $q ) {
 		return ! empty( $q['q'] ) && ! empty( $q['a'] );
-	} );
-	if ( ! empty( $questions ) ) {
-		$graph[] = array(
-			'@type'      => 'FAQPage',
-			'@id'        => $permalink . '#faqpage',
-			'mainEntity' => array_values( array_map( function( $q ) {
-				return array(
-					'@type'          => 'Question',
-					'name'           => $q['q'],
-					'acceptedAnswer' => array(
-						'@type' => 'Answer',
-						'text'  => $q['a'],
-					),
-				);
-			}, $questions ) ),
-		);
+	} ) );
+
+	if ( empty( $valid ) ) {
+		return null;
 	}
 
-	// Extended schema type node (HowTo, Product, Event, LocalBusiness, VideoObject)
-	$extended = wppugmill_build_extended_schema_node( $post_id, $post );
-	if ( $extended ) {
-		$graph[] = $extended;
-	}
-
-	// BreadcrumbList node
-	$breadcrumbs = wppugmill_build_breadcrumb_schema( $post_id );
-	if ( ! empty( $breadcrumbs['itemListElement'] ) ) {
-		$graph[] = $breadcrumbs;
-	}
-
-	$output = array(
-		'@context' => 'https://schema.org',
-		'@graph'   => $graph,
+	return array(
+		'@type'      => 'FAQPage',
+		'@id'        => $permalink . '#faqpage',
+		'mainEntity' => array_map( function( $q ) {
+			return array(
+				'@type'          => 'Question',
+				'name'           => $q['q'],
+				'acceptedAnswer' => array( '@type' => 'Answer', 'text' => $q['a'] ),
+			);
+		}, $valid ),
 	);
-
-	echo '<script type="application/ld+json">' . wp_json_encode( $output, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG ) . '</script>' . "\n";
 }
 
 /**
@@ -500,7 +517,7 @@ function wppugmill_output_home_meta_tags() {
  */
 function wppugmill_get_schema( $post_id ) {
 	$defaults = array(
-		'type'           => '',
+		'type'           => 'Article',
 		'howto'          => array( 'description' => '', 'total_time' => '', 'steps' => array() ),
 		'product'        => array( 'name' => '', 'description' => '', 'price' => '', 'currency' => 'USD', 'availability' => 'InStock', 'brand' => '' ),
 		'event'          => array( 'name' => '', 'description' => '', 'start_date' => '', 'end_date' => '', 'location_name' => '', 'location_address' => '', 'organizer' => '' ),
@@ -543,6 +560,8 @@ function wppugmill_build_extended_schema_node( $post_id, $post ) {
 	$type   = $schema['type'] ?? '';
 
 	switch ( $type ) {
+		case 'Article':
+			return null; // Article schema is output by the main article node; no extra node needed.
 		case 'HowTo':
 			return wppugmill_build_howto_node( $post_id, $post, $schema['howto'] );
 		case 'Product':

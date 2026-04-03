@@ -38,7 +38,6 @@ function wppugmill_enqueue_editor_assets() {
 			'hasApiKey'     => ! empty( wppugmill_get_encrypted_option( 'wppugmill_ai_api_key', '' ) ),
 			'ajaxUrl'       => admin_url( 'admin-ajax.php' ),
 			'nonce'         => wp_create_nonce( 'wppugmill_generate_aeo' ),
-			'rewriteNonce'  => wp_create_nonce( 'wppugmill_rewrite_draft' ),
 			'toneNonce'          => wp_create_nonce( 'wppugmill_tone_check' ),
 			'readingLevelNonce'  => wp_create_nonce( 'wppugmill_reading_level' ),
 			'headlinesNonce'     => wp_create_nonce( 'wppugmill_headline_variants' ),
@@ -58,8 +57,6 @@ function wppugmill_enqueue_editor_assets() {
 		'seoNonce'           => wp_create_nonce( 'wppugmill_generate_seo' ),
 		'howtoNonce'         => wp_create_nonce( 'wppugmill_generate_howto_steps' ),
 		'schemaAiNonce'      => wp_create_nonce( 'wppugmill_suggest_schema' ),
-			'simplifyNonce'      => wp_create_nonce( 'wppugmill_simplify_draft' ),
-			'imageAltNonce'      => wp_create_nonce( 'wppugmill_generate_image_alt' ),
 			'pricingUrl'    => esc_url( 'https://wppugmill.com/pricing' ),
 		)
 	);

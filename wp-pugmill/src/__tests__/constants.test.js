@@ -18,8 +18,8 @@ import {
 // ── SCHEMA_DEFAULTS ───────────────────────────────────────────────────────────
 
 describe( 'SCHEMA_DEFAULTS', () => {
-	it( 'has a top-level type key defaulting to empty string', () => {
-		expect( SCHEMA_DEFAULTS.type ).toBe( '' );
+	it( 'has a top-level type key defaulting to Article', () => {
+		expect( SCHEMA_DEFAULTS.type ).toBe( 'Article' );
 	} );
 
 	it( 'has all expected schema type sub-objects', () => {
@@ -67,8 +67,8 @@ describe( 'SCHEMA_DEFAULTS', () => {
 describe( 'SCHEMA_TYPE_OPTIONS', () => {
 	const values = SCHEMA_TYPE_OPTIONS.map( ( o ) => o.value );
 
-	it( 'includes an empty-string "none" option', () => {
-		expect( values ).toContain( '' );
+	it( 'includes Article as the default option', () => {
+		expect( values ).toContain( 'Article' );
 	} );
 
 	it( 'includes all original schema types', () => {

@@ -10,7 +10,6 @@ const {
 	mode              = 'free',
 	ajaxUrl           = '',
 	nonce             = '',
-	rewriteNonce      = '',
 	toneNonce         = '',
 	readingLevelNonce = '',
 	headlinesNonce    = '',
@@ -30,8 +29,6 @@ const {
 	seoNonce          = '',
 	howtoNonce        = '',
 	schemaAiNonce     = '',
-	simplifyNonce     = '',
-	imageAltNonce     = '',
 	pricingUrl        = 'https://wppugmill.com/pricing',
 } = window.wppugmill || {};
 
@@ -39,7 +36,6 @@ export {
 	mode,
 	ajaxUrl,
 	nonce,
-	rewriteNonce,
 	toneNonce,
 	readingLevelNonce,
 	headlinesNonce,
@@ -59,8 +55,6 @@ export {
 	seoNonce,
 	howtoNonce,
 	schemaAiNonce,
-	simplifyNonce,
-	imageAltNonce,
 	pricingUrl,
 };
 
@@ -89,7 +83,7 @@ export const ENTITY_TYPE_OPTIONS = [
 
 /** Default (empty) schema data stored in _wppugmill_schema. */
 export const SCHEMA_DEFAULTS = {
-	type: '',
+	type: 'Article',
 	howto: {
 		description: '',
 		total_time:  '',
@@ -141,7 +135,7 @@ export const SCHEMA_DEFAULTS = {
 
 /** Schema type choices for the top-level SelectControl. */
 export const SCHEMA_TYPE_OPTIONS = [
-	{ label: 'Article',                  value:         '' },
+	{ label: 'Article',                  value:   'Article' },
 	{ label: 'HowTo',                   value:     'HowTo' },
 	{ label: 'Product',                 value:   'Product' },
 	{ label: 'Event',                   value:     'Event' },
@@ -166,7 +160,7 @@ export const PRODUCT_AVAILABILITY_OPTIONS = [
 
 /** Help text shown below the schema type selector. */
 export const SCHEMA_TYPE_DESCRIPTIONS = {
-	'':            'Outputs Article (or BlogPosting), FAQPage (from your Q&A pairs), and Breadcrumb schema automatically — no setup needed.',
+	Article:       'Outputs Article (or BlogPosting), FAQPage (from your Q&A pairs), and Breadcrumb schema automatically — no setup needed.',
 	HowTo:         'Enables step-by-step rich results in Google Search. Best for tutorials, recipes, and guides.',
 	Product:       'Adds price, availability, and brand to search results. Best for product pages and reviews.',
 	Event:         'Displays date, time, and location in search. Best for event announcements and listings.',
@@ -199,21 +193,36 @@ export const AUDIT_STATUS_ICONS = {
 };
 
 /**
- * Map of audit check IDs to the AJAX action that can auto-fix them.
+ * Lazy accessor for window.wppugmill data.
+ * Reading at call time (rather than module-load) makes tests easier to
+ * set up and avoids capturing stale values if the global is written late.
+ */
+export function getWppugmillConfig() {
+	return window.wppugmill || {};
+}
+
+/**
+ * Returns the map of audit check IDs → AJAX fix actions.
+ * Nonces are read from window.wppugmill at call time so test environments
+ * can inject them without needing to mock the entire module.
+ *
  * Special cases (keywords_in_content, has_headings) render their own result UI.
  */
-export const AUDIT_FIX_ACTIONS = {
-	summary_present:     { ajaxAction: 'wppugmill_generate_summary',   actionNonce: summaryNonce,         label: '✨ Generate Summary'      },
-	summary_length:      { ajaxAction: 'wppugmill_generate_summary',   actionNonce: summaryNonce,         label: '✨ Regenerate Summary'    },
-	qa_present:          { ajaxAction: 'wppugmill_generate_qa',        actionNonce: qaNonce,              label: '✨ Generate Q&A'          },
-	qa_coverage:         { ajaxAction: 'wppugmill_generate_qa',        actionNonce: qaNonce,              label: '✨ Regenerate Q&A'        },
-	questions_natural:   { ajaxAction: 'wppugmill_generate_qa',        actionNonce: qaNonce,              label: '✨ Regenerate Q&A'        },
-	entities_present:    { ajaxAction: 'wppugmill_generate_entities',  actionNonce: entitiesNonce,        label: '✨ Generate Entities'     },
-	entity_specificity:  { ajaxAction: 'wppugmill_generate_entities',  actionNonce: entitiesNonce,        label: '✨ Regenerate Entities'   },
-	keywords_present:    { ajaxAction: 'wppugmill_generate_keywords',  actionNonce: keywordsNonce,        label: '✨ Generate Keywords'     },
-	keywords_in_content: { ajaxAction: 'wppugmill_fix_keyword_coverage', actionNonce: fixKeywordsNonce,  label: '✨ Fix with AI'           },
-	has_headings:        { ajaxAction: 'wppugmill_suggest_headings',   actionNonce: suggestHeadingsNonce, label: '✨ Suggest Headings'      },
-};
+export function getAuditFixActions() {
+	const cfg = getWppugmillConfig();
+	return {
+		summary_present:     { ajaxAction: 'wppugmill_generate_summary',     actionNonce: cfg.summaryNonce         || '', label: '✨ Generate Summary'    },
+		summary_length:      { ajaxAction: 'wppugmill_generate_summary',     actionNonce: cfg.summaryNonce         || '', label: '✨ Regenerate Summary'  },
+		qa_present:          { ajaxAction: 'wppugmill_generate_qa',          actionNonce: cfg.qaNonce              || '', label: '✨ Generate Q&A'        },
+		qa_coverage:         { ajaxAction: 'wppugmill_generate_qa',          actionNonce: cfg.qaNonce              || '', label: '✨ Regenerate Q&A'      },
+		questions_natural:   { ajaxAction: 'wppugmill_generate_qa',          actionNonce: cfg.qaNonce              || '', label: '✨ Regenerate Q&A'      },
+		entities_present:    { ajaxAction: 'wppugmill_generate_entities',    actionNonce: cfg.entitiesNonce        || '', label: '✨ Generate Entities'   },
+		entity_specificity:  { ajaxAction: 'wppugmill_generate_entities',    actionNonce: cfg.entitiesNonce        || '', label: '✨ Regenerate Entities' },
+		keywords_present:    { ajaxAction: 'wppugmill_generate_keywords',    actionNonce: cfg.keywordsNonce        || '', label: '✨ Generate Keywords'   },
+		keywords_in_content: { ajaxAction: 'wppugmill_fix_keyword_coverage', actionNonce: cfg.fixKeywordsNonce    || '', label: '✨ Fix with AI'         },
+		has_headings:        { ajaxAction: 'wppugmill_suggest_headings',     actionNonce: cfg.suggestHeadingsNonce || '', label: '✨ Suggest Headings'    },
+	};
+}
 
 /** Social platform metadata for the Social Media Draft panel. */
 export const SOCIAL_PLATFORMS = [

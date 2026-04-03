@@ -3,7 +3,7 @@
  * Plugin Name: WP Pugmill
  * Plugin URI:  https://wppugmill.com
  * Description: A pugmill turns slop into usable clay. This one turns your existing SEO into structured, AI-ready content — llms.txt, AEO metadata, schema, and sitemaps for ChatGPT, Perplexity, and Gemini.
- * Version:     0.6.8
+ * Version:     0.6.9
  * Author:      Janzen Works
  * Author URI:  https://janzenworks.com
  * License:     GPL-2.0-or-later
@@ -18,17 +18,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WPPUGMILL_VERSION',         '0.6.8' );
+define( 'WPPUGMILL_VERSION',         '0.6.9' );
 define( 'WPPUGMILL_PLUGIN_DIR',      plugin_dir_path( __FILE__ ) );
 define( 'WPPUGMILL_PLUGIN_URL',      plugin_dir_url( __FILE__ ) );
 define( 'WPPUGMILL_PLUGIN_FILE',     __FILE__ );
 define( 'WPPUGMILL_ANTHROPIC_MODEL', 'claude-sonnet-4-6' );
-define( 'WPPUGMILL_MAX_AI_INPUT',    8000 ); // ~2K tokens
-
-// Test key for QA — lets you verify AI features in production without wp-config.php access.
-// Enter this in Settings → WP Pugmill → License to enable AI mode.
-// Remove this constant before submitting to WordPress.org.
-define( 'WPPUGMILL_TEST_KEY', 'WPPUGMILL-TEST-AI-KEY' );
+define( 'WPPUGMILL_MAX_AI_INPUT',    8000 ); // character cap — approximately 2K tokens for typical English prose
 
 /**
  * Detect which mode the plugin is running in.
@@ -40,18 +35,13 @@ define( 'WPPUGMILL_TEST_KEY', 'WPPUGMILL-TEST-AI-KEY' );
  * A valid license key is always required to access AI features.
  */
 function wppugmill_mode() {
-	// Dev bypass — define WPPUGMILL_DEV_MODE true in wp-config.php to force AI
-	// mode without a license key. Remove before submitting to WordPress.org.
+	// Dev bypass — define WPPUGMILL_DEV_MODE true in wp-config.php (local only)
+	// to force AI mode without a license key. Never set this on a production site.
 	if ( defined( 'WPPUGMILL_DEV_MODE' ) && WPPUGMILL_DEV_MODE ) {
 		return 'ai';
 	}
 
 	$license_key = wppugmill_get_encrypted_option( 'wppugmill_license_key', '' );
-
-	// Test key bypass — remove before WordPress.org submission.
-	if ( WPPUGMILL_TEST_KEY === $license_key ) {
-		return 'ai';
-	}
 
 	if ( ! empty( $license_key ) ) {
 		return wppugmill_is_licensed() ? 'ai' : 'free';
@@ -74,8 +64,7 @@ require_once WPPUGMILL_PLUGIN_DIR . 'includes/rest-api.php';
 require_once WPPUGMILL_PLUGIN_DIR . 'includes/ai.php';
 require_once WPPUGMILL_PLUGIN_DIR . 'includes/health.php';
 require_once WPPUGMILL_PLUGIN_DIR . 'includes/bot-analytics.php';
-require_once WPPUGMILL_PLUGIN_DIR . 'includes/audit.php';
-require_once WPPUGMILL_PLUGIN_DIR . 'includes/agent.php';
+
 
 // Auto-updates via GitHub Releases (Plugin Update Checker)
 if ( is_admin() ) {
