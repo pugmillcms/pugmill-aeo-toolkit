@@ -84,7 +84,7 @@ function wppugmill_ajax_tone_check() {
 	$mode = wppugmill_mode();
 	if ( 'free' === $mode ) {
 		wp_send_json_error( array(
-			'message' => __( 'Tone Check requires a WP Pugmill AI Connector license. <a href="https://wppugmill.com/pricing" target="_blank">Get your license →</a>', 'wp-pugmill' ),
+			'message' => __( 'Tone Check requires a WP Pugmill WP Pugmill Pro license. <a href="https://wppugmill.com/pricing" target="_blank">Get your license →</a>', 'wp-pugmill' ),
 		), 403 );
 	}
 
@@ -457,7 +457,7 @@ function wppugmill_ajax_generate_image_alt() {
 	$mode = wppugmill_mode();
 	if ( 'free' === $mode ) {
 		wp_send_json_error( array(
-			'message' => __( 'AI alt text generation requires a WP Pugmill AI Connector license. <a href="https://wppugmill.com/pricing" target="_blank">Get your license →</a>', 'wp-pugmill' ),
+			'message' => __( 'AI alt text generation requires a WP Pugmill WP Pugmill Pro license. <a href="https://wppugmill.com/pricing" target="_blank">Get your license →</a>', 'wp-pugmill' ),
 		), 403 );
 	}
 	if ( 'pro' === $mode ) {

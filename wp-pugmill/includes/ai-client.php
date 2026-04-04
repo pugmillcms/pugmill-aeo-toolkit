@@ -49,7 +49,7 @@ function wppugmill_ai_request_setup( $nonce_action, $feature_label, $require_lic
 		if ( 'free' === $mode ) {
 			wp_send_json_error( array(
 				/* translators: %1$s: feature name */
-				'message' => sprintf( __( '%1$s requires a WP Pugmill AI Connector license. <a href="https://wppugmill.com/pricing" target="_blank">Get your license →</a>', 'wp-pugmill' ), $feature_label ),
+				'message' => sprintf( __( '%1$s requires a WP Pugmill WP Pugmill Pro license. <a href="https://wppugmill.com/pricing" target="_blank">Get your license →</a>', 'wp-pugmill' ), $feature_label ),
 			), 403 );
 		}
 		if ( 'pro' === $mode ) {

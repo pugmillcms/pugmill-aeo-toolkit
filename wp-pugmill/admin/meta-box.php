@@ -55,7 +55,7 @@ function wppugmill_render_meta_box( $post ) {
 					<?php printf(
 						'<a href="%1$s">%2$s</a> %3$s',
 						esc_url( admin_url( 'options-general.php?page=wp-pugmill' ) ),
-						esc_html__( 'Get an AI Connector license', 'wp-pugmill' ),
+						esc_html__( 'Get an WP Pugmill Pro license', 'wp-pugmill' ),
 						esc_html__( 'to auto-generate these fields.', 'wp-pugmill' )
 					); ?>
 				<?php endif; ?>

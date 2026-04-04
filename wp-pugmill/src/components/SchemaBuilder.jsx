@@ -2,7 +2,7 @@
  * WP Pugmill — Schema type builder panel.
  *
  * Renders the "Schema" PanelBody including the AI "Suggest Schema" button
- * (AI Connector mode only) and form fields for each structured data type.
+ * (WP Pugmill Pro mode only) and form fields for each structured data type.
  *
  * @package WPPugmill
  */

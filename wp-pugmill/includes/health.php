@@ -236,7 +236,7 @@ function wppugmill_render_health_meta_box( $post ) {
 				printf(
 					'<a href="%1$s" target="_blank">%2$s</a> %3$s',
 					esc_url( 'https://wppugmill.com/pricing' ),
-					esc_html__( 'Get AI Connector', 'wp-pugmill' ),
+					esc_html__( 'Get WP Pugmill Pro', 'wp-pugmill' ),
 					esc_html__( 'to auto-complete these fields.', 'wp-pugmill' )
 				);
 				?>

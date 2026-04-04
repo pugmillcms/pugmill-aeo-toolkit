@@ -175,7 +175,7 @@ function wppugmill_ajax_suggest_schema() {
 	$mode = wppugmill_mode();
 	if ( 'free' === $mode ) {
 		wp_send_json_error( array(
-			'message' => __( 'Schema suggestions require a WP Pugmill AI Connector license.', 'wp-pugmill' ),
+			'message' => __( 'Schema suggestions require a WP Pugmill WP Pugmill Pro license.', 'wp-pugmill' ),
 		), 403 );
 	}
 

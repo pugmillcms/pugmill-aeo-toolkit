@@ -60,7 +60,7 @@ export {
 	pricingUrl,
 };
 
-/** True when the plugin is in AI Connector or Pro mode. */
+/** True when the plugin is in WP Pugmill Pro or Pro mode. */
 export const IS_AI_MODE = mode === 'ai' || mode === 'pro';
 
 /** True when a BYOK API key is saved — unlocks basic AEO generation in free mode. */
