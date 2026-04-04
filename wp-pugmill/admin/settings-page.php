@@ -296,7 +296,7 @@ function wppugmill_render_settings_page() {
 			<?php elseif ( ! empty( $api_key ) ) : ?>
 			<div style="background:#fefce8; border:1px solid #fde68a; border-radius:8px; padding:18px 20px;">
 				<p style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#d97706; margin:0 0 6px;"><?php esc_html_e( 'Current Plan', 'wp-pugmill' ); ?></p>
-				<p style="font-size:17px; font-weight:700; color:#1d2327; margin:0 0 10px;"><?php esc_html_e( 'Free + API Key', 'wp-pugmill' ); ?></p>
+				<p style="font-size:17px; font-weight:700; color:#1d2327; margin:0 0 10px;"><?php esc_html_e( 'Free + AI Provider', 'wp-pugmill' ); ?></p>
 				<ul style="font-size:12px; color:#374151; margin:0 0 14px; padding-left:16px; line-height:1.9;">
 					<li><?php esc_html_e( 'Core AEO generators', 'wp-pugmill' ); ?></li>
 					<li><?php esc_html_e( 'Manual schema &amp; SEO', 'wp-pugmill' ); ?></li>
