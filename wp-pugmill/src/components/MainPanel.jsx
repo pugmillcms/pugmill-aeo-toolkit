@@ -29,6 +29,7 @@ import { SocialDraftPanel } from './SocialDraftPanel';
 import { saveIfDirty }     from '../utils';
 import {
 	IS_AI_MODE,
+	HAS_API_KEY,
 	BUTTON_STYLE,
 	ENTITY_TYPE_OPTIONS,
 	getAuditFixActions,
@@ -50,7 +51,6 @@ import {
 	keywordsNonce,
 	seoNonce,
 	schemaAiNonce,
-	pricingUrl,
 } from '../constants';
 
 // ── Utility ───────────────────────────────────────────────────────────────────
@@ -718,7 +718,7 @@ export function MainPanel() {
 						label="Generate"
 						isActive={ summaryState.loading }
 						anyPending={ summaryState.loading }
-						locked={ ! IS_AI_MODE }
+						locked={ ! IS_AI_MODE && ! HAS_API_KEY }
 						onClick={ () => ajaxGenerate( 'wppugmill_generate_summary', summaryNonce, setSummaryState, ( d ) => updateAeo( { summary: d.summary } ) ) }
 					/>
 				</div>
@@ -761,7 +761,7 @@ export function MainPanel() {
 						label="Generate"
 						isActive={ qaState.loading }
 						anyPending={ qaState.loading }
-						locked={ ! IS_AI_MODE }
+						locked={ ! IS_AI_MODE && ! HAS_API_KEY }
 						onClick={ () => ajaxGenerate( 'wppugmill_generate_qa', qaNonce, setQaState, ( d ) => updateAeo( { questions: d.questions } ) ) }
 					/>
 				</div>
@@ -816,7 +816,7 @@ export function MainPanel() {
 						label="Generate"
 						isActive={ entitiesState.loading }
 						anyPending={ entitiesState.loading }
-						locked={ ! IS_AI_MODE }
+						locked={ ! IS_AI_MODE && ! HAS_API_KEY }
 						onClick={ () => ajaxGenerate( 'wppugmill_generate_entities', entitiesNonce, setEntitiesState, ( d ) => updateAeo( { entities: d.entities } ) ) }
 					/>
 				</div>
@@ -842,7 +842,7 @@ export function MainPanel() {
 						label="Generate"
 						isActive={ keywordsState.loading }
 						anyPending={ keywordsState.loading }
-						locked={ ! IS_AI_MODE }
+						locked={ ! IS_AI_MODE && ! HAS_API_KEY }
 						onClick={ () => ajaxGenerate( 'wppugmill_generate_keywords', keywordsNonce, setKeywordsState, ( d ) => updateAeo( { keywords: d.keywords } ) ) }
 					/>
 				</div>

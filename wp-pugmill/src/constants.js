@@ -8,6 +8,7 @@
 
 const {
 	mode              = 'free',
+	hasApiKey         = false,
 	ajaxUrl           = '',
 	nonce             = '',
 	toneNonce         = '',
@@ -34,6 +35,7 @@ const {
 
 export {
 	mode,
+	hasApiKey,
 	ajaxUrl,
 	nonce,
 	toneNonce,
@@ -60,6 +62,9 @@ export {
 
 /** True when the plugin is in AI Connector or Pro mode. */
 export const IS_AI_MODE = mode === 'ai' || mode === 'pro';
+
+/** True when a BYOK API key is saved — unlocks basic AEO generation in free mode. */
+export const HAS_API_KEY = !! hasApiKey;
 
 /** Shared pill-button inline style (purple, rounded). */
 export const BUTTON_STYLE = {

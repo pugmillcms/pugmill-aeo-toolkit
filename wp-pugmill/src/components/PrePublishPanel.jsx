@@ -14,7 +14,6 @@ import { useAeoMeta } from '../hooks';
 import { useSeoMeta } from '../hooks';
 import { CheckList }  from './CheckList';
 import { computeScore } from '../scoring';
-import { IS_AI_MODE, pricingUrl } from '../constants';
 
 export function PrePublishPanel() {
 	const { aeo } = useAeoMeta();

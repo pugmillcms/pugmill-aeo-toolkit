@@ -12,7 +12,7 @@ import { PanelBody } from '@wordpress/components';
 import { ScoreDisplay }      from './ScoreDisplay';
 import { AiPill }            from './AiInput';
 import { computeScore }      from '../scoring';
-import { getAuditFixActions, IS_AI_MODE } from '../constants';
+import { getAuditFixActions, IS_AI_MODE, HAS_API_KEY } from '../constants';
 
 /**
  * @param {{
@@ -86,7 +86,7 @@ export function AeoHealthPanel( { aeo, seo, draftContent, featuredMediaAltText, 
 												label="Generate"
 												isActive={ fixState === 'loading' }
 												anyPending={ fixState === 'loading' }
-												locked={ ! IS_AI_MODE }
+												locked={ ! IS_AI_MODE && ! HAS_API_KEY }
 												onClick={ () => onFix( item.id ) }
 											/>
 										</div>

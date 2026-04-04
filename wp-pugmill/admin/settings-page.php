@@ -196,13 +196,16 @@ function wppugmill_render_settings_page() {
 		<?php else : ?>
 			<div class="notice notice-warning inline" style="margin-top:12px;">
 				<p>
-					<strong><?php esc_html_e( 'Free mode.', 'wp-pugmill' ); ?></strong> <?php esc_html_e( 'Manual AEO tools are active.', 'wp-pugmill' ); ?>
-					<?php printf(
-						'<a href="%1$s" target="_blank">%2$s</a> %3$s',
-						esc_url( 'https://wppugmill.com/pricing' ),
-						esc_html__( 'Upgrade to AI Connector', 'wp-pugmill' ),
-						esc_html__( 'to unlock AI-powered generation with your own API key.', 'wp-pugmill' )
-					); ?>
+					<strong><?php esc_html_e( 'Free mode.', 'wp-pugmill' ); ?></strong>
+					<?php if ( $api_key ) : ?>
+						<?php esc_html_e( 'API key connected — basic AEO generation active. Upgrade to AI Connector to unlock the full feature set.', 'wp-pugmill' ); ?>
+					<?php else : ?>
+						<?php printf(
+							wp_kses( __( 'Manual AEO tools active. <a href="%1$s">Add an API key</a> to enable basic AI generation for free, or <a href="%2$s" target="_blank">upgrade to AI Connector</a> for the full feature set.', 'wp-pugmill' ), array( 'a' => array( 'href' => array(), 'target' => array() ) ) ),
+							esc_url( admin_url( 'options-general.php?page=wp-pugmill&tab=ai-provider' ) ),
+							esc_url( 'https://wppugmill.com/pricing' )
+						); ?>
+					<?php endif; ?>
 				</p>
 			</div>
 		<?php endif; ?>
@@ -237,7 +240,7 @@ function wppugmill_render_settings_page() {
 			<?php esc_html_e( 'A pugmill turns slop into usable clay — de-aired, wedged, and ready to work with. This plugin does the same for your content: takes the good parts of your existing SEO and transforms them into structured, AI-ready signal that answer engines can actually consume and cite.', 'wp-pugmill' ); ?>
 		</p>
 		<p style="<?php echo esc_attr( $p_style ); ?>">
-			<?php esc_html_e( 'WP Pugmill works in Free mode out of the box — you can manually fill in AEO metadata for every post. Upgrading to AI Connector unlocks one-click AI generation for summaries, Q&A pairs, entities, keywords, SEO fields, social drafts, and more. You bring your own API key from Anthropic, OpenAI, or Google, so your content never passes through our servers.', 'wp-pugmill' ); ?>
+			<?php esc_html_e( 'WP Pugmill is free to use — manually fill in AEO metadata for every post, or connect your own API key (Anthropic, OpenAI, or Google) to enable basic AI generation at no extra cost. Upgrading to AI Connector unlocks the full feature set: Generate All, SEO generation, Tone Check, Topic Focus, Social Media Draft, and more. Your key is encrypted on your server — usage is billed directly by your provider.', 'wp-pugmill' ); ?>
 		</p>
 		<form method="post" action="options.php" style="margin-top:16px;">
 			<?php settings_fields( 'wppugmill_settings' ); ?>
@@ -268,6 +271,88 @@ function wppugmill_render_settings_page() {
 			</table>
 			<?php submit_button(); ?>
 		</form>
+
+		<!-- ── Feature comparison table ─────────────────────────────────── -->
+		<div style="margin-top:32px;">
+			<h2 style="font-size:14px; font-weight:600; color:#1d2327; padding-bottom:10px; border-bottom:1px solid #ddd; margin:0 0 16px;">
+				<?php esc_html_e( 'What\'s included', 'wp-pugmill' ); ?>
+			</h2>
+			<table style="width:100%; max-width:700px; border-collapse:collapse; font-size:13px;">
+				<thead>
+					<tr>
+						<th style="text-align:left; padding:8px 12px 8px 0; border-bottom:2px solid #ddd; color:#1d2327; font-weight:600; width:55%;">Feature</th>
+						<th style="text-align:center; padding:8px 12px; border-bottom:2px solid #ddd; color:#1d2327; font-weight:600; width:22%;">Free</th>
+						<th style="text-align:center; padding:8px 12px; border-bottom:2px solid #ddd; color:#7c3aed; font-weight:600; width:23%;">AI Connector</th>
+					</tr>
+				</thead>
+				<tbody>
+					<?php
+					$row = function( $label, $free, $paid, $note = '' ) {
+						$tick  = '<span style="color:#46b450; font-weight:700;">&#10003;</span>';
+						$dash  = '<span style="color:#ccc;">&#8212;</span>';
+						$free_cell = $free  ? $tick : $dash;
+						$paid_cell = $paid  ? $tick : $dash;
+						$bg = '';
+						static $alt = false;
+						$alt = !$alt;
+						$bg = $alt ? 'background:#fafafa;' : '';
+						echo '<tr style="' . esc_attr( $bg ) . '">';
+						echo '<td style="padding:7px 12px 7px 0; border-bottom:1px solid #f0f0f0; color:#374151;">' . esc_html( $label );
+						if ( $note ) {
+							echo ' <span style="font-size:11px; color:#9ca3af;">' . esc_html( $note ) . '</span>';
+						}
+						echo '</td>';
+						echo '<td style="text-align:center; padding:7px 12px; border-bottom:1px solid #f0f0f0;">' . wp_kses_post( $free_cell ) . '</td>';
+						echo '<td style="text-align:center; padding:7px 12px; border-bottom:1px solid #f0f0f0;">' . wp_kses_post( $paid_cell ) . '</td>';
+						echo '</tr>';
+					};
+					$section = function( $label ) {
+						echo '<tr><td colspan="3" style="padding:14px 0 4px; font-size:11px; font-weight:700; color:#7c3aed; text-transform:uppercase; letter-spacing:.06em;">' . esc_html( $label ) . '</td></tr>';
+					};
+
+					$section( __( 'Core tools', 'wp-pugmill' ) );
+					$row( __( 'Manual AEO editing (Summary, Q&A, Entities, Keywords)', 'wp-pugmill' ),  true, true );
+					$row( __( 'Manual SEO editing (Title, Meta, Canonical, OG…)', 'wp-pugmill' ),      true, true );
+					$row( __( 'Manual Schema markup (Article, HowTo, Product, Event…)', 'wp-pugmill' ), true, true );
+					$row( __( 'AEO Health score', 'wp-pugmill' ),                                       true, true );
+					$row( __( '/llms.txt, XML Sitemap & IndexNow', 'wp-pugmill' ),                      true, true );
+					$row( __( 'Bot Analytics', 'wp-pugmill' ),                                          true, true );
+					$row( __( 'Plugin Compatibility checker', 'wp-pugmill' ),                           true, true );
+
+					$section( __( 'Basic AI generation — free with your own API key', 'wp-pugmill' ) );
+					$row( __( 'Connect Anthropic, OpenAI, or Google Gemini key', 'wp-pugmill' ),        true, true );
+					$row( __( 'Generate AEO Summary', 'wp-pugmill' ),                                   true, true );
+					$row( __( 'Generate Q&A Pairs', 'wp-pugmill' ),                                     true, true );
+					$row( __( 'Generate Entities', 'wp-pugmill' ),                                      true, true );
+					$row( __( 'Generate Keywords', 'wp-pugmill' ),                                      true, true );
+					$row( __( 'Draft Site Summary with AI (Settings)', 'wp-pugmill' ),                  true, true );
+					$row( __( 'AI llms.txt Improvement Tips (Settings)', 'wp-pugmill' ),                true, true );
+
+					$section( __( 'Full AI generation — AI Connector license required', 'wp-pugmill' ) );
+					$row( __( 'Generate All (one-click, 7 steps)', 'wp-pugmill' ),           false, true );
+					$row( __( 'Generate SEO Title & Description', 'wp-pugmill' ),            false, true );
+					$row( __( 'Schema AI Suggestion', 'wp-pugmill' ),                        false, true );
+					$row( __( 'HowTo Draft Steps from Content', 'wp-pugmill' ),              false, true );
+					$row( __( 'Tone Check', 'wp-pugmill' ),                                  false, true );
+					$row( __( 'Topic Focus & Refine', 'wp-pugmill' ),                        false, true );
+					$row( __( 'Internal Links', 'wp-pugmill' ),                              false, true );
+					$row( __( 'Reading Level', 'wp-pugmill' ),                               false, true );
+					$row( __( 'Suggest Titles', 'wp-pugmill' ),                              false, true );
+					$row( __( 'Excerpt Generator', 'wp-pugmill' ),                           false, true );
+					$row( __( 'Social Media Draft', 'wp-pugmill' ),                          false, true );
+					?>
+				</tbody>
+			</table>
+			<?php if ( 'free' === $mode ) : ?>
+			<p style="margin-top:16px; font-size:13px;">
+				<?php if ( empty( $api_key ) ) : ?>
+					<a href="<?php echo esc_url( admin_url( 'options-general.php?page=wp-pugmill&tab=ai-provider' ) ); ?>" class="button"><?php esc_html_e( 'Connect API Key — free →', 'wp-pugmill' ); ?></a>
+					&nbsp;
+				<?php endif; ?>
+				<a href="<?php echo esc_url( 'https://wppugmill.com/pricing' ); ?>" target="_blank" class="button button-primary"><?php esc_html_e( 'Get AI Connector →', 'wp-pugmill' ); ?></a>
+			</p>
+			<?php endif; ?>
+		</div>
 
 		<?php elseif ( 'ai-provider' === $active_tab ) : ?>
 		<!-- ════════════════════════════════════════════════════════════
@@ -444,7 +529,7 @@ function wppugmill_render_settings_page() {
 						<?php else : ?>
 						<p style="margin-top:6px; font-size:12px; color:#9ca3af;">
 							<?php printf(
-								wp_kses( __( 'Add an <a href="%s">AI Connector license and API key</a> to draft this with AI.', 'wp-pugmill' ), array( 'a' => array( 'href' => array() ) ) ),
+								wp_kses( __( 'Add an <a href="%s">API key</a> to draft this with AI.', 'wp-pugmill' ), array( 'a' => array( 'href' => array() ) ) ),
 								esc_url( admin_url( 'options-general.php?page=wp-pugmill&tab=ai-provider' ) )
 							); ?>
 						</p>

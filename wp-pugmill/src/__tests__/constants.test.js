@@ -13,6 +13,7 @@ import {
 	LOCAL_BUSINESS_TYPE_OPTIONS,
 	PRODUCT_AVAILABILITY_OPTIONS,
 	IS_AI_MODE,
+	HAS_API_KEY,
 } from '../constants';
 
 // ── SCHEMA_DEFAULTS ───────────────────────────────────────────────────────────
@@ -163,5 +164,13 @@ describe( 'IS_AI_MODE', () => {
 	it( 'is false when window.wppugmill is not set (defaults to free mode)', () => {
 		// window.wppugmill is undefined in test env; mode defaults to 'free'
 		expect( IS_AI_MODE ).toBe( false );
+	} );
+} );
+
+// ── HAS_API_KEY ───────────────────────────────────────────────────────────────
+
+describe( 'HAS_API_KEY', () => {
+	it( 'is false when window.wppugmill is not set (no API key configured)', () => {
+		expect( HAS_API_KEY ).toBe( false );
 	} );
 } );
