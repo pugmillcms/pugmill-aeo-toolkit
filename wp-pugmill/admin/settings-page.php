@@ -1204,9 +1204,14 @@ function wppugmill_render_settings_page() {
 		<p style="<?php echo esc_attr( $p_style ); ?> margin-top:24px;">
 			<?php esc_html_e( 'WP Pugmill automatically generates an XML sitemap and manages your robots.txt. The sitemap lists all public published posts and pages so search engines and AI crawlers can discover your content. The robots.txt controls which crawlers are allowed in — AI answer engines like ChatGPT, Perplexity, and Gemini use their own bots, and allowing them is key to AEO discoverability.', 'wp-pugmill' ); ?>
 		</p>
+		<style>
+		@media (max-width:900px) {
+			.wppugmill-sitemap-grid { grid-template-columns: 1fr !important; }
+		}
+		</style>
 		<form method="post" action="options.php" style="margin-top:20px;">
 			<?php settings_fields( 'wppugmill_settings' ); ?>
-			<div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; align-items:start;">
+			<div class="wppugmill-sitemap-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:20px; align-items:start;">
 
 			<!-- LEFT: XML Sitemap -->
 			<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px 24px;">
