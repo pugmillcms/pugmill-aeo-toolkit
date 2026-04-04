@@ -241,16 +241,20 @@ function wppugmill_render_settings_page() {
 		<div style="display:grid; grid-template-columns:1fr 280px; gap:28px; align-items:start; margin-top:24px;">
 		<div><!-- left column -->
 		<p style="<?php echo esc_attr( $p_style ); ?>">
-			<?php esc_html_e( 'A pugmill in a pottery studio turns slop into usable clay — de-aired, wedged, and ready to work. This plugin does the same for your content: takes the good parts of your existing SEO and transforms them into structured, AI-ready signal that answer engines can actually consume and cite.', 'wp-pugmill' ); ?>
+			<?php esc_html_e( 'A pugmill in a pottery studio turns slop into usable clay — de-aired, wedged, and ready to work. This plugin does the same for your content: takes the good parts of your existing SEO and transforms them into structured, AI-ready signal that answer engines can consume and cite.', 'wp-pugmill' ); ?>
 		</p>
 		<p style="<?php echo esc_attr( $p_style ); ?>">
-			<?php esc_html_e( 'WP Pugmill is free to use — manually fill in AEO metadata for every post, or connect your own API Provider (Anthropic, OpenAI, or Google). Upgrading to WP Pugmill Pro unlocks the full feature set: Generate All, SEO generation, Tone Check, Topic Focus, Social Media Draft, and more. Your key is encrypted on your server — usage is billed directly by your provider.', 'wp-pugmill' ); ?>
+			<?php esc_html_e( 'WP Pugmill is free to use — manually fill in AEO metadata for every post, or connect your own AI Provider (Anthropic, OpenAI, or Google). The AI Provider key you use is encrypted on your server — usage is billed directly by your AI provider.', 'wp-pugmill' ); ?>
+		</p>
+		<h3 style="font-size:13px; font-weight:700; color:#1d2327; margin:20px 0 6px;"><?php esc_html_e( 'Upgrade to WP Pugmill Pro', 'wp-pugmill' ); ?></h3>
+		<p style="<?php echo esc_attr( $p_style ); ?>">
+			<?php esc_html_e( 'Upgrading to WP Pugmill Pro unlocks the full feature set: Generate All AEO, SEO Generation, Tone Check, Topic Focus, Social Media Draftss, and more (see below).', 'wp-pugmill' ); ?>
 		</p>
 		<form method="post" action="options.php" style="margin-top:16px;">
 			<?php settings_fields( 'wppugmill_settings' ); ?>
 			<table class="form-table">
 				<tr>
-					<th><label for="wppugmill_license_key"><?php esc_html_e( 'License Key', 'wp-pugmill' ); ?></label></th>
+					<th><label for="wppugmill_license_key"><?php esc_html_e( 'WP Pugmill Pro License Key', 'wp-pugmill' ); ?></label></th>
 					<td>
 						<input type="text"
 							id="wppugmill_license_key"
@@ -286,7 +290,7 @@ function wppugmill_render_settings_page() {
 					<li><?php esc_html_e( 'All AI generation features', 'wp-pugmill' ); ?></li>
 					<li><?php esc_html_e( 'Generate All (one-click)', 'wp-pugmill' ); ?></li>
 					<li><?php esc_html_e( 'Tone Check &amp; editorial suite', 'wp-pugmill' ); ?></li>
-					<li><?php esc_html_e( 'Social Media Draft', 'wp-pugmill' ); ?></li>
+					<li><?php esc_html_e( 'Social Media Drafts', 'wp-pugmill' ); ?></li>
 				</ul>
 			</div>
 			<?php elseif ( ! empty( $api_key ) ) : ?>
@@ -373,16 +377,14 @@ function wppugmill_render_settings_page() {
 
 					$section( __( 'Full AI generation — WP Pugmill Pro license required', 'wp-pugmill' ) );
 					$row( __( 'Generate All (one-click, 7 steps)', 'wp-pugmill' ),           false, true );
-					$row( __( 'Generate SEO Title & Description', 'wp-pugmill' ),            false, true );
-					$row( __( 'Schema AI Suggestion', 'wp-pugmill' ),                        false, true );
-					$row( __( 'HowTo Draft Steps from Content', 'wp-pugmill' ),              false, true );
+					$row( __( 'Generate SEO/AEO Title & Description', 'wp-pugmill' ),            false, true );
+					$row( __( 'Schema AI Type (Article, HowTo, Product, Event, LocalBusiness, VideoObject, Review)', 'wp-pugmill' ), false, true );
 					$row( __( 'Tone Check', 'wp-pugmill' ),                                  false, true );
 					$row( __( 'Topic Focus & Refine', 'wp-pugmill' ),                        false, true );
 					$row( __( 'Internal Links', 'wp-pugmill' ),                              false, true );
 					$row( __( 'Reading Level', 'wp-pugmill' ),                               false, true );
-					$row( __( 'Suggest Titles', 'wp-pugmill' ),                              false, true );
-					$row( __( 'Excerpt Generator', 'wp-pugmill' ),                           false, true );
-					$row( __( 'Social Media Draft', 'wp-pugmill' ),                          false, true );
+										$row( __( 'Excerpt Generator', 'wp-pugmill' ),                           false, true );
+					$row( __( 'Social Media Drafts', 'wp-pugmill' ),                          false, true );
 					?>
 				</tbody>
 			</table>
@@ -407,8 +409,8 @@ function wppugmill_render_settings_page() {
 			<?php esc_html_e( 'WP Pugmill uses a bring-your-own-key model — you connect directly to Anthropic, OpenAI, or Google Gemini using your own API account. Your key is encrypted and stored server-side only, never exposed to visitors or transmitted through our servers. Usage is billed directly by your chosen AI provider.', 'wp-pugmill' ); ?>
 		</p>
 
-		<div style="margin:20px 0 4px; max-width:700px;">
-			<p style="font-size:12px; font-weight:700; color:#1e1e1e; text-transform:uppercase; letter-spacing:.05em; margin:0 0 10px;">
+		<div style="margin:20px 0 4px;">
+			<p style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#9ca3af; margin:0 0 10px;">
 				<?php esc_html_e( 'How to connect', 'wp-pugmill' ); ?>
 			</p>
 			<ol style="font-size:13px; color:#444; margin:0 0 20px; padding-left:20px; line-height:1.8;">
@@ -417,20 +419,20 @@ function wppugmill_render_settings_page() {
 				<li><?php esc_html_e( 'Paste the key in the form and click Save Settings.', 'wp-pugmill' ); ?></li>
 			</ol>
 
-			<div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px;">
-				<div style="padding:14px; background:#f9f6ff; border:1px solid #e8d5fd; border-radius:6px;">
-					<p style="font-size:13px; font-weight:700; color:#1e1e1e; margin:0 0 4px;">Anthropic — Claude</p>
-					<p style="font-size:12px; color:#555; margin:0 0 10px; line-height:1.5;"><?php esc_html_e( 'Excellent reasoning and long-form writing. Recommended for AEO and editorial tasks.', 'wp-pugmill' ); ?></p>
+			<div style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px;">
+				<div style="padding:18px 20px; background:#f9f6ff; border:1px solid #e8d5fd; border-radius:8px; border-top:3px solid #7c3aed; display:flex; flex-direction:column;">
+					<p style="font-size:13px; font-weight:700; color:#1e1e1e; margin:0 0 6px;">Anthropic — Claude</p>
+					<p style="font-size:12px; color:#555; margin:0 0 12px; line-height:1.6; flex:1;"><?php esc_html_e( 'Excellent reasoning and long-form writing. Recommended for AEO and editorial tasks.', 'wp-pugmill' ); ?></p>
 					<a href="<?php echo esc_url( 'https://console.anthropic.com/settings/keys' ); ?>" target="_blank" style="font-size:12px; font-weight:600; color:#7c3aed; text-decoration:none;"><?php esc_html_e( 'Get API key →', 'wp-pugmill' ); ?></a>
 				</div>
-				<div style="padding:14px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:6px;">
-					<p style="font-size:13px; font-weight:700; color:#1e1e1e; margin:0 0 4px;">OpenAI — GPT</p>
-					<p style="font-size:12px; color:#555; margin:0 0 10px; line-height:1.5;"><?php esc_html_e( 'Widely used and reliable. Strong across summarization, SEO, and structured output.', 'wp-pugmill' ); ?></p>
+				<div style="padding:18px 20px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; border-top:3px solid #16a34a; display:flex; flex-direction:column;">
+					<p style="font-size:13px; font-weight:700; color:#1e1e1e; margin:0 0 6px;">OpenAI — GPT</p>
+					<p style="font-size:12px; color:#555; margin:0 0 12px; line-height:1.6; flex:1;"><?php esc_html_e( 'Widely used and reliable. Strong across summarization, SEO, and structured output.', 'wp-pugmill' ); ?></p>
 					<a href="<?php echo esc_url( 'https://platform.openai.com/api-keys' ); ?>" target="_blank" style="font-size:12px; font-weight:600; color:#16a34a; text-decoration:none;"><?php esc_html_e( 'Get API key →', 'wp-pugmill' ); ?></a>
 				</div>
-				<div style="padding:14px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px;">
-					<p style="font-size:13px; font-weight:700; color:#1e1e1e; margin:0 0 4px;">Google — Gemini</p>
-					<p style="font-size:12px; color:#555; margin:0 0 10px; line-height:1.5;"><?php esc_html_e( 'Google\'s multimodal model. Well-suited for search-aware content and entity recognition.', 'wp-pugmill' ); ?></p>
+				<div style="padding:18px 20px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; border-top:3px solid #2563eb; display:flex; flex-direction:column;">
+					<p style="font-size:13px; font-weight:700; color:#1e1e1e; margin:0 0 6px;">Google — Gemini</p>
+					<p style="font-size:12px; color:#555; margin:0 0 12px; line-height:1.6; flex:1;"><?php esc_html_e( 'Google\'s multimodal model. Well-suited for search-aware content and entity recognition.', 'wp-pugmill' ); ?></p>
 					<a href="<?php echo esc_url( 'https://aistudio.google.com/apikey' ); ?>" target="_blank" style="font-size:12px; font-weight:600; color:#2563eb; text-decoration:none;"><?php esc_html_e( 'Get API key →', 'wp-pugmill' ); ?></a>
 				</div>
 			</div>
@@ -765,7 +767,7 @@ function wppugmill_render_settings_page() {
 				</div>
 			</div>
 
-			<div style="margin-top:16px; padding-top:16px; border-top:1px solid #e8e0f7; display:grid; grid-template-columns:1fr 1fr; gap:0 32px;">
+			<div style="margin-top:16px; padding-top:16px; border-top:1px solid #e8e0f7; display:grid; grid-template-columns:1fr 1fr 3fr; gap:0 24px;">
 				<div>
 					<p style="font-size:11px; font-weight:700; color:#7c3aed; text-transform:uppercase; letter-spacing:.06em; margin:0 0 8px;">
 						<?php esc_html_e( 'Site Level', 'wp-pugmill' ); ?>
@@ -778,6 +780,19 @@ function wppugmill_render_settings_page() {
 						<?php echo $has_org_name ? '✓' : '✗'; ?>
 						<?php esc_html_e( 'Organization name', 'wp-pugmill' ); ?>
 					</p>
+				</div>
+				<div>
+					<p style="font-size:11px; font-weight:700; color:#7c3aed; text-transform:uppercase; letter-spacing:.06em; margin:0 0 8px;">
+						<?php esc_html_e( 'How this is scored', 'wp-pugmill' ); ?>
+					</p>
+					<ul style="margin:0; padding:0; list-style:none; font-size:11px; color:#6b7280;">
+						<li style="padding:2px 0;"><?php esc_html_e( 'Site summary — 20 pts', 'wp-pugmill' ); ?></li>
+						<li style="padding:2px 0;"><?php esc_html_e( 'Post summaries — up to 30 pts', 'wp-pugmill' ); ?></li>
+						<li style="padding:2px 0;"><?php esc_html_e( 'Organization name — 5 pts', 'wp-pugmill' ); ?></li>
+						<li style="padding:2px 0;"><?php esc_html_e( 'Q&A pairs — up to 20 pts', 'wp-pugmill' ); ?></li>
+						<li style="padding:2px 0;"><?php esc_html_e( 'Keywords — up to 15 pts', 'wp-pugmill' ); ?></li>
+						<li style="padding:2px 0;"><?php esc_html_e( 'Entities — up to 10 pts', 'wp-pugmill' ); ?></li>
+					</ul>
 				</div>
 				<div>
 					<p style="font-size:11px; font-weight:700; color:#7c3aed; text-transform:uppercase; letter-spacing:.06em; margin:0 0 6px;">
@@ -795,19 +810,6 @@ function wppugmill_render_settings_page() {
 			</div>
 
 			<div style="margin-top:16px; padding-top:16px; border-top:1px solid #e8e0f7;">
-				<p style="font-size:11px; font-weight:700; color:#7c3aed; text-transform:uppercase; letter-spacing:.06em; margin:0 0 8px;">
-					<?php esc_html_e( 'How this is scored', 'wp-pugmill' ); ?>
-				</p>
-				<div style="display:grid; grid-template-columns:1fr 1fr; gap:3px 16px; font-size:11px; color:#6b7280; margin-bottom:10px;">
-					<span><?php esc_html_e( 'Site summary — 20 pts', 'wp-pugmill' ); ?></span>
-					<span><?php esc_html_e( 'Post summaries — up to 30 pts', 'wp-pugmill' ); ?></span>
-					<span><?php esc_html_e( 'Organization name — 5 pts', 'wp-pugmill' ); ?></span>
-					<span><?php esc_html_e( 'Q&A pairs — up to 20 pts', 'wp-pugmill' ); ?></span>
-					<span></span>
-					<span><?php esc_html_e( 'Keywords — up to 15 pts', 'wp-pugmill' ); ?></span>
-					<span></span>
-					<span><?php esc_html_e( 'Entities — up to 10 pts', 'wp-pugmill' ); ?></span>
-				</div>
 				<p style="font-size:12px; color:#6b7280; margin:0 0 12px; line-height:1.5;">
 					<?php esc_html_e( 'AI answer engines read /llms.txt to understand your site. Richer metadata means more accurate AI-generated answers and summaries that attribute content back to you.', 'wp-pugmill' ); ?>
 				</p>

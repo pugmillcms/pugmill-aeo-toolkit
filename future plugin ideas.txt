@@ -1,0 +1,38 @@
+What Belongs as WPPugmill Plugins                                                                                 
+                         
+  Persistent, optional, needed by a meaningful percentage of users in roughly the same form:
+                                                                                                            
+  Communication
+  - Newsletter (Resend Broadcasts, Beehiiv, Buttondown, Kit) — post → send to subscribers                   
+  - Outbound webhooks — register a URL, fire it on any hook event; the generic integration primitive that   
+  replaces a dozen one-off plugins                                                                       
+  - Slack/Discord notifications — post published, form submitted, etc.                                      
+  - Push notifications (Web Push / OneSignal)                                                             
+                                                                                                            
+  Engagement                                                                                              
+  - Comments (Giscus is the right default for a dev-focused CMS — GitHub-backed, zero infrastructure)       
+  - Reactions                                                                                               
+                                                                                                            
+  Discovery & Search                                                                                        
+  - Public site search — built-in with Postgres tsvector, enhanced with Algolia or Typesense                
+  - Google Search Console integration — index status dashboard in admin                     
+                                                                                                            
+  Analytics                                                                                                 
+  - Web analytics (Plausible, Umami, Fathom) — script injection + dashboard embed
+  - Bot analytics already exists                                                                            
+                                                                                                          
+  Commerce                                                                                                  
+  - Stripe — payments, subscriptions, tip jar                                                             
+  - Gated content — depends on Stripe plugin                                                                
+  - Digital downloads — depends on Stripe plugin                                                          
+                                                                                                            
+  Media                                                                                                   
+  - Video hosting (Mux or Cloudflare Stream) — storage handles static files; video transcoding is a
+  different category and should never be local                                                              
+  
+  Social                                                                                                    
+  - Auto-publish on post:after-publish (Twitter/X, LinkedIn, Bluesky)                                     
+                                                                                                            
+  Accessibility & Quality
+  - Accessibility audit — flag missing alt text, heading structure; fits the enhanced pattern but persistent
+   enough to be a plugin 
