@@ -25,6 +25,10 @@ define( 'WPPUGMILL_LS_VALIDATE_URL',  'https://api.lemonsqueezy.com/v1/licenses/
 define( 'WPPUGMILL_LS_ACTIVATE_URL',  'https://api.lemonsqueezy.com/v1/licenses/activate' );
 define( 'WPPUGMILL_LS_DEACTIVATE_URL','https://api.lemonsqueezy.com/v1/licenses/deactivate' );
 
+// Hardcoded test key — enter this in the License Key field on any install to
+// activate AI mode without a real Lemon Squeezy key. For testing only.
+define( 'WPPUGMILL_HARDCODED_TEST_KEY', 'WPPUGMILL-TEST-AI-KEY' );
+
 /**
  * Common request args for all Lemon Squeezy calls.
  */
@@ -91,8 +95,9 @@ function wppugmill_validate_license_remote() {
 		return $empty;
 	}
 
-	// Test key — return synthetic active status without hitting the LS API.
-	if ( defined( 'WPPUGMILL_TEST_KEY' ) && WPPUGMILL_TEST_KEY === $key ) {
+	// Test keys — return synthetic active status without hitting the LS API.
+	if ( ( defined( 'WPPUGMILL_TEST_KEY' ) && WPPUGMILL_TEST_KEY === $key )
+		|| WPPUGMILL_HARDCODED_TEST_KEY === $key ) {
 		return array(
 			'status'         => 'active',
 			'error'          => '',
@@ -148,8 +153,9 @@ function wppugmill_activate_license( $key ) {
 		return array( 'success' => false, 'error' => __( 'Invalid license key format.', 'wp-pugmill' ) );
 	}
 
-	// Test key — skip LS API call and return synthetic success.
-	if ( defined( 'WPPUGMILL_TEST_KEY' ) && WPPUGMILL_TEST_KEY === $key ) {
+	// Test keys — skip LS API call and return synthetic success.
+	if ( ( defined( 'WPPUGMILL_TEST_KEY' ) && WPPUGMILL_TEST_KEY === $key )
+		|| WPPUGMILL_HARDCODED_TEST_KEY === $key ) {
 		$result = array(
 			'status'         => 'active',
 			'error'          => '',
@@ -223,10 +229,11 @@ function wppugmill_on_license_key_update( $old_encrypted, $new_encrypted ) {
 	$old_key = wppugmill_decrypt( $old_encrypted );
 	$new_key = wppugmill_decrypt( $new_encrypted );
 
-	// Deactivate old key only if it's a real LS key (not the test key).
-	$is_test_key = defined( 'WPPUGMILL_TEST_KEY' );
+	// Deactivate old key only if it's a real LS key (not a test key).
+	$is_wp_config_test_key = defined( 'WPPUGMILL_TEST_KEY' ) && WPPUGMILL_TEST_KEY === $old_key;
+	$is_hardcoded_test_key = WPPUGMILL_HARDCODED_TEST_KEY === $old_key;
 	if ( ! empty( $old_key ) && $old_key !== $new_key ) {
-		if ( ! $is_test_key || WPPUGMILL_TEST_KEY !== $old_key ) {
+		if ( ! $is_wp_config_test_key && ! $is_hardcoded_test_key ) {
 			wppugmill_deactivate_license( $old_key );
 		}
 	}
