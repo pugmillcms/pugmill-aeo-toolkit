@@ -39,6 +39,7 @@ export function ToneCheckPanel( {
 	onApplyFix,
 	onDismissError,
 	onDismissAll,
+	locked,
 } ) {
 	return (
 		<PanelBody title="Tone Check" opened={ open } onToggle={ onToggle }>
@@ -107,9 +108,9 @@ export function ToneCheckPanel( {
 			<Button
 				variant="secondary"
 				isBusy={ loading }
-				disabled={ loading }
+				disabled={ locked || loading }
 				onClick={ onCheck }
-				style={ { width: '100%', justifyContent: 'center', ...BUTTON_STYLE } }
+				style={ { width: '100%', justifyContent: 'center', ...BUTTON_STYLE, ...( locked ? { opacity: 0.4 } : {} ) } }
 			>
 				{ loading ? 'Checking…' : '🎨 Check Tone' }
 			</Button>

@@ -572,140 +572,128 @@ export function MainPanel() {
 				onFix={ handleHealthFix }
 			/>
 
-			{ /* ── Generate All (AI mode) ───────────────────────────────────── */ }
-			{ IS_AI_MODE ? (
-				<>
-					{ generateAllError && (
-						<Notice status="error" isDismissible={ false } style={ { marginTop: '8px' } }>
-							{ generateAllError }
-						</Notice>
-					) }
-					{ generateAllSuccess && (
-						<Notice status="success" isDismissible={ false } style={ { marginTop: '8px' } }>
-							Fields generated — review and save.
-						</Notice>
-					) }
-					<Button
-						variant="primary"
-						isBusy={ generateAllLoading }
-						disabled={ generateAllLoading }
-						onClick={ async () => {
-							setGenerateAllLoading( true );
-							setGenerateAllError( '' );
-							setGenerateAllSuccess( false );
-							try {
-								// Step 1 — AEO
-								const aeoRes  = await fetch( ajaxUrl, {
-									method:  'POST',
-									headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-									body:    new URLSearchParams( { action: 'wppugmill_generate_aeo', nonce, post_id: postId, draft_content: draftContent } ),
-								} );
-								const aeoData = await aeoRes.json();
-								if ( ! aeoData.success ) {
-									setGenerateAllError( aeoData.data?.message || aeoData.data || 'AEO generation failed. Please try again.' );
-									return;
-								}
-
-								// Step 2 — SEO
-								const seoRes  = await fetch( ajaxUrl, {
-									method:  'POST',
-									headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-									body:    new URLSearchParams( { action: 'wppugmill_generate_seo', nonce: seoNonce, post_id: postId, draft_content: draftContent } ),
-								} );
-								const seoData = await seoRes.json();
-
-								// Apply AEO + SEO to post meta.
-								const newAeo = JSON.stringify( { ...aeo, ...aeoData.data } );
-								const newSeo = seoData.success
-									? JSON.stringify( { ...seo, title: seoData.data.title, meta_desc: seoData.data.meta_desc } )
-									: JSON.stringify( seo );
-								setMeta( { ...meta, _wppugmill_aeo: newAeo, _wppugmill_seo: newSeo } );
-
-								// Step 3 — Save so post-content-dependent steps read the latest content.
-								await saveIfDirty();
-
-								// Step 4 — Excerpt (auto-apply)
-								const excerptRes  = await fetch( ajaxUrl, {
-									method:  'POST',
-									headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-									body:    new URLSearchParams( { action: 'wppugmill_generate_excerpt', nonce: excerptNonce, post_id: postId } ),
-								} );
-								const excerptData = await excerptRes.json();
-								if ( excerptData.success && excerptData.data?.excerpt ) {
-									editPost( { excerpt: excerptData.data.excerpt } );
-									setExcerptApplied( true );
-									setExcerptState( { loading: false, error: '', result: excerptData.data } );
-								}
-
-								// Step 5 — Topic Focus (populate panel)
-								const topicRes  = await fetch( ajaxUrl, {
-									method:  'POST',
-									headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-									body:    new URLSearchParams( { action: 'wppugmill_topic_focus', nonce: topicFocusNonce, post_id: postId } ),
-								} );
-								const topicData = await topicRes.json();
-								if ( topicData.success ) {
-									setTopicState( { loading: false, error: '', result: topicData.data } );
-									setRefineState( { loading: false, error: '', result: null } );
-									setSwapStates( {} );
-								}
-
-								// Step 6 — Internal Links (populate panel)
-								const linksRes  = await fetch( ajaxUrl, {
-									method:  'POST',
-									headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-									body:    new URLSearchParams( { action: 'wppugmill_internal_links', nonce: internalLinksNonce, post_id: postId } ),
-								} );
-								const linksData = await linksRes.json();
-								if ( linksData.success ) {
-									setLinksState( { loading: false, error: '', result: linksData.data } );
-									setLinkInserted( {} );
-								}
-
-								// Step 7 — Schema suggestion (apply only if AI returns a type)
-								const schemaRes  = await fetch( ajaxUrl, {
-									method:      'POST',
-									credentials: 'same-origin',
-									headers:     { 'Content-Type': 'application/x-www-form-urlencoded' },
-									body:        new URLSearchParams( { action: 'wppugmill_suggest_schema', nonce: schemaAiNonce, post_id: postId } ),
-								} );
-								const schemaData = await schemaRes.json();
-								if ( schemaData.success && schemaData.data?.type ) {
-									const s = schemaData.data;
-									const updates = { type: s.type };
-									if ( s.howto )          updates.howto          = { ...schema.howto,          ...s.howto          };
-									if ( s.product )        updates.product        = { ...schema.product,        ...s.product        };
-									if ( s.event )          updates.event          = { ...schema.event,          ...s.event          };
-									if ( s.local_business ) updates.local_business = { ...schema.local_business, ...s.local_business };
-									if ( s.video )          updates.video          = { ...schema.video,          ...s.video          };
-									if ( s.review )         updates.review         = { ...schema.review,         ...s.review         };
-									updateSchema( updates );
-								}
-
-								fetchUsage();
-								setGenerateAllSuccess( true );
-								setTimeout( () => setGenerateAllSuccess( false ), 5000 );
-							} catch {
-								setGenerateAllError( 'Network error. Please check your connection and try again.' );
-							} finally {
-								setGenerateAllLoading( false );
-							}
-						} }
-						style={ { width: '100%', justifyContent: 'center', marginTop: '12px', ...BUTTON_STYLE } }
-					>
-						{ generateAllLoading ? 'Generating…' : '✨ Generate All' }
-					</Button>
-
-					{ /* Usage meter */ }
-					<UsageMeter usage={ usage } />
-				</>
-			) : (
-				<p style={ { fontSize: '11px', color: '#666', textAlign: 'center', marginTop: '10px' } }>
-					Use the <strong>Generate</strong> buttons in each panel below, or{ ' ' }
-					<a href={ pricingUrl } target="_blank" rel="noreferrer">upgrade to AI Connector</a>
-					{ ' ' }to generate all fields at once.
-				</p>
+			{ /* ── Generate All ───────────────────────────────────────────── */ }
+			{ IS_AI_MODE && generateAllError && (
+				<Notice status="error" isDismissible={ false } style={ { marginTop: '8px' } }>
+					{ generateAllError }
+				</Notice>
 			) }
+			{ IS_AI_MODE && generateAllSuccess && (
+				<Notice status="success" isDismissible={ false } style={ { marginTop: '8px' } }>
+					Fields generated — review and save.
+				</Notice>
+			) }
+			<Button
+				variant="primary"
+				isBusy={ generateAllLoading }
+				disabled={ ! IS_AI_MODE || generateAllLoading }
+				onClick={ async () => {
+					setGenerateAllLoading( true );
+					setGenerateAllError( '' );
+					setGenerateAllSuccess( false );
+					try {
+						// Step 1 — AEO
+						const aeoRes  = await fetch( ajaxUrl, {
+							method:  'POST',
+							headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+							body:    new URLSearchParams( { action: 'wppugmill_generate_aeo', nonce, post_id: postId, draft_content: draftContent } ),
+						} );
+						const aeoData = await aeoRes.json();
+						if ( ! aeoData.success ) {
+							setGenerateAllError( aeoData.data?.message || aeoData.data || 'AEO generation failed. Please try again.' );
+							return;
+						}
+
+						// Step 2 — SEO
+						const seoRes  = await fetch( ajaxUrl, {
+							method:  'POST',
+							headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+							body:    new URLSearchParams( { action: 'wppugmill_generate_seo', nonce: seoNonce, post_id: postId, draft_content: draftContent } ),
+						} );
+						const seoData = await seoRes.json();
+
+						// Apply AEO + SEO to post meta.
+						const newAeo = JSON.stringify( { ...aeo, ...aeoData.data } );
+						const newSeo = seoData.success
+							? JSON.stringify( { ...seo, title: seoData.data.title, meta_desc: seoData.data.meta_desc } )
+							: JSON.stringify( seo );
+						setMeta( { ...meta, _wppugmill_aeo: newAeo, _wppugmill_seo: newSeo } );
+
+						// Step 3 — Save so post-content-dependent steps read the latest content.
+						await saveIfDirty();
+
+						// Step 4 — Excerpt (auto-apply)
+						const excerptRes  = await fetch( ajaxUrl, {
+							method:  'POST',
+							headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+							body:    new URLSearchParams( { action: 'wppugmill_generate_excerpt', nonce: excerptNonce, post_id: postId } ),
+						} );
+						const excerptData = await excerptRes.json();
+						if ( excerptData.success && excerptData.data?.excerpt ) {
+							editPost( { excerpt: excerptData.data.excerpt } );
+							setExcerptApplied( true );
+							setExcerptState( { loading: false, error: '', result: excerptData.data } );
+						}
+
+						// Step 5 — Topic Focus (populate panel)
+						const topicRes  = await fetch( ajaxUrl, {
+							method:  'POST',
+							headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+							body:    new URLSearchParams( { action: 'wppugmill_topic_focus', nonce: topicFocusNonce, post_id: postId } ),
+						} );
+						const topicData = await topicRes.json();
+						if ( topicData.success ) {
+							setTopicState( { loading: false, error: '', result: topicData.data } );
+							setRefineState( { loading: false, error: '', result: null } );
+							setSwapStates( {} );
+						}
+
+						// Step 6 — Internal Links (populate panel)
+						const linksRes  = await fetch( ajaxUrl, {
+							method:  'POST',
+							headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+							body:    new URLSearchParams( { action: 'wppugmill_internal_links', nonce: internalLinksNonce, post_id: postId } ),
+						} );
+						const linksData = await linksRes.json();
+						if ( linksData.success ) {
+							setLinksState( { loading: false, error: '', result: linksData.data } );
+							setLinkInserted( {} );
+						}
+
+						// Step 7 — Schema suggestion (apply only if AI returns a type)
+						const schemaRes  = await fetch( ajaxUrl, {
+							method:      'POST',
+							credentials: 'same-origin',
+							headers:     { 'Content-Type': 'application/x-www-form-urlencoded' },
+							body:        new URLSearchParams( { action: 'wppugmill_suggest_schema', nonce: schemaAiNonce, post_id: postId } ),
+						} );
+						const schemaData = await schemaRes.json();
+						if ( schemaData.success && schemaData.data?.type ) {
+							const s = schemaData.data;
+							const updates = { type: s.type };
+							if ( s.howto )          updates.howto          = { ...schema.howto,          ...s.howto          };
+							if ( s.product )        updates.product        = { ...schema.product,        ...s.product        };
+							if ( s.event )          updates.event          = { ...schema.event,          ...s.event          };
+							if ( s.local_business ) updates.local_business = { ...schema.local_business, ...s.local_business };
+							if ( s.video )          updates.video          = { ...schema.video,          ...s.video          };
+							if ( s.review )         updates.review         = { ...schema.review,         ...s.review         };
+							updateSchema( updates );
+						}
+
+						fetchUsage();
+						setGenerateAllSuccess( true );
+						setTimeout( () => setGenerateAllSuccess( false ), 5000 );
+					} catch {
+						setGenerateAllError( 'Network error. Please check your connection and try again.' );
+					} finally {
+						setGenerateAllLoading( false );
+					}
+				} }
+				style={ { width: '100%', justifyContent: 'center', marginTop: '12px', ...BUTTON_STYLE, ...( ! IS_AI_MODE ? { opacity: 0.4 } : {} ) } }
+			>
+				{ generateAllLoading ? 'Generating…' : '✨ Generate All' }
+			</Button>
+			{ IS_AI_MODE && <UsageMeter usage={ usage } /> }
 
 			{ /* ── AEO section ───────────────────────────────────────────────── */ }
 			<SectionHeader label="AEO" />
@@ -730,6 +718,7 @@ export function MainPanel() {
 						label="Generate"
 						isActive={ summaryState.loading }
 						anyPending={ summaryState.loading }
+						locked={ ! IS_AI_MODE }
 						onClick={ () => ajaxGenerate( 'wppugmill_generate_summary', summaryNonce, setSummaryState, ( d ) => updateAeo( { summary: d.summary } ) ) }
 					/>
 				</div>
@@ -772,6 +761,7 @@ export function MainPanel() {
 						label="Generate"
 						isActive={ qaState.loading }
 						anyPending={ qaState.loading }
+						locked={ ! IS_AI_MODE }
 						onClick={ () => ajaxGenerate( 'wppugmill_generate_qa', qaNonce, setQaState, ( d ) => updateAeo( { questions: d.questions } ) ) }
 					/>
 				</div>
@@ -826,6 +816,7 @@ export function MainPanel() {
 						label="Generate"
 						isActive={ entitiesState.loading }
 						anyPending={ entitiesState.loading }
+						locked={ ! IS_AI_MODE }
 						onClick={ () => ajaxGenerate( 'wppugmill_generate_entities', entitiesNonce, setEntitiesState, ( d ) => updateAeo( { entities: d.entities } ) ) }
 					/>
 				</div>
@@ -851,6 +842,7 @@ export function MainPanel() {
 						label="Generate"
 						isActive={ keywordsState.loading }
 						anyPending={ keywordsState.loading }
+						locked={ ! IS_AI_MODE }
 						onClick={ () => ajaxGenerate( 'wppugmill_generate_keywords', keywordsNonce, setKeywordsState, ( d ) => updateAeo( { keywords: d.keywords } ) ) }
 					/>
 				</div>
@@ -865,29 +857,27 @@ export function MainPanel() {
 			{ /* Featured Image Alt Text */ }
 			{ featuredImageId ? <FeaturedImageAlt featuredImageId={ featuredImageId } initialAlt={ featuredMediaAltText } /> : null }
 
-			{ /* ── Refine Content section (AI mode only) ─────────────────── */ }
-			{ IS_AI_MODE && <SectionHeader label="Refine Content" /> }
+			{ /* ── Refine Content section ────────────────────────────────── */ }
+			<SectionHeader label="Refine Content" />
 
 			{ /* Tone Check */ }
-			{ IS_AI_MODE && (
-				<ToneCheckPanel
-					open={ toneOpen }
-					onToggle={ () => setToneOpen( ! toneOpen ) }
-					loading={ toneLoading }
-					error={ toneError }
-					results={ toneResults }
-					applied={ toneApplied }
-					swapErrs={ toneSwapErrs }
-					onCheck={ runToneCheck }
-					onApplyFix={ applyToneFix }
-					onDismissError={ () => setToneError( '' ) }
-					onDismissAll={ () => { setToneResults( null ); setToneApplied( {} ); setToneSwapErrs( {} ); } }
-				/>
-			) }
+			<ToneCheckPanel
+				open={ toneOpen }
+				onToggle={ () => setToneOpen( ! toneOpen ) }
+				loading={ toneLoading }
+				error={ toneError }
+				results={ toneResults }
+				applied={ toneApplied }
+				swapErrs={ toneSwapErrs }
+				onCheck={ runToneCheck }
+				onApplyFix={ applyToneFix }
+				onDismissError={ () => setToneError( '' ) }
+				onDismissAll={ () => { setToneResults( null ); setToneApplied( {} ); setToneSwapErrs( {} ); } }
+				locked={ ! IS_AI_MODE }
+			/>
 
 			{ /* Topic Focus */ }
-			{ IS_AI_MODE && (
-				<PanelBody title="Topic Focus" opened={ topicOpen } onToggle={ () => setTopicOpen( ! topicOpen ) }>
+			<PanelBody title="Topic Focus" opened={ topicOpen } onToggle={ () => setTopicOpen( ! topicOpen ) }>
 					{ topicState.error && (
 						<Notice status="error" isDismissible={ false } style={ { marginBottom: '8px' } }>{ topicState.error }</Notice>
 					) }
@@ -910,12 +900,12 @@ export function MainPanel() {
 									<Button
 										variant="secondary"
 										isBusy={ refineState.loading }
-										disabled={ refineState.loading }
+										disabled={ ! IS_AI_MODE || refineState.loading }
 										onClick={ () => {
 											setSwapStates( {} );
 											ajaxFetch( 'wppugmill_refine_focus', refineFocusNonce, setRefineState );
 										} }
-										style={ { width: '100%', justifyContent: 'center', ...BUTTON_STYLE } }
+										style={ { width: '100%', justifyContent: 'center', ...BUTTON_STYLE, ...( ! IS_AI_MODE ? { opacity: 0.4 } : {} ) } }
 									>
 										{ refineState.loading ? 'Working…' : '🎯 Refine Focus' }
 									</Button>
@@ -979,18 +969,16 @@ export function MainPanel() {
 					<Button
 						variant="secondary"
 						isBusy={ topicState.loading }
-						disabled={ topicState.loading }
+						disabled={ ! IS_AI_MODE || topicState.loading }
 						onClick={ runTopicFocus }
-						style={ { width: '100%', justifyContent: 'center', ...BUTTON_STYLE } }
+						style={ { width: '100%', justifyContent: 'center', ...BUTTON_STYLE, ...( ! IS_AI_MODE ? { opacity: 0.4 } : {} ) } }
 					>
 						{ topicState.loading ? 'Analyzing…' : '🎯 Analyze Topic Focus' }
 					</Button>
-				</PanelBody>
-			) }
+			</PanelBody>
 
 			{ /* Internal Links */ }
-			{ IS_AI_MODE && (
-				<PanelBody title="Internal Links" opened={ linksOpen } onToggle={ () => setLinksOpen( ! linksOpen ) }>
+			<PanelBody title="Internal Links" opened={ linksOpen } onToggle={ () => setLinksOpen( ! linksOpen ) }>
 					<p style={ { fontSize: '12px', color: '#555', margin: '0 0 10px' } }>
 						Suggests internal linking opportunities based on your published posts.
 					</p>
@@ -1056,18 +1044,16 @@ export function MainPanel() {
 					<Button
 						variant="secondary"
 						isBusy={ linksState.loading }
-						disabled={ linksState.loading }
+						disabled={ ! IS_AI_MODE || linksState.loading }
 						onClick={ runInternalLinks }
-						style={ { width: '100%', justifyContent: 'center', ...BUTTON_STYLE } }
+						style={ { width: '100%', justifyContent: 'center', ...BUTTON_STYLE, ...( ! IS_AI_MODE ? { opacity: 0.4 } : {} ) } }
 					>
 						{ linksState.loading ? 'Finding links…' : '🔗 Find Internal Links' }
 					</Button>
-				</PanelBody>
-			) }
+			</PanelBody>
 
 			{ /* Reading Level */ }
-			{ IS_AI_MODE && (
-				<PanelBody title="Reading Level" opened={ readingOpen } onToggle={ () => setReadingOpen( ! readingOpen ) }>
+			<PanelBody title="Reading Level" opened={ readingOpen } onToggle={ () => setReadingOpen( ! readingOpen ) }>
 					{ readingState.error && (
 						<Notice status="error" isDismissible={ false } style={ { marginBottom: '8px' } }>{ readingState.error }</Notice>
 					) }
@@ -1093,18 +1079,16 @@ export function MainPanel() {
 					<Button
 						variant="secondary"
 						isBusy={ readingState.loading }
-						disabled={ readingState.loading }
+						disabled={ ! IS_AI_MODE || readingState.loading }
 						onClick={ runReadingLevel }
-						style={ { width: '100%', justifyContent: 'center', ...BUTTON_STYLE } }
+						style={ { width: '100%', justifyContent: 'center', ...BUTTON_STYLE, ...( ! IS_AI_MODE ? { opacity: 0.4 } : {} ) } }
 					>
 						{ readingState.loading ? 'Analyzing…' : '📖 Analyze Reading Level' }
 					</Button>
-				</PanelBody>
-			) }
+			</PanelBody>
 
 			{ /* Suggest Titles */ }
-			{ IS_AI_MODE && (
-				<PanelBody title="Suggest Titles" opened={ titlesOpen } onToggle={ () => setTitlesOpen( ! titlesOpen ) }>
+			<PanelBody title="Suggest Titles" opened={ titlesOpen } onToggle={ () => setTitlesOpen( ! titlesOpen ) }>
 					<p style={ { fontSize: '12px', color: '#555', margin: '0 0 10px' } }>
 						Generate a curiosity-driven and a utility-driven alternative to your current title.
 					</p>
@@ -1141,15 +1125,14 @@ export function MainPanel() {
 							label="Generate"
 							isActive={ headlineState.loading }
 							anyPending={ headlineState.loading }
+							locked={ ! IS_AI_MODE }
 							onClick={ runSuggestTitles }
 						/>
 					</div>
-				</PanelBody>
-			) }
+			</PanelBody>
 
 			{ /* Excerpt Generator */ }
-			{ IS_AI_MODE && (
-				<PanelBody
+			<PanelBody
 					title={
 						postExcerpt && postExcerpt.trim()
 							? <span>Excerpt Generator <span style={ { color: '#46b450', fontWeight: '700' } }>✓</span></span>
@@ -1199,25 +1182,24 @@ export function MainPanel() {
 							label="Generate"
 							isActive={ excerptState.loading }
 							anyPending={ excerptState.loading }
+							locked={ ! IS_AI_MODE }
 							onClick={ runSuggestExcerpt }
 						/>
 					</div>
-				</PanelBody>
-			) }
+			</PanelBody>
 
-			{ /* ── Distribute section (AI mode only) ──────────────────────── */ }
-			{ IS_AI_MODE && <SectionHeader label="Distribute" /> }
+			{ /* ── Distribute section ───────────────────────────────────── */ }
+			<SectionHeader label="Distribute" />
 
 			{ /* Social Media Draft */ }
-			{ IS_AI_MODE && (
-				<SocialDraftPanel
-					open={ socialOpen }
-					onToggle={ () => setSocialOpen( ! socialOpen ) }
-					state={ socialState }
-					onStateChange={ setSocialState }
-					onGenerate={ runSocialDraft }
-				/>
-			) }
+			<SocialDraftPanel
+				open={ socialOpen }
+				onToggle={ () => setSocialOpen( ! socialOpen ) }
+				state={ socialState }
+				onStateChange={ setSocialState }
+				onGenerate={ runSocialDraft }
+				locked={ ! IS_AI_MODE }
+			/>
 
 		</PluginDocumentSettingPanel>
 	);

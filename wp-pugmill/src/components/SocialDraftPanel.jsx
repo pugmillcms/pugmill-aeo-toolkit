@@ -20,7 +20,7 @@ import { SOCIAL_PLATFORMS } from '../constants';
  *   onGenerate:    (platform: string) => void,
  * }} props
  */
-export function SocialDraftPanel( { open, onToggle, state, onStateChange, onGenerate } ) {
+export function SocialDraftPanel( { open, onToggle, state, onStateChange, onGenerate, locked } ) {
 	const platform = SOCIAL_PLATFORMS.find( ( p ) => p.key === state.platform );
 	const len      = state.draft.length;
 	const over     = platform && len > platform.limit;
@@ -35,19 +35,19 @@ export function SocialDraftPanel( { open, onToggle, state, onStateChange, onGene
 					<button
 						key={ key }
 						type="button"
-						disabled={ state.loading }
-						onClick={ () => onGenerate( key ) }
+						disabled={ locked || state.loading }
+						onClick={ locked ? undefined : () => onGenerate( key ) }
 						style={ {
 							fontSize:     '12px',
 							padding:      '4px 12px',
 							borderRadius: '9999px',
-							cursor:       state.loading ? 'not-allowed' : 'pointer',
+							cursor:       ( locked || state.loading ) ? 'not-allowed' : 'pointer',
 							border:       '1px solid',
 							borderColor:  state.platform === key ? '#7c3aed' : '#ccc',
 							background:   state.platform === key ? '#7c3aed' : '#fff',
 							color:        state.platform === key ? '#fff' : '#1e1e1e',
 							fontWeight:   state.platform === key ? '600' : '400',
-							opacity:      state.loading && state.platform !== key ? 0.5 : 1,
+							opacity:      locked ? 0.4 : ( state.loading && state.platform !== key ? 0.5 : 1 ),
 						} }
 					>
 						{ state.loading && state.platform === key ? '…' : label }

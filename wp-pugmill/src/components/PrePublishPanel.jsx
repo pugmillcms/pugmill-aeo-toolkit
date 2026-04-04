@@ -48,14 +48,7 @@ export function PrePublishPanel() {
 					<CheckList items={ failing } failingOnly={ true } />
 
 					<p style={ { fontSize: '11px', color: '#666', marginTop: '10px', marginBottom: 0 } }>
-						{ IS_AI_MODE
-							? 'Go back and use Generate with AI to complete missing fields.'
-							: <>
-								Complete these in the <strong>SEO+AEO — WP Pugmill</strong> panel, or{ ' ' }
-								<a href={ pricingUrl } target="_blank" rel="noreferrer">get AI Connector</a>
-								{ ' ' }to auto-fill them.
-							</>
-						}
+						Go back and complete these in the <strong>WP Pugmill</strong> panel.
 					</p>
 				</>
 			) }

@@ -8,9 +8,9 @@
  */
 
 /**
- * @param {{ label: string, onClick: Function, isActive: boolean, anyPending: boolean }} props
+ * @param {{ label: string, onClick: Function, isActive: boolean, anyPending: boolean, locked: boolean }} props
  */
-export function AiPill( { label, onClick, isActive, anyPending } ) {
+export function AiPill( { label, onClick, isActive, anyPending, locked } ) {
 	const idle = {
 		display:      'inline-flex',
 		alignItems:   'center',
@@ -27,15 +27,19 @@ export function AiPill( { label, onClick, isActive, anyPending } ) {
 		lineHeight:   '1.6',
 		transition:   'background 0.15s, color 0.15s',
 	};
-	const active = { ...idle, background: '#7c3aed', color: '#fff', borderColor: 'transparent', cursor: 'wait' };
-	const faded  = { ...idle, opacity: 0.4, cursor: 'default' };
+	const active     = { ...idle, background: '#7c3aed', color: '#fff', borderColor: 'transparent', cursor: 'wait' };
+	const faded      = { ...idle, opacity: 0.4, cursor: 'default' };
+	const lockedStyle = { ...idle, opacity: 0.35, cursor: 'not-allowed' };
+
+	const style = locked ? lockedStyle : isActive ? active : anyPending ? faded : idle;
 
 	return (
 		<button
 			type="button"
-			onClick={ onClick }
-			disabled={ anyPending }
-			style={ isActive ? active : anyPending ? faded : idle }
+			onClick={ locked ? undefined : onClick }
+			disabled={ locked || anyPending }
+			className={ isActive ? 'wppugmill-loading' : '' }
+			style={ style }
 		>
 			<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={ { flexShrink: 0 } }>
 				<path d="M13 10V3L4 14h7v7l9-11h-7z" />

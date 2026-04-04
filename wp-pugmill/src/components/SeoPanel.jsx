@@ -207,47 +207,43 @@ export function SeoPanel() {
 			) }
 
 			{ /* AI: Generate SEO Title & Description */ }
-			{ IS_AI_MODE && (
-				<>
-					{ generateState.error && (
-						<p style={ { fontSize: '11px', color: '#dc3232', margin: '8px 0 4px' } }>
-							{ generateState.error }
-						</p>
-					) }
-					<Button
-						variant="secondary"
-						isBusy={ generateState.loading }
-						disabled={ generateState.loading }
-						onClick={ async () => {
-							setGenerateState( { loading: true, error: '' } );
-							try {
-								const res  = await fetch( ajaxUrl, {
-									method:  'POST',
-									headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-									body:    new URLSearchParams( {
-										action:        'wppugmill_generate_seo',
-										nonce:         seoNonce,
-										post_id:       postId,
-										draft_content: wp.data.select( 'core/editor' ).getEditedPostContent(),
-									} ),
-								} );
-								const data = await res.json();
-								if ( data.success ) {
-									updateSeo( { title: data.data.title, meta_desc: data.data.meta_desc } );
-									setGenerateState( { loading: false, error: '' } );
-								} else {
-									setGenerateState( { loading: false, error: data.data?.message || 'Generation failed. Please try again.' } );
-								}
-							} catch {
-								setGenerateState( { loading: false, error: 'Network error. Please check your connection.' } );
-							}
-						} }
-						style={ { width: '100%', justifyContent: 'center', marginTop: '8px', ...BUTTON_STYLE } }
-					>
-						{ generateState.loading ? 'Generating…' : '✨ Generate SEO Title & Description' }
-					</Button>
-				</>
+			{ generateState.error && (
+				<p style={ { fontSize: '11px', color: '#dc3232', margin: '8px 0 4px' } }>
+					{ generateState.error }
+				</p>
 			) }
+			<Button
+				variant="secondary"
+				isBusy={ generateState.loading }
+				disabled={ ! IS_AI_MODE || generateState.loading }
+				onClick={ async () => {
+					setGenerateState( { loading: true, error: '' } );
+					try {
+						const res  = await fetch( ajaxUrl, {
+							method:  'POST',
+							headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+							body:    new URLSearchParams( {
+								action:        'wppugmill_generate_seo',
+								nonce:         seoNonce,
+								post_id:       postId,
+								draft_content: wp.data.select( 'core/editor' ).getEditedPostContent(),
+							} ),
+						} );
+						const data = await res.json();
+						if ( data.success ) {
+							updateSeo( { title: data.data.title, meta_desc: data.data.meta_desc } );
+							setGenerateState( { loading: false, error: '' } );
+						} else {
+							setGenerateState( { loading: false, error: data.data?.message || 'Generation failed. Please try again.' } );
+						}
+					} catch {
+						setGenerateState( { loading: false, error: 'Network error. Please check your connection.' } );
+					}
+				} }
+				style={ { width: '100%', justifyContent: 'center', marginTop: '8px', ...BUTTON_STYLE, ...( ! IS_AI_MODE ? { opacity: 0.4 } : {} ) } }
+			>
+				{ generateState.loading ? 'Generating…' : '✨ Generate SEO Title & Description' }
+			</Button>
 		</PanelBody>
 	);
 }
