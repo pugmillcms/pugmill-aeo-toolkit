@@ -146,8 +146,10 @@ function wppugmill_render_settings_page() {
 		: 'license';
 
 	// Shared styles
-	$h2_style = 'font-size:14px; font-weight:600; color:#1d2327; padding-bottom:10px; border-bottom:1px solid #ddd; margin:28px 0 16px;';
-	$p_style  = 'color:#666; font-size:13px; max-width:650px; margin:0 0 16px;';
+	$h2_style      = 'font-size:14px; font-weight:600; color:#1d2327; padding-bottom:10px; border-bottom:1px solid #ddd; margin:28px 0 16px;';
+	$p_style       = 'color:#555; font-size:13px; max-width:760px; margin:0 0 14px; line-height:1.6;';
+	$card_style    = 'background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px 24px; margin-bottom:16px;';
+	$section_label = 'font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#9ca3af; margin:0 0 12px;';
 
 	// Helper: tab URL
 	$tab_url = function( $tab ) {
@@ -236,7 +238,9 @@ function wppugmill_render_settings_page() {
 		<!-- ════════════════════════════════════════════════════════════
 		     LICENSE TAB
 		     ════════════════════════════════════════════════════════════ -->
-		<p style="<?php echo esc_attr( $p_style ); ?> margin-top:24px;">
+		<div style="display:grid; grid-template-columns:1fr 280px; gap:28px; align-items:start; margin-top:24px;">
+		<div><!-- left column -->
+		<p style="<?php echo esc_attr( $p_style ); ?>">
 			<?php esc_html_e( 'A pugmill turns slop into usable clay — de-aired, wedged, and ready to work with. This plugin does the same for your content: takes the good parts of your existing SEO and transforms them into structured, AI-ready signal that answer engines can actually consume and cite.', 'wp-pugmill' ); ?>
 		</p>
 		<p style="<?php echo esc_attr( $p_style ); ?>">
@@ -271,18 +275,58 @@ function wppugmill_render_settings_page() {
 			</table>
 			<?php submit_button(); ?>
 		</form>
+		</div><!-- /left column -->
+
+		<div><!-- right column — current plan -->
+			<?php if ( 'ai' === $mode ) : ?>
+			<div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:18px 20px;">
+				<p style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#16a34a; margin:0 0 6px;"><?php esc_html_e( 'Current Plan', 'wp-pugmill' ); ?></p>
+				<p style="font-size:17px; font-weight:700; color:#1d2327; margin:0 0 10px;"><?php esc_html_e( 'AI Connector', 'wp-pugmill' ); ?></p>
+				<ul style="font-size:12px; color:#374151; margin:0; padding-left:16px; line-height:1.9;">
+					<li><?php esc_html_e( 'All AI generation features', 'wp-pugmill' ); ?></li>
+					<li><?php esc_html_e( 'Generate All (one-click)', 'wp-pugmill' ); ?></li>
+					<li><?php esc_html_e( 'Tone Check &amp; editorial suite', 'wp-pugmill' ); ?></li>
+					<li><?php esc_html_e( 'Social Media Draft', 'wp-pugmill' ); ?></li>
+				</ul>
+			</div>
+			<?php elseif ( ! empty( $api_key ) ) : ?>
+			<div style="background:#fefce8; border:1px solid #fde68a; border-radius:8px; padding:18px 20px;">
+				<p style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#d97706; margin:0 0 6px;"><?php esc_html_e( 'Current Plan', 'wp-pugmill' ); ?></p>
+				<p style="font-size:17px; font-weight:700; color:#1d2327; margin:0 0 10px;"><?php esc_html_e( 'Free + API Key', 'wp-pugmill' ); ?></p>
+				<ul style="font-size:12px; color:#374151; margin:0 0 14px; padding-left:16px; line-height:1.9;">
+					<li><?php esc_html_e( 'Core AEO generators', 'wp-pugmill' ); ?></li>
+					<li><?php esc_html_e( 'Manual schema &amp; SEO', 'wp-pugmill' ); ?></li>
+					<li><?php esc_html_e( 'Bot Analytics', 'wp-pugmill' ); ?></li>
+				</ul>
+				<a href="<?php echo esc_url( 'https://wppugmill.com/pricing' ); ?>" target="_blank" class="button button-primary" style="width:100%; text-align:center; box-sizing:border-box;"><?php esc_html_e( 'Upgrade to AI Connector', 'wp-pugmill' ); ?></a>
+			</div>
+			<?php else : ?>
+			<div style="background:#f6f7f7; border:1px solid #ddd; border-radius:8px; padding:18px 20px;">
+				<p style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#9ca3af; margin:0 0 6px;"><?php esc_html_e( 'Current Plan', 'wp-pugmill' ); ?></p>
+				<p style="font-size:17px; font-weight:700; color:#1d2327; margin:0 0 10px;"><?php esc_html_e( 'Free', 'wp-pugmill' ); ?></p>
+				<ul style="font-size:12px; color:#374151; margin:0 0 14px; padding-left:16px; line-height:1.9;">
+					<li><?php esc_html_e( 'Manual AEO editing', 'wp-pugmill' ); ?></li>
+					<li><?php esc_html_e( 'Manual schema &amp; SEO', 'wp-pugmill' ); ?></li>
+					<li><?php esc_html_e( 'Bot Analytics', 'wp-pugmill' ); ?></li>
+				</ul>
+				<a href="<?php echo esc_url( admin_url( 'options-general.php?page=wp-pugmill&tab=ai-provider' ) ); ?>" class="button" style="width:100%; text-align:center; box-sizing:border-box; margin-bottom:8px;"><?php esc_html_e( 'Connect API Key →', 'wp-pugmill' ); ?></a>
+				<a href="<?php echo esc_url( 'https://wppugmill.com/pricing' ); ?>" target="_blank" class="button button-primary" style="width:100%; text-align:center; box-sizing:border-box;"><?php esc_html_e( 'Get AI Connector →', 'wp-pugmill' ); ?></a>
+			</div>
+			<?php endif; ?>
+		</div><!-- /right column -->
+		</div><!-- /two-column grid -->
 
 		<!-- ── Feature comparison table ─────────────────────────────────── -->
-		<div style="margin-top:32px;">
-			<h2 style="font-size:14px; font-weight:600; color:#1d2327; padding-bottom:10px; border-bottom:1px solid #ddd; margin:0 0 16px;">
+		<div style="margin-top:32px; background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px 24px;">
+			<p style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#9ca3af; margin:0 0 16px;">
 				<?php esc_html_e( 'What\'s included', 'wp-pugmill' ); ?>
-			</h2>
-			<table style="width:100%; max-width:700px; border-collapse:collapse; font-size:13px;">
-				<thead>
+			</p>
+			<table class="widefat" style="font-size:13px;">
+				<thead style="background:#f6f7f7;">
 					<tr>
-						<th style="text-align:left; padding:8px 12px 8px 0; border-bottom:2px solid #ddd; color:#1d2327; font-weight:600; width:55%;">Feature</th>
-						<th style="text-align:center; padding:8px 12px; border-bottom:2px solid #ddd; color:#1d2327; font-weight:600; width:22%;">Free</th>
-						<th style="text-align:center; padding:8px 12px; border-bottom:2px solid #ddd; color:#7c3aed; font-weight:600; width:23%;">AI Connector</th>
+						<th style="padding:10px 16px; color:#1d2327; font-weight:600; width:58%;"><?php esc_html_e( 'Feature', 'wp-pugmill' ); ?></th>
+						<th style="text-align:center; padding:10px 16px; color:#1d2327; font-weight:600; width:21%;"><?php esc_html_e( 'Free', 'wp-pugmill' ); ?></th>
+						<th style="text-align:center; padding:10px 16px; color:#7c3aed; font-weight:600; width:21%;"><?php esc_html_e( 'AI Connector', 'wp-pugmill' ); ?></th>
 					</tr>
 				</thead>
 				<tbody>
@@ -292,22 +336,21 @@ function wppugmill_render_settings_page() {
 						$dash  = '<span style="color:#ccc;">&#8212;</span>';
 						$free_cell = $free  ? $tick : $dash;
 						$paid_cell = $paid  ? $tick : $dash;
-						$bg = '';
 						static $alt = false;
 						$alt = !$alt;
-						$bg = $alt ? 'background:#fafafa;' : '';
+						$bg = $alt ? 'background:#fff;' : 'background:#f9fafb;';
 						echo '<tr style="' . esc_attr( $bg ) . '">';
-						echo '<td style="padding:7px 12px 7px 0; border-bottom:1px solid #f0f0f0; color:#374151;">' . esc_html( $label );
+						echo '<td style="padding:10px 16px; color:#374151;">' . esc_html( $label );
 						if ( $note ) {
 							echo ' <span style="font-size:11px; color:#9ca3af;">' . esc_html( $note ) . '</span>';
 						}
 						echo '</td>';
-						echo '<td style="text-align:center; padding:7px 12px; border-bottom:1px solid #f0f0f0;">' . wp_kses_post( $free_cell ) . '</td>';
-						echo '<td style="text-align:center; padding:7px 12px; border-bottom:1px solid #f0f0f0;">' . wp_kses_post( $paid_cell ) . '</td>';
+						echo '<td style="text-align:center; padding:10px 16px;">' . wp_kses_post( $free_cell ) . '</td>';
+						echo '<td style="text-align:center; padding:10px 16px;">' . wp_kses_post( $paid_cell ) . '</td>';
 						echo '</tr>';
 					};
 					$section = function( $label ) {
-						echo '<tr><td colspan="3" style="padding:14px 0 4px; font-size:11px; font-weight:700; color:#7c3aed; text-transform:uppercase; letter-spacing:.06em;">' . esc_html( $label ) . '</td></tr>';
+						echo '<tr style="background:#faf7ff;"><td colspan="3" style="padding:10px 16px 8px; font-size:11px; font-weight:700; color:#7c3aed; text-transform:uppercase; letter-spacing:.06em; border-top:1px solid #ede9fb;">' . esc_html( $label ) . '</td></tr>';
 					};
 
 					$section( __( 'Core tools', 'wp-pugmill' ) );
@@ -359,7 +402,8 @@ function wppugmill_render_settings_page() {
 		     AI PROVIDER TAB
 		     ════════════════════════════════════════════════════════════ -->
 		<?php if ( in_array( $mode, array( 'ai', 'free' ), true ) ) : ?>
-		<p style="<?php echo esc_attr( $p_style ); ?> margin-top:24px;">
+		<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px 24px; margin-top:24px;">
+		<p style="<?php echo esc_attr( $p_style ); ?>">
 			<?php esc_html_e( 'WP Pugmill uses a bring-your-own-key model — you connect directly to Anthropic, OpenAI, or Google Gemini using your own API account. Your key is encrypted and stored server-side only, never exposed to visitors or transmitted through our servers. Usage is billed directly by your chosen AI provider.', 'wp-pugmill' ); ?>
 		</p>
 
@@ -440,6 +484,7 @@ function wppugmill_render_settings_page() {
 				<span id="wppugmill-test-api-key-status" style="margin-left:10px; font-size:13px;"></span>
 			</p>
 		</form>
+		</div><!-- /ai-provider card -->
 		<script>
 		(function() {
 			var btn    = document.getElementById( 'wppugmill-test-api-key' );
@@ -511,7 +556,8 @@ function wppugmill_render_settings_page() {
 		<p style="<?php echo esc_attr( $p_style ); ?> margin-top:24px;">
 			<?php esc_html_e( 'Site AEO metadata describes your organization to AI crawlers at a site-wide level. The summary and organization details are published in your /llms.txt file and embedded in Organization schema in every page header. Setting these accurately gives AI answer engines — ChatGPT, Perplexity, Gemini — a reliable source of truth about who you are and what your site covers.', 'wp-pugmill' ); ?>
 		</p>
-		<form method="post" action="options.php" style="margin-top:16px;">
+		<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px 24px; margin-top:16px;">
+		<form method="post" action="options.php">
 			<?php settings_fields( 'wppugmill_settings' ); ?>
 			<table class="form-table">
 				<tr>
@@ -560,6 +606,7 @@ function wppugmill_render_settings_page() {
 			</table>
 			<?php submit_button(); ?>
 		</form>
+		</div><!-- /site-aeo card -->
 
 		<?php if ( $ai_available ) : ?>
 		<script>
@@ -849,7 +896,8 @@ function wppugmill_render_settings_page() {
 		<!-- ════════════════════════════════════════════════════════════
 		     AUTHOR VOICE TAB
 		     ════════════════════════════════════════════════════════════ -->
-		<form method="post" action="options.php" style="margin-top:24px;">
+		<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px 24px; margin-top:24px;">
+		<form method="post" action="options.php">
 			<?php settings_fields( 'wppugmill_settings' ); ?>
 			<p style="<?php echo esc_attr( $p_style ); ?>"><?php esc_html_e( 'Describe your writing style, tone, and audience in plain language. When AI generation is active, this guide is injected into every prompt so the AI matches your voice rather than using a generic default.', 'wp-pugmill' ); ?></p>
 			<table class="form-table">
@@ -889,6 +937,7 @@ function wppugmill_render_settings_page() {
 			</table>
 			<?php submit_button(); ?>
 		</form>
+		</div><!-- /author-voice card -->
 
 		<?php elseif ( 'compatibility' === $active_tab ) : ?>
 		<!-- ════════════════════════════════════════════════════════════
@@ -902,7 +951,8 @@ function wppugmill_render_settings_page() {
 		<p style="<?php echo esc_attr( $p_style ); ?> margin-top:24px;">
 			<?php esc_html_e( 'WP Pugmill outputs structured data (JSON-LD schema), a site summary file (/llms.txt), and on-page SEO tags. If you are running another SEO plugin alongside it, some of these outputs may overlap. Use the controls below to disable specific WP Pugmill outputs and defer to the other plugin instead — your AEO metadata is always preserved regardless of which plugin handles the front-end output.', 'wp-pugmill' ); ?>
 		</p>
-		<form method="post" action="options.php" style="margin-top:16px;">
+		<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px 24px; margin-top:16px;">
+		<form method="post" action="options.php">
 			<?php settings_fields( 'wppugmill_settings' ); ?>
 
 			<?php if ( ! $has_issues ) : ?>
@@ -1009,6 +1059,7 @@ function wppugmill_render_settings_page() {
 			<?php submit_button(); ?>
 			<?php endif; ?>
 		</form>
+		</div><!-- /compat card -->
 
 		<!-- ── Import from Another SEO Plugin ───────────────────────── -->
 		<h2 style="<?php echo esc_attr( $h2_style ); ?> margin-top:32px;"><?php esc_html_e( 'Import from Another SEO Plugin', 'wp-pugmill' ); ?></h2>
@@ -1151,50 +1202,45 @@ function wppugmill_render_settings_page() {
 		<p style="<?php echo esc_attr( $p_style ); ?> margin-top:24px;">
 			<?php esc_html_e( 'WP Pugmill automatically generates an XML sitemap and manages your robots.txt. The sitemap lists all public published posts and pages so search engines and AI crawlers can discover your content. The robots.txt controls which crawlers are allowed in — AI answer engines like ChatGPT, Perplexity, and Gemini use their own bots, and allowing them is key to AEO discoverability.', 'wp-pugmill' ); ?>
 		</p>
-		<form method="post" action="options.php" style="margin-top:16px;">
+		<form method="post" action="options.php" style="margin-top:20px;">
 			<?php settings_fields( 'wppugmill_settings' ); ?>
+			<div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; align-items:start;">
 
-			<h2 style="<?php echo esc_attr( $h2_style ); ?> margin-top:0;"><?php esc_html_e( 'XML Sitemap', 'wp-pugmill' ); ?></h2>
-			<table class="form-table" role="presentation">
-				<tr>
-					<th><?php esc_html_e( 'XML Sitemap', 'wp-pugmill' ); ?></th>
-					<td>
-						<?php $sitemap_url = home_url( '/sitemap.xml' ); ?>
-						<p>
-							<a href="<?php echo esc_url( $sitemap_url ); ?>" target="_blank" class="button button-secondary">
-								<?php esc_html_e( 'View sitemap.xml →', 'wp-pugmill' ); ?>
-							</a>
-						</p>
-						<p class="description">
-							<?php esc_html_e( 'WP Pugmill automatically generates /sitemap.xml covering all public, published posts and pages. noindex posts are excluded. Search engines are pinged on publish.', 'wp-pugmill' ); ?>
-						</p>
-					</td>
-				</tr>
-			</table>
+			<!-- LEFT: XML Sitemap -->
+			<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px 24px;">
+				<p style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#9ca3af; margin:0 0 12px;"><?php esc_html_e( 'XML Sitemap', 'wp-pugmill' ); ?></p>
+				<?php $sitemap_url = home_url( '/sitemap.xml' ); ?>
+				<p style="margin:0 0 10px;">
+					<a href="<?php echo esc_url( $sitemap_url ); ?>" target="_blank" class="button button-secondary">
+						<?php esc_html_e( 'View sitemap.xml →', 'wp-pugmill' ); ?>
+					</a>
+				</p>
+				<p style="font-size:13px; color:#555; line-height:1.6; margin:0;">
+					<?php esc_html_e( 'WP Pugmill automatically generates /sitemap.xml covering all public, published posts and pages. noindex posts are excluded. Search engines are pinged on publish.', 'wp-pugmill' ); ?>
+				</p>
+			</div>
 
-			<h2 style="<?php echo esc_attr( $h2_style ); ?>"><?php esc_html_e( 'Robots.txt', 'wp-pugmill' ); ?></h2>
-			<p style="<?php echo esc_attr( $p_style ); ?>"><?php esc_html_e( 'Optionally override WordPress\'s virtual robots.txt with your own content. WP Pugmill will automatically append a Sitemap: directive when using the default. Leave blank to use WordPress defaults.', 'wp-pugmill' ); ?></p>
-			<table class="form-table" role="presentation">
-				<tr>
-					<th style="vertical-align:top;"><?php esc_html_e( 'Custom robots.txt', 'wp-pugmill' ); ?></th>
-					<td>
-						<textarea
-							name="wppugmill_robots_txt_custom"
-							id="wppugmill_robots_txt_custom"
-							rows="12"
-							style="width:100%; max-width:650px; font-family:monospace; font-size:12px;"
-							placeholder="User-agent: *&#10;Disallow:&#10;&#10;Sitemap: <?php echo esc_url( home_url( '/sitemap.xml' ) ); ?>"
-						><?php echo esc_textarea( get_option( 'wppugmill_robots_txt_custom', '' ) ); ?></textarea>
-						<p class="description">
-							<?php printf(
-								wp_kses( __( 'Live robots.txt: <a href="%s" target="_blank">%s</a>', 'wp-pugmill' ), array( 'a' => array( 'href' => array(), 'target' => array() ) ) ),
-								esc_url( home_url( '/robots.txt' ) ),
-								esc_html( home_url( '/robots.txt' ) )
-							); ?>
-						</p>
-					</td>
-				</tr>
-			</table>
+			<!-- RIGHT: Robots.txt -->
+			<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px 24px;">
+				<p style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#9ca3af; margin:0 0 12px;"><?php esc_html_e( 'Custom Robots.txt', 'wp-pugmill' ); ?></p>
+				<p style="font-size:13px; color:#555; line-height:1.6; margin:0 0 10px;"><?php esc_html_e( 'Override WordPress\'s virtual robots.txt with your own content. WP Pugmill appends a Sitemap: directive automatically. Leave blank to use WordPress defaults.', 'wp-pugmill' ); ?></p>
+				<textarea
+					name="wppugmill_robots_txt_custom"
+					id="wppugmill_robots_txt_custom"
+					rows="10"
+					style="width:100%; font-family:monospace; font-size:12px; box-sizing:border-box;"
+					placeholder="User-agent: *&#10;Disallow:&#10;&#10;Sitemap: <?php echo esc_url( home_url( '/sitemap.xml' ) ); ?>"
+				><?php echo esc_textarea( get_option( 'wppugmill_robots_txt_custom', '' ) ); ?></textarea>
+				<p class="description" style="margin-top:6px;">
+					<?php printf(
+						wp_kses( __( 'Live robots.txt: <a href="%s" target="_blank">%s</a>', 'wp-pugmill' ), array( 'a' => array( 'href' => array(), 'target' => array() ) ) ),
+						esc_url( home_url( '/robots.txt' ) ),
+						esc_html( home_url( '/robots.txt' ) )
+					); ?>
+				</p>
+			</div>
+
+			</div><!-- /grid -->
 			<?php submit_button(); ?>
 		</form>
 
