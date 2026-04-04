@@ -1071,7 +1071,9 @@ function wppugmill_render_settings_page() {
 		$migration_sources = wppugmill_migration_sources();
 		if ( empty( $migration_sources ) ) :
 		?>
-		<p style="color:#46b450;">&#10003; <?php esc_html_e( 'No importable data found from Yoast, Rank Math, AIOSEO, or SEOPress.', 'wp-pugmill' ); ?></p>
+		<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px 24px;">
+			<p style="color:#46b450; margin:0;">&#10003; <?php esc_html_e( 'No importable data found from Yoast, Rank Math, AIOSEO, or SEOPress.', 'wp-pugmill' ); ?></p>
+		</div>
 		<?php else : ?>
 
 		<div id="wppugmill-migration-wrap" style="max-width:700px;">
