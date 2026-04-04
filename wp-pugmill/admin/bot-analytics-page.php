@@ -31,6 +31,7 @@ function wppugmill_bot_config() {
 		'Amazonbot'  => array( 'label' => 'Amazonbot',  'color' => '#ff9900', 'type' => 'ai' ),
 		'Meta'       => array( 'label' => 'Meta',       'color' => '#0866ff', 'type' => 'ai' ),
 		// Traditional search spiders (tracked separately to detect AEO endpoint usage)
+		'GoogleOther' => array( 'label' => 'GoogleOther', 'color' => '#ea4335', 'type' => 'search' ),
 		'Googlebot'   => array( 'label' => 'Googlebot',   'color' => '#34a853', 'type' => 'search' ),
 		'Bingbot'     => array( 'label' => 'Bingbot',     'color' => '#00809d', 'type' => 'search' ),
 		'Applebot'    => array( 'label' => 'Applebot',    'color' => '#555555', 'type' => 'search' ),

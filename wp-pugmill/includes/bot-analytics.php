@@ -45,6 +45,7 @@ function wppugmill_bot_ids() {
 		'Amazonbot'  => 5,
 		'Meta'       => 6,
 		// Traditional search spiders
+		'GoogleOther' => 12,
 		'Googlebot'   => 7,
 		'Bingbot'     => 8,
 		'Applebot'    => 9,
@@ -128,6 +129,7 @@ function wppugmill_bot_fingerprints() {
 		'Amazonbot'  => array( 'Amazonbot' ),
 		'Meta'       => array( 'meta-externalagent' ),
 		// Traditional search spiders — checked after AI bots
+		'GoogleOther' => array( 'GoogleOther' ),
 		'Googlebot'   => array( 'Googlebot' ),
 		'Bingbot'     => array( 'bingbot' ),
 		'Applebot'    => array( 'Applebot' ),
