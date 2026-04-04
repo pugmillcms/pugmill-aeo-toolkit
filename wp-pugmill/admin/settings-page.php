@@ -244,7 +244,7 @@ function wppugmill_render_settings_page() {
 			<?php esc_html_e( 'A pugmill in a pottery studio turns slop into usable clay — de-aired, wedged, and ready to work. This plugin does the same for your content: takes the good parts of your existing SEO and transforms them into structured, AI-ready signal that answer engines can actually consume and cite.', 'wp-pugmill' ); ?>
 		</p>
 		<p style="<?php echo esc_attr( $p_style ); ?>">
-			<?php esc_html_e( 'WP Pugmill is free to use — manually fill in AEO metadata for every post, or connect your own API key (Anthropic, OpenAI, or Google) to enable basic AI generation at no extra cost. Upgrading to WP Pugmill Pro unlocks the full feature set: Generate All, SEO generation, Tone Check, Topic Focus, Social Media Draft, and more. Your key is encrypted on your server — usage is billed directly by your provider.', 'wp-pugmill' ); ?>
+			<?php esc_html_e( 'WP Pugmill is free to use — manually fill in AEO metadata for every post, or connect your own API Provider (Anthropic, OpenAI, or Google) to enable basic AI generation at no extra cost. Upgrading to WP Pugmill Pro unlocks the full feature set: Generate All, SEO generation, Tone Check, Topic Focus, Social Media Draft, and more. Your key is encrypted on your server — usage is billed directly by your provider.', 'wp-pugmill' ); ?>
 		</p>
 		<form method="post" action="options.php" style="margin-top:16px;">
 			<?php settings_fields( 'wppugmill_settings' ); ?>
