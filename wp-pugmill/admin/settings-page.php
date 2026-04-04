@@ -1856,6 +1856,10 @@ function wppugmill_render_settings_page() {
 
 		<!-- ── Shared footer ───────────────────────────────────────── -->
 		<hr>
+		<div style="margin:16px 0 12px; padding:12px 16px; background:#fff8e1; border-left:4px solid #f0b429; border-radius:3px; font-size:13px; line-height:1.6;">
+			<strong><?php esc_html_e( 'Your content lives here', 'wp-pugmill' ); ?></strong><br>
+			<?php esc_html_e( 'Your AEO summaries, Q&As, entities, and SEO fields are saved directly inside your WordPress site. If you ever remove WP Pugmill using the Delete option in the plugins list, that content will be permanently erased. Choose Deactivate instead — your data stays put and will be right there when you come back.', 'wp-pugmill' ); ?>
+		</div>
 		<p style="color:#999; font-size:12px;">
 			<?php
 			printf(
