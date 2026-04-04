@@ -683,8 +683,8 @@ export function MainPanel() {
 						fetchUsage();
 						setGenerateAllSuccess( true );
 						setTimeout( () => setGenerateAllSuccess( false ), 5000 );
-					} catch {
-						setGenerateAllError( 'Network error. Please check your connection and try again.' );
+					} catch ( err ) {
+						setGenerateAllError( err?.message || 'Network error. Please check your connection and try again.' );
 					} finally {
 						setGenerateAllLoading( false );
 					}
