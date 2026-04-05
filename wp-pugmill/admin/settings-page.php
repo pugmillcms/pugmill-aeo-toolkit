@@ -1295,6 +1295,22 @@ function wppugmill_render_settings_page() {
 		$cached_insights = get_transient( 'wppugmill_ai_analytics_insights' );
 		$has_api_key     = ! empty( wppugmill_get_encrypted_option( 'wppugmill_ai_api_key', '' ) );
 
+		// Fetch network averages if opted in and enough sites are contributing
+		$network_avgs  = array();
+		$network_sites = 0;
+		if ( get_option( 'wppugmill_analytics_opted_in' ) ) {
+			$net_response = wp_remote_get( 'https://pugmill.dev/api/report', array( 'timeout' => 5, 'sslverify' => true ) );
+			if ( ! is_wp_error( $net_response ) ) {
+				$net_data      = json_decode( wp_remote_retrieve_body( $net_response ), true ) ?: array();
+				$network_sites = (int) ( $net_data['sites_contributing'] ?? 0 );
+				if ( $network_sites >= 10 && ! empty( $net_data['last_30_days'] ) ) {
+					foreach ( $net_data['last_30_days'] as $bot => $resources ) {
+						$network_avgs[ $bot ] = (int) round( array_sum( $resources ) / $network_sites );
+					}
+				}
+			}
+		}
+
 		// ── Build chart data: date labels + per-bot series ────────────────────
 		$date_labels = array();
 		for ( $i = $days - 1; $i >= 0; $i-- ) {
@@ -1414,7 +1430,9 @@ function wppugmill_render_settings_page() {
 			</div>
 
 			<?php foreach ( $ai_bots as $bot_key => $bot_info ) :
-				$count = isset( $summary[ $bot_key ] ) ? $summary[ $bot_key ] : 0;
+				$count   = isset( $summary[ $bot_key ] ) ? $summary[ $bot_key ] : 0;
+				$net_avg = isset( $network_avgs[ $bot_key ] ) ? $network_avgs[ $bot_key ] : null;
+				$below   = ( null !== $net_avg && $net_avg > 0 && $count < ( $net_avg * 0.5 ) );
 			?>
 			<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:16px 20px; min-width:110px; flex:1; text-align:center; border-top:3px solid <?php echo esc_attr( $bot_info['color'] ); ?>;">
 				<div style="font-size:26px; font-weight:700; color:<?php echo esc_attr( $count > 0 ? $bot_info['color'] : '#9ca3af' ); ?>; line-height:1.1;">
@@ -1422,6 +1440,15 @@ function wppugmill_render_settings_page() {
 				</div>
 				<div style="font-size:12px; color:#666; margin-top:4px;"><?php echo esc_html( $bot_info['label'] ); ?></div>
 				<div style="font-size:11px; color:#9ca3af;"><?php esc_html_e( 'last 30 days', 'wp-pugmill' ); ?></div>
+				<?php if ( null !== $net_avg ) : ?>
+				<div style="margin-top:8px; padding-top:8px; border-top:1px solid #f0f0f0;">
+					<div style="font-size:13px; font-weight:600; color:#7c3aed;"><?php echo esc_html( number_format_i18n( $net_avg ) ); ?></div>
+					<div style="font-size:10px; color:#9ca3af;"><?php esc_html_e( 'network avg', 'wp-pugmill' ); ?></div>
+					<?php if ( $below ) : ?>
+					<div style="font-size:10px; color:#dc2626; margin-top:2px; font-weight:600;"><?php esc_html_e( 'below avg', 'wp-pugmill' ); ?></div>
+					<?php endif; ?>
+				</div>
+				<?php endif; ?>
 			</div>
 			<?php endforeach; ?>
 
@@ -1433,7 +1460,9 @@ function wppugmill_render_settings_page() {
 		</p>
 		<div style="display:flex; flex-wrap:wrap; gap:14px; margin-bottom:24px;">
 			<?php foreach ( $search_bots as $bot_key => $bot_info ) :
-				$count = isset( $summary[ $bot_key ] ) ? $summary[ $bot_key ] : 0;
+				$count   = isset( $summary[ $bot_key ] ) ? $summary[ $bot_key ] : 0;
+				$net_avg = isset( $network_avgs[ $bot_key ] ) ? $network_avgs[ $bot_key ] : null;
+				$below   = ( null !== $net_avg && $net_avg > 0 && $count < ( $net_avg * 0.5 ) );
 			?>
 			<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:12px 16px; min-width:100px; flex:1; text-align:center; border-top:3px solid <?php echo esc_attr( $bot_info['color'] ); ?>;">
 				<div style="font-size:22px; font-weight:700; color:<?php echo esc_attr( $count > 0 ? $bot_info['color'] : '#9ca3af' ); ?>; line-height:1.1;">
@@ -1441,6 +1470,15 @@ function wppugmill_render_settings_page() {
 				</div>
 				<div style="font-size:11px; color:#666; margin-top:3px;"><?php echo esc_html( $bot_info['label'] ); ?></div>
 				<div style="font-size:10px; color:#9ca3af;"><?php esc_html_e( 'last 30 days', 'wp-pugmill' ); ?></div>
+				<?php if ( null !== $net_avg ) : ?>
+				<div style="margin-top:6px; padding-top:6px; border-top:1px solid #f0f0f0;">
+					<div style="font-size:12px; font-weight:600; color:#7c3aed;"><?php echo esc_html( number_format_i18n( $net_avg ) ); ?></div>
+					<div style="font-size:10px; color:#9ca3af;"><?php esc_html_e( 'network avg', 'wp-pugmill' ); ?></div>
+					<?php if ( $below ) : ?>
+					<div style="font-size:10px; color:#dc2626; margin-top:2px; font-weight:600;"><?php esc_html_e( 'below avg', 'wp-pugmill' ); ?></div>
+					<?php endif; ?>
+				</div>
+				<?php endif; ?>
 			</div>
 			<?php endforeach; ?>
 		</div>
@@ -1873,75 +1911,29 @@ function wppugmill_render_settings_page() {
 		<?php endif; ?>
 		<?php endif; // end opted-in else (analytics tab) ?>
 
-		<?php
-		// ── Network report + opt-out (shown when opted in, inside analytics tab) ──
-		if ( 'analytics' === $active_tab && get_option( 'wppugmill_analytics_opted_in' ) ) :
-			$network = @json_decode( wp_remote_retrieve_body( wp_remote_get( 'https://pugmill.dev/api/report', array( 'timeout' => 5, 'sslverify' => true ) ) ), true );
-		?>
-		<div style="margin-top:40px; padding:24px; background:#f5f0ff; border:1px solid #e0d7ff; border-radius:8px;">
-			<h3 style="margin:0 0 4px; font-size:16px; color:#7c3aed;"><?php esc_html_e( 'Pugmill Intelligence Network', 'wp-pugmill' ); ?></h3>
-			<p style="margin:0 0 16px; font-size:13px; color:#6b7280;">
-				<?php
-				if ( ! empty( $network['sites_contributing'] ) ) {
+		<?php if ( 'analytics' === $active_tab && get_option( 'wppugmill_analytics_opted_in' ) ) : ?>
+		<div style="margin-top:8px; display:flex; align-items:center; gap:8px; font-size:12px; color:#9ca3af;">
+			<span>&#10003; <?php
+				if ( $network_sites >= 10 ) {
 					printf(
 						/* translators: %d: number of contributing sites */
-						esc_html__( 'Aggregated crawler activity across %d participating sites — last 30 days.', 'wp-pugmill' ),
-						(int) $network['sites_contributing']
+						esc_html__( 'Network averages from %d participating sites', 'wp-pugmill' ),
+						$network_sites
 					);
 				} else {
-					esc_html_e( 'Network data loading…', 'wp-pugmill' );
+					esc_html_e( 'Pugmill Intelligence Network — network averages appear once 10+ sites contribute', 'wp-pugmill' );
 				}
-				?>
-			</p>
-			<?php if ( ! empty( $network['last_30_days'] ) ) : ?>
-			<table class="widefat" style="font-size:13px; background:#fff;">
-				<thead>
-					<tr>
-						<th><?php esc_html_e( 'Bot', 'wp-pugmill' ); ?></th>
-						<th><?php esc_html_e( 'HTML Pages', 'wp-pugmill' ); ?></th>
-						<th><?php esc_html_e( 'llms.txt', 'wp-pugmill' ); ?></th>
-						<th><?php esc_html_e( 'Post Markdown', 'wp-pugmill' ); ?></th>
-						<th><?php esc_html_e( 'Sitemap', 'wp-pugmill' ); ?></th>
-						<th><?php esc_html_e( '30d Trend', 'wp-pugmill' ); ?></th>
-					</tr>
-				</thead>
-				<tbody>
-				<?php foreach ( $network['last_30_days'] as $bot => $resources ) :
-					$trend = $network['trends'][ $bot ]['change_pct'] ?? null;
-					if ( null === $trend ) {
-						$trend_html = '<span style="color:#aaa;">—</span>';
-					} elseif ( $trend > 0 ) {
-						$trend_html = '<span style="color:#16a34a;">▲ ' . absint( $trend ) . '%</span>';
-					} elseif ( $trend < 0 ) {
-						$trend_html = '<span style="color:#dc2626;">▼ ' . absint( $trend ) . '%</span>';
-					} else {
-						$trend_html = '<span style="color:#aaa;">0%</span>';
-					}
-				?>
-				<tr>
-					<td><strong><?php echo esc_html( $bot ); ?></strong></td>
-					<td><?php echo absint( $resources['html'] ?? 0 ); ?></td>
-					<td><?php echo absint( $resources['llms_txt'] ?? 0 ); ?></td>
-					<td><?php echo absint( $resources['post_markdown'] ?? 0 ); ?></td>
-					<td><?php echo absint( $resources['sitemap'] ?? 0 ); ?></td>
-					<td><?php echo wp_kses( $trend_html, array( 'span' => array( 'style' => array() ) ) ); ?></td>
-				</tr>
-				<?php endforeach; ?>
-				</tbody>
-			</table>
-			<?php else : ?>
-			<p style="color:#aaa; font-size:13px;"><?php esc_html_e( 'No network data yet — check back tomorrow once your first daily send completes.', 'wp-pugmill' ); ?></p>
-			<?php endif; ?>
-
-			<form method="post" action="options.php" style="margin-top:16px;">
+			?></span>
+			<span style="color:#ddd;">|</span>
+			<form method="post" action="options.php" style="margin:0; padding:0;">
 				<?php settings_fields( 'wppugmill_settings' ); ?>
 				<input type="hidden" name="wppugmill_analytics_opted_in" value="0">
-				<button type="submit" class="button button-secondary" style="font-size:12px; color:#dc2626; border-color:#dc2626;">
-					<?php esc_html_e( 'Leave network and deactivate analytics', 'wp-pugmill' ); ?>
+				<button type="submit" style="background:none; border:none; padding:0; color:#dc2626; font-size:12px; cursor:pointer; text-decoration:underline;">
+					<?php esc_html_e( 'Leave network', 'wp-pugmill' ); ?>
 				</button>
 			</form>
 		</div>
-		<?php endif; // network panel ?>
+		<?php endif; ?>
 
 		<?php endif; // end tab switch ?>
 
