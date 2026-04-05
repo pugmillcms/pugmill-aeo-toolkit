@@ -673,7 +673,10 @@ function wppugmill_bot_analytics_top_posts( $limit = 10 ) {
 }
 
 /**
- * Build a compact analytics context payload for the AI insights prompt.
+ * Build a rich analytics context payload for the AI insights prompt.
+ *
+ * Includes: 30-day summary, AEO conversion rate, 15-day trend split,
+ * network benchmark (if opted in), and top posts.
  *
  * @return array
  */
@@ -684,6 +687,7 @@ function wppugmill_bot_analytics_insights_context() {
 	$total       = wppugmill_bot_analytics_total();
 	$top_posts   = wppugmill_bot_analytics_top_posts( 5 );
 	$labels      = wppugmill_resource_type_labels();
+	$daily       = wppugmill_bot_analytics_daily( $days );
 
 	// Flatten resource breakdown to bot → label → count.
 	$reach = array();
@@ -693,14 +697,105 @@ function wppugmill_bot_analytics_insights_context() {
 		}
 	}
 
-	return array(
-		'site'          => get_bloginfo( 'name' ),
-		'url'           => home_url(),
-		'period_days'   => $days,
-		'total_visits'  => $total,
-		'visits_by_bot' => $summary,
-		'content_reach' => $reach,
-		'top_posts'     => array_map( function( $p ) {
+	// ── AEO conversion rate ──────────────────────────────────────────────────
+	// AEO endpoints: llms.txt (1), llms-full.txt (2), Post Markdown (3), Site Summary (4).
+	$aeo_types   = array( 1, 2, 3, 4 );
+	$total_30    = 0;
+	$aeo_hits_30 = 0;
+	foreach ( $by_resource as $types ) {
+		foreach ( $types as $type_id => $cnt ) {
+			$total_30 += $cnt;
+			if ( in_array( $type_id, $aeo_types, true ) ) {
+				$aeo_hits_30 += $cnt;
+			}
+		}
+	}
+	$aeo_conversion_pct = $total_30 > 0 ? round( $aeo_hits_30 / $total_30 * 100, 1 ) : 0.0;
+
+	// ── Traffic trend: first 15 days vs last 15 days ─────────────────────────
+	$now       = (int) floor( time() / DAY_IN_SECONDS );
+	$split_day = $now - 15;
+	$period1   = array(); // days -30 to -16
+	$period2   = array(); // days -15 to now
+	foreach ( $daily as $row ) {
+		$row_day = (int) floor( strtotime( $row['day'] ) / DAY_IN_SECONDS );
+		$bot     = $row['bot'];
+		$cnt     = (int) $row['cnt'];
+		if ( $row_day < $split_day ) {
+			$period1[ $bot ] = ( $period1[ $bot ] ?? 0 ) + $cnt;
+		} else {
+			$period2[ $bot ] = ( $period2[ $bot ] ?? 0 ) + $cnt;
+		}
+	}
+	$trends          = array();
+	$all_trend_bots  = array_unique( array_merge( array_keys( $period1 ), array_keys( $period2 ) ) );
+	foreach ( $all_trend_bots as $bot ) {
+		$p1  = $period1[ $bot ] ?? 0;
+		$p2  = $period2[ $bot ] ?? 0;
+		$dir = $p2 > $p1 ? 'rising' : ( $p2 < $p1 ? 'falling' : 'flat' );
+		$pct = $p1 > 0 ? (int) round( ( $p2 - $p1 ) / $p1 * 100 ) : ( $p2 > 0 ? 100 : 0 );
+		$trends[ $bot ] = array(
+			'first_15_days' => $p1,
+			'last_15_days'  => $p2,
+			'direction'     => $dir,
+			'change_pct'    => $pct,
+		);
+	}
+
+	// ── Network benchmark ────────────────────────────────────────────────────
+	$network_context = null;
+	if ( get_option( 'wppugmill_analytics_opted_in' ) ) {
+		$net_response = wp_remote_get( 'https://pugmill.dev/api/report', array( 'timeout' => 8, 'sslverify' => true ) );
+		if ( ! is_wp_error( $net_response ) ) {
+			$net_data      = json_decode( wp_remote_retrieve_body( $net_response ), true ) ?: array();
+			$network_sites = (int) ( $net_data['sites_contributing'] ?? 0 );
+			if ( $network_sites >= 1 && ! empty( $net_data['last_30_days'] ) ) {
+				$benchmarks = array();
+				$zero_bots  = array();
+				foreach ( $net_data['last_30_days'] as $bot => $resources ) {
+					$net_avg  = (int) round( array_sum( $resources ) / $network_sites );
+					$my_count = $summary[ $bot ] ?? 0;
+					if ( 0 === $my_count && $net_avg > 0 ) {
+						$zero_bots[] = array( 'bot' => $bot, 'network_avg_per_site' => $net_avg );
+					} else {
+						$ratio  = $net_avg > 0 ? round( $my_count / $net_avg, 2 ) : null;
+						$signal = null;
+						if ( null !== $ratio ) {
+							if ( $ratio >= 2.0 )      { $signal = 'well_above_average'; }
+							elseif ( $ratio >= 1.1 )  { $signal = 'above_average'; }
+							elseif ( $ratio >= 0.9 )  { $signal = 'at_average'; }
+							elseif ( $ratio >= 0.5 )  { $signal = 'below_average'; }
+							else                       { $signal = 'well_below_average'; }
+						}
+						$benchmarks[ $bot ] = array(
+							'your_count'  => $my_count,
+							'network_avg' => $net_avg,
+							'ratio'       => $ratio,
+							'signal'      => $signal,
+						);
+					}
+				}
+				$network_context = array(
+					'sites_in_network' => $network_sites,
+					'note'             => 'Pugmill Intelligence Network: per-site 30-day averages',
+					'benchmarks'       => $benchmarks,
+					'zero_visit_bots'  => $zero_bots,
+				);
+			}
+		}
+	}
+
+	$context = array(
+		'site'               => get_bloginfo( 'name' ),
+		'url'                => home_url(),
+		'period_days'        => $days,
+		'total_all_time'     => $total,
+		'total_30_days'      => $total_30,
+		'visits_by_bot'      => $summary,
+		'aeo_conversion_pct' => $aeo_conversion_pct,
+		'content_reach'      => $reach,
+		'traffic_trend'      => $trends,
+		'top_posts'          => array_map( function( $p ) {
 			return array(
 				'url'     => $p['url'],
 				'total'   => $p['total'],
@@ -709,6 +804,12 @@ function wppugmill_bot_analytics_insights_context() {
 			);
 		}, $top_posts ),
 	);
+
+	if ( null !== $network_context ) {
+		$context['network_benchmark'] = $network_context;
+	}
+
+	return $context;
 }
 
 // ── AJAX: AI insights ─────────────────────────────────────────────────────────
@@ -744,27 +845,30 @@ function wppugmill_ajax_analytics_insights() {
 	$context  = wppugmill_bot_analytics_insights_context();
 	$ctx_json = wp_json_encode( $context, JSON_PRETTY_PRINT );
 
-	$system = "You are an expert in AI search and web crawler analytics. You will receive bot traffic data from a WordPress blog using the WP Pugmill SEO+AEO plugin. Analyze the data and write a concise, insightful report.
+	$system = "You are an expert in AI search and Answer Engine Optimization (AEO). You receive bot traffic data from a WordPress site using the WP Pugmill AEO plugin. Analyze the data and write a concise, insightful report in plain text — no markdown except the section headings below.
 
-Structure your response using exactly these four section headings, each on its own line preceded by '## ':
+Structure your response with exactly these five section headings, each on its own line preceded by '## ':
 
 ## Bot Activity
-Which bots are most active and what that signals (e.g. citation activity, indexing depth, content discovery phase). Note any AEO endpoint hits (?wppugmill_llm=1 means a bot read your optimized markdown directly — flag this as a strong positive signal).
+Which bots are most active and what that signals (citation activity, indexing depth, content discovery phase). Note AEO endpoint hits (llms.txt, llms-full.txt, Post Markdown, Site Summary) as strong positive signals — they mean a bot is reading your optimized content directly. Mention the AEO conversion percentage (what share of visits hit AEO endpoints vs generic HTML/sitemap crawling) and whether it is healthy.
+
+## Traffic Trend
+Compare each bot's first 15 days versus last 15 days. Name which bots are rising, falling, or flat and what that implies. If a bot appears only in the second half, call it out as newly active — that is worth watching.
+
+## Network Benchmark
+If network_benchmark data is present: for each bot, state whether this site is well above average, above average, at average, below average, or well below average compared to the Pugmill Intelligence Network (the ratio field tells you: ≥ 2.0 = well above, ≥ 1.1 = above, 0.9–1.1 = at average, ≥ 0.5 = below, < 0.5 = well below). For every bot listed in zero_visit_bots (bots the network sees but this site has zero visits from), name them and say the typical site gets N visits — this is a gap. If no network_benchmark data is present, skip this section entirely.
 
 ## Content Coverage
-Which pages or post types are being crawled most, and what patterns you notice (repeat visits, ignored sections, etc.).
-
-## AI vs Search Bots
-Differences between AI crawlers and traditional search spiders if both are present; what each group's behavior implies.
+Which pages or post types are crawled most, which resource types are hit most, and any patterns worth noting (ignored sections, repeat visits on specific posts, etc.).
 
 ## Recommendations
-Give 2-3 specific, actionable recommendations tailored to the bots actually present in the data. Use this guidance: if ClaudeBot is active and hitting sitemaps heavily, recommend keeping the sitemap current and ensuring all posts have AEO markup; if ChatGPT/GPTBot is active, recommend enriching the llms.txt file with more complete AEO summaries and Q&A pairs since ChatGPT is known to read it directly; if Perplexity is active, recommend prioritising AEO summaries and Q&A pairs on high-traffic posts since Perplexity cites content in real-time answers; if only traditional search bots are present with no AI crawlers, recommend completing the llms.txt and AEO metadata setup to attract AI crawlers. Only mention bots that appear in the data.
+Give 3–4 specific, prioritized actions. For any bot that is below average or a zero-visit gap, give a targeted fix. Use this guidance: ChatGPT — enrich llms.txt with Q&A pairs and AEO summaries, ChatGPT reads it directly; Perplexity — prioritize AEO summaries on high-traffic posts, Perplexity cites in real-time so freshness matters; ClaudeBot — keep sitemap current and add AEO markup to all posts; Gemini — Schema.org JSON-LD is key; Bingbot — clean sitemaps and solid meta descriptions; if AEO conversion rate is under 10%, recommend running Generate All AEO on top posts first. Only mention bots present in the data or identified as network gaps.
 
-Rules: use a blank line between the heading and its paragraph. No bullet lists. Keep each section to 2-4 sentences. Total response under 350 words.";
+Rules: blank line between each heading and its paragraph. No bullet lists. 2–4 sentences per section. Total response under 450 words.";
 
 	$user = "Site: " . get_bloginfo( 'name' ) . " (" . home_url() . ")\n\nBot analytics data:\n\n" . $ctx_json . "\n\nProvide your analysis.";
 
-	$result = wppugmill_call_ai( $provider, $api_key, $system, $user, 600 );
+	$result = wppugmill_call_ai( $provider, $api_key, $system, $user, 750 );
 
 	if ( is_wp_error( $result ) ) {
 		wp_send_json_error( $result->get_error_message() );
