@@ -1456,7 +1456,7 @@ function wppugmill_render_settings_page() {
 						<div style="flex:1; background:#f0f0f0; border-radius:2px; height:6px; overflow:hidden;">
 							<div style="width:<?php echo $net_pct; ?>%; height:100%; background:#7c3aed; border-radius:2px;"></div>
 						</div>
-						<span style="font-size:10px; color:#7c3aed; min-width:28px; text-align:right; flex-shrink:0;"><?php echo esc_html( number_format_i18n( $net_avg ) ); ?></span>
+						<span style="min-width:28px; flex-shrink:0;"></span>
 					</div>
 				</div>
 				<?php endif; ?>
@@ -1497,7 +1497,7 @@ function wppugmill_render_settings_page() {
 						<div style="flex:1; background:#f0f0f0; border-radius:2px; height:5px; overflow:hidden;">
 							<div style="width:<?php echo $net_pct; ?>%; height:100%; background:#7c3aed; border-radius:2px;"></div>
 						</div>
-						<span style="font-size:9px; color:#7c3aed; min-width:24px; text-align:right; flex-shrink:0;"><?php echo esc_html( number_format_i18n( $net_avg ) ); ?></span>
+						<span style="min-width:24px; flex-shrink:0;"></span>
 					</div>
 				</div>
 				<?php endif; ?>
