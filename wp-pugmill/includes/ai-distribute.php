@@ -97,19 +97,9 @@ Only suggest content that is genuinely topically relevant. Fewer than 3 suggesti
 		wp_send_json_error( array( 'message' => $result->get_error_message() ), 500 );
 	}
 
-	// Strip markdown code fences the AI occasionally adds despite instructions,
-	// then extract just the JSON array in case there is leading/trailing text.
-	$raw = trim( $result );
-	$raw = preg_replace( '/^```(?:json)?\s*/i', '', $raw );
-	$raw = preg_replace( '/\s*```$/i', '', trim( $raw ) );
-	if ( preg_match( '/(\[[\s\S]*\])/s', $raw, $m ) ) {
-		$raw = $m[1];
-	}
-
-	$decoded = json_decode( $raw, true );
-	if ( ! is_array( $decoded ) ) {
-		error_log( 'WP Pugmill: internal links invalid JSON: ' . substr( $result, 0, 200 ) );
-		wp_send_json_error( array( 'message' => __( 'AI returned an unexpected response format. Please try again.', 'wp-pugmill' ) ), 500 );
+	$decoded = wppugmill_decode_ai_json( wppugmill_strip_ai_json_fences( $result ), 'internal_links' );
+	if ( is_wp_error( $decoded ) ) {
+		wp_send_json_error( array( 'message' => $decoded->get_error_message() ), 500 );
 	}
 
 	// Validate each anchor against paragraph block texts — mirrors the JS block-by-block

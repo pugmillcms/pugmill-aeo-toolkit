@@ -46,6 +46,11 @@ function wppugmill_render_list_column( $column, $post_id ) {
 	$grade  = $health['grade'];
 	$color  = $health['color'];
 
+	// Lazily cache the score for sorting if it hasn't been stored yet.
+	if ( '' === get_post_meta( $post_id, '_wppugmill_score', true ) ) {
+		update_post_meta( $post_id, '_wppugmill_score', (int) $score );
+	}
+
 	// Compact dot + number badge
 	printf(
 		'<span title="%s" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:%s;">
@@ -78,13 +83,56 @@ function wppugmill_list_column_css() {
 add_action( 'admin_head', 'wppugmill_list_column_css' );
 
 /**
+ * Register the score column as sortable for all public post types.
+ *
+ * @param  array $sortable Existing sortable columns.
+ * @return array
+ */
+function wppugmill_sortable_columns( $sortable ) {
+	$sortable['wppugmill_score'] = 'wppugmill_score';
+	return $sortable;
+}
+
+/**
+ * Modify the list-table query when sorting by AEO score.
+ *
+ * Uses named meta-query clauses so posts that have never been scored
+ * (no _wppugmill_score meta yet) are still included in the results.
+ *
+ * @param WP_Query $query
+ */
+function wppugmill_score_orderby( $query ) {
+	if ( ! is_admin() || ! $query->is_main_query() ) {
+		return;
+	}
+	if ( 'wppugmill_score' !== $query->get( 'orderby' ) ) {
+		return;
+	}
+	$query->set( 'meta_query', array(
+		'relation'     => 'OR',
+		'score_clause' => array(
+			'key'     => '_wppugmill_score',
+			'compare' => 'EXISTS',
+			'type'    => 'NUMERIC',
+		),
+		array(
+			'key'     => '_wppugmill_score',
+			'compare' => 'NOT EXISTS',
+		),
+	) );
+	$query->set( 'orderby', 'score_clause' );
+}
+add_action( 'pre_get_posts', 'wppugmill_score_orderby' );
+
+/**
  * Hook the column into every public post type's list table.
  */
 function wppugmill_register_list_columns() {
 	$post_types = get_post_types( array( 'public' => true ), 'names' );
 	foreach ( $post_types as $post_type ) {
-		add_filter( "manage_{$post_type}_posts_columns",       'wppugmill_add_list_column' );
-		add_action( "manage_{$post_type}_posts_custom_column", 'wppugmill_render_list_column', 10, 2 );
+		add_filter( "manage_{$post_type}_posts_columns",          'wppugmill_add_list_column' );
+		add_action( "manage_{$post_type}_posts_custom_column",    'wppugmill_render_list_column', 10, 2 );
+		add_filter( "manage_edit-{$post_type}_sortable_columns",  'wppugmill_sortable_columns' );
 	}
 }
 add_action( 'admin_init', 'wppugmill_register_list_columns' );

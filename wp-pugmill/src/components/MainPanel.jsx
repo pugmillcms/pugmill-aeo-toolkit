@@ -443,16 +443,17 @@ export function MainPanel() {
 					window.wp.data.dispatch( 'core/editor' ).savePost();
 					return;
 				}
-				// 3. Case-insensitive fallback — context found but anchor text may differ in case.
-				//    Replaces in raw HTML first to preserve inline formatting.
-				if ( normalize( plain ).includes( normalize( link.context ) ) ) {
+				// 3. Normalised anchor fallback — anchor text is present in stripped content
+				//    but capitalisation differs from the raw HTML (e.g. sentence-start).
+				//    Only replaces in raw HTML to preserve inline formatting.
+				if ( normalize( plain ).includes( normalize( link.anchorText ) ) ) {
 					const caseRe = new RegExp( link.anchorText.replace( /[.*+?^${}()|[\]\\]/g, '\\$&' ), 'i' );
-					updateBlockAttributes( block.clientId, {
-						content: caseRe.test( raw ) ? raw.replace( caseRe, anchor ) : plain.replace( link.anchorText, anchor ),
-					} );
-					setLinkInserted( ( prev ) => ( { ...prev, [ index ]: 'done' } ) );
-					window.wp.data.dispatch( 'core/editor' ).savePost();
-					return;
+					if ( caseRe.test( raw ) ) {
+						updateBlockAttributes( block.clientId, { content: raw.replace( caseRe, anchor ) } );
+						setLinkInserted( ( prev ) => ( { ...prev, [ index ]: 'done' } ) );
+						window.wp.data.dispatch( 'core/editor' ).savePost();
+						return;
+					}
 				}
 			}
 			setLinkInserted( ( prev ) => ( { ...prev, [ index ]: 'Looks like this passage changed after the check ran — the anchor no longer matches. Re-run for fresh results.' } ) );

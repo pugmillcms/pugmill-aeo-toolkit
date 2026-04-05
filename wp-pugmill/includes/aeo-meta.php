@@ -90,3 +90,24 @@ function wppugmill_get_aeo( $post_id ) {
 function wppugmill_save_aeo( $post_id, array $aeo ) {
 	update_post_meta( $post_id, '_wppugmill_aeo', wp_json_encode( $aeo ) );
 }
+
+/**
+ * Refresh the cached _wppugmill_score whenever AEO or SEO meta is written.
+ * The score is stored as a plain integer so the list table can sort by it.
+ *
+ * @param int    $meta_id   ID of the updated meta row (unused).
+ * @param int    $post_id
+ * @param string $meta_key
+ */
+function wppugmill_refresh_score_cache( $meta_id, $post_id, $meta_key ) {
+	if ( ! in_array( $meta_key, array( '_wppugmill_aeo', '_wppugmill_seo' ), true ) ) {
+		return;
+	}
+	if ( ! function_exists( 'wppugmill_health_score' ) ) {
+		return;
+	}
+	$health = wppugmill_health_score( $post_id );
+	update_post_meta( $post_id, '_wppugmill_score', (int) $health['score'] );
+}
+add_action( 'updated_post_meta', 'wppugmill_refresh_score_cache', 10, 3 );
+add_action( 'added_post_meta',   'wppugmill_refresh_score_cache', 10, 3 );
