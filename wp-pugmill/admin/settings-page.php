@@ -2026,7 +2026,7 @@ function wppugmill_render_settings_page() {
 			<form method="post" action="options.php" style="margin:0; padding:0;">
 				<?php settings_fields( 'wppugmill_analytics' ); ?>
 				<input type="hidden" name="wppugmill_analytics_opted_in" value="0">
-				<button type="submit" style="background:none; border:none; padding:0; color:#dc2626; font-size:12px; cursor:pointer; text-decoration:underline;">
+				<button type="submit" onclick="return confirm('<?php echo esc_js( __( 'Leave the Pugmill Intelligence Network? This will also disable Bot Analytics — your historical data stays on your site but you will no longer see crawler or spider activity.', 'wp-pugmill' ) ); ?>')" style="background:none; border:none; padding:0; color:#dc2626; font-size:12px; cursor:pointer; text-decoration:underline;">
 					<?php esc_html_e( 'Leave network', 'wp-pugmill' ); ?>
 				</button>
 			</form>
