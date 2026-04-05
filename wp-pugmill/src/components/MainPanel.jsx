@@ -281,15 +281,14 @@ export function MainPanel() {
 		}
 	}, [ postId, draftContent, fetchUsage ] );
 
-	/** POST to AJAX (no draft_content), saves first if dirty, then puts result in state. */
+	/** POST to AJAX with current draft_content — no save required. */
 	const ajaxFetch = useCallback( async ( ajaxAction, actionNonce, setState ) => {
 		setState( { loading: true, error: '', result: null } );
 		try {
-			await saveIfDirty();
 			const res  = await fetch( ajaxUrl, {
 				method:  'POST',
 				headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-				body:    new URLSearchParams( { action: ajaxAction, nonce: actionNonce, post_id: postId } ),
+				body:    new URLSearchParams( { action: ajaxAction, nonce: actionNonce, post_id: postId, draft_content: draftContent } ),
 			} );
 			const data = await res.json();
 			if ( ! data.success ) throw new Error( data.data?.message || data.data || 'Request failed. Please try again.' );
@@ -298,7 +297,7 @@ export function MainPanel() {
 			setState( { loading: false, error: err.message, result: null } );
 		}
 		fetchUsage();
-	}, [ postId, fetchUsage ] );
+	}, [ postId, draftContent, fetchUsage ] );
 
 	// ── Q&A / Entities field updaters ─────────────────────────────────────────
 	const updateQuestion = ( index, field, value ) =>
@@ -694,6 +693,11 @@ export function MainPanel() {
 				{ generateAllLoading ? 'Generating…' : '✨ Generate All' }
 			</Button>
 			{ IS_AI_MODE && <UsageMeter usage={ usage } /> }
+			{ IS_AI_MODE && (
+				<p style={ { margin: '6px 0 0', fontSize: '11px', color: '#9ca3af', lineHeight: '1.5', textAlign: 'center' } }>
+					Finish editing your content before generating — the AI reads your current draft.
+				</p>
+			) }
 
 			{ /* ── AEO section ───────────────────────────────────────────────── */ }
 			<SectionHeader label="AEO" />

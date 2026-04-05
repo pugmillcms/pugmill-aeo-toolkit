@@ -97,7 +97,16 @@ Only suggest content that is genuinely topically relevant. Fewer than 3 suggesti
 		wp_send_json_error( array( 'message' => $result->get_error_message() ), 500 );
 	}
 
-	$decoded = json_decode( $result, true );
+	// Strip markdown code fences the AI occasionally adds despite instructions,
+	// then extract just the JSON array in case there is leading/trailing text.
+	$raw = trim( $result );
+	$raw = preg_replace( '/^```(?:json)?\s*/i', '', $raw );
+	$raw = preg_replace( '/\s*```$/i', '', trim( $raw ) );
+	if ( preg_match( '/(\[[\s\S]*\])/s', $raw, $m ) ) {
+		$raw = $m[1];
+	}
+
+	$decoded = json_decode( $raw, true );
 	if ( ! is_array( $decoded ) ) {
 		error_log( 'WP Pugmill: internal links invalid JSON: ' . substr( $result, 0, 200 ) );
 		wp_send_json_error( array( 'message' => __( 'AI returned an unexpected response format. Please try again.', 'wp-pugmill' ) ), 500 );
@@ -105,8 +114,13 @@ Only suggest content that is genuinely topically relevant. Fewer than 3 suggesti
 
 	// Validate each anchor against paragraph block texts — mirrors the JS block-by-block
 	// insertion strategy and resolves HTML entity variants (e.g. Q&amp;A vs Q&A).
-	// Falls through without validation for classic-editor posts (no block structure).
-	$para_texts = wppugmill_get_paragraph_block_texts( $r['post']->post_content );
+	// Prefer draft_content (current editor state) over the saved DB version so this
+	// works correctly without requiring a save first. Falls through without validation
+	// for classic-editor posts (no block structure).
+	$raw_blocks = ! empty( $_POST['draft_content'] )
+		? wp_unslash( $_POST['draft_content'] )
+		: $r['post']->post_content;
+	$para_texts = wppugmill_get_paragraph_block_texts( $raw_blocks );
 	$validated  = array();
 
 	foreach ( $decoded as $item ) {
