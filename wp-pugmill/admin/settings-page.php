@@ -1504,14 +1504,14 @@ function wppugmill_render_settings_page() {
 		</p>
 		<div style="display:flex; flex-wrap:wrap; gap:14px; margin-bottom:24px;">
 			<!-- Search spiders summary card -->
-			<div style="background:#f0f9ff; border:1px solid #bae0fd; border-radius:8px; padding:12px 16px; min-width:100px; flex:1; text-align:center;">
-				<div style="font-size:22px; font-weight:700; color:#0369a1; line-height:1.1;">
+			<div style="background:#f0f9ff; border:1px solid #bae0fd; border-radius:8px; padding:16px 20px; min-width:110px; flex:1; text-align:center;">
+				<div style="font-size:26px; font-weight:700; color:#0369a1; line-height:1.1;">
 					<?php echo esc_html( number_format_i18n( $search_total_30 ) ); ?>
 				</div>
-				<div style="font-size:11px; color:#0369a1; font-weight:600; margin-top:3px;"><?php esc_html_e( 'Search Spiders', 'wp-pugmill' ); ?></div>
-				<div style="font-size:10px; color:#9ca3af;"><?php esc_html_e( 'last 30 days', 'wp-pugmill' ); ?></div>
+				<div style="font-size:12px; color:#0369a1; font-weight:600; margin-top:4px;"><?php esc_html_e( 'Search Spiders', 'wp-pugmill' ); ?></div>
+				<div style="font-size:11px; color:#9ca3af;"><?php esc_html_e( 'last 30 days', 'wp-pugmill' ); ?></div>
 				<?php if ( $combined_30 > 0 ) : ?>
-				<div style="margin-top:6px; padding-top:6px; border-top:1px solid #bae0fd; font-size:16px; font-weight:700; color:#0369a1;">
+				<div style="margin-top:8px; padding-top:8px; border-top:1px solid #bae0fd; font-size:18px; font-weight:700; color:#0369a1;">
 					<?php echo esc_html( $search_pct ); ?>%
 					<div style="font-size:10px; font-weight:400; color:#9ca3af; margin-top:1px;"><?php esc_html_e( 'of bot traffic', 'wp-pugmill' ); ?></div>
 				</div>
@@ -1524,27 +1524,27 @@ function wppugmill_render_settings_page() {
 				$my_pct  = min( 100, (int) round( $count   / $bar_max * 100 ) );
 				$net_pct = min( 100, (int) round( (int) $net_avg / $bar_max * 100 ) );
 			?>
-			<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:12px 16px; min-width:100px; flex:1; text-align:center; border-top:3px solid <?php echo esc_attr( $bot_info['color'] ); ?>;">
-				<div style="font-size:22px; font-weight:700; color:<?php echo esc_attr( $count > 0 ? $bot_info['color'] : '#9ca3af' ); ?>; line-height:1.1;">
+			<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:16px 20px; min-width:110px; flex:1; text-align:center; border-top:3px solid <?php echo esc_attr( $bot_info['color'] ); ?>;">
+				<div style="font-size:26px; font-weight:700; color:<?php echo esc_attr( $count > 0 ? $bot_info['color'] : '#9ca3af' ); ?>; line-height:1.1;">
 					<?php echo esc_html( number_format_i18n( $count ) ); ?>
 				</div>
-				<div style="font-size:11px; color:#666; margin-top:3px;"><?php echo esc_html( $bot_info['label'] ); ?></div>
-				<div style="font-size:10px; color:#9ca3af;"><?php esc_html_e( 'last 30 days', 'wp-pugmill' ); ?></div>
+				<div style="font-size:12px; color:#666; margin-top:4px;"><?php echo esc_html( $bot_info['label'] ); ?></div>
+				<div style="font-size:11px; color:#9ca3af;"><?php esc_html_e( 'last 30 days', 'wp-pugmill' ); ?></div>
 				<?php if ( null !== $net_avg && $count > 0 ) : ?>
-				<div style="margin-top:6px; padding-top:6px; border-top:1px solid #f0f0f0;">
-					<div style="display:flex; align-items:center; gap:3px; margin-bottom:2px;">
+				<div style="margin-top:8px; padding-top:8px; border-top:1px solid #f0f0f0;">
+					<div style="display:flex; align-items:center; gap:4px; margin-bottom:3px;">
 						<span style="font-size:9px; color:#9ca3af; min-width:20px; text-align:left; flex-shrink:0;"><?php esc_html_e( 'you', 'wp-pugmill' ); ?></span>
-						<div style="flex:1; background:#f0f0f0; border-radius:2px; height:5px; overflow:hidden;">
+						<div style="flex:1; background:#f0f0f0; border-radius:2px; height:6px; overflow:hidden;">
 							<div style="width:<?php echo $my_pct; ?>%; height:100%; background:<?php echo esc_attr( $bot_info['color'] ); ?>; border-radius:2px;"></div>
 						</div>
-						<span style="min-width:24px; flex-shrink:0;"></span>
+						<span style="min-width:28px; flex-shrink:0;"></span>
 					</div>
-					<div style="display:flex; align-items:center; gap:3px;">
+					<div style="display:flex; align-items:center; gap:4px;">
 						<span style="font-size:9px; color:#7c3aed; min-width:20px; text-align:left; flex-shrink:0;"><?php esc_html_e( 'avg', 'wp-pugmill' ); ?></span>
-						<div style="flex:1; background:#f0f0f0; border-radius:2px; height:5px; overflow:hidden;">
+						<div style="flex:1; background:#f0f0f0; border-radius:2px; height:6px; overflow:hidden;">
 							<div style="width:<?php echo $net_pct; ?>%; height:100%; background:#7c3aed; border-radius:2px;"></div>
 						</div>
-						<span style="min-width:24px; flex-shrink:0;"></span>
+						<span style="min-width:28px; flex-shrink:0;"></span>
 					</div>
 				</div>
 				<?php endif; ?>
