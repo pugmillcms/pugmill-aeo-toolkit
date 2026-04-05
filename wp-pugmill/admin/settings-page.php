@@ -1296,8 +1296,19 @@ function wppugmill_render_settings_page() {
 		$has_api_key     = ! empty( wppugmill_get_encrypted_option( 'wppugmill_ai_api_key', '' ) );
 
 		// Fetch network averages if opted in and enough sites are contributing
-		$network_avgs  = array();
-		$network_sites = 0;
+		$network_avgs          = array();         // bot → total 30-day avg
+		$network_resource_avgs = array();         // bot → type_id → per-resource avg
+		$network_sites         = 0;
+		// Maps the network's resource slugs (from ingest.js) to local type IDs.
+		$network_slug_to_type  = array(
+			'html'          => 0,
+			'llms_txt'      => 1,
+			'llms_full'     => 2,
+			'post_markdown' => 3,
+			'site_summary'  => 4,
+			'sitemap'       => 5,
+			'robots_txt'    => 6,
+		);
 		if ( get_option( 'wppugmill_analytics_opted_in' ) ) {
 			$net_response = wp_remote_get( 'https://pugmill.dev/api/report', array( 'timeout' => 5, 'sslverify' => true ) );
 			if ( ! is_wp_error( $net_response ) ) {
@@ -1306,6 +1317,12 @@ function wppugmill_render_settings_page() {
 				if ( $network_sites >= 1 && ! empty( $net_data['last_30_days'] ) ) {
 					foreach ( $net_data['last_30_days'] as $bot => $resources ) {
 						$network_avgs[ $bot ] = (int) round( array_sum( $resources ) / $network_sites );
+						foreach ( $resources as $slug => $total ) {
+							if ( isset( $network_slug_to_type[ $slug ] ) ) {
+								$type_id = $network_slug_to_type[ $slug ];
+								$network_resource_avgs[ $bot ][ $type_id ] = round( (float) $total / $network_sites, 1 );
+							}
+						}
 					}
 				}
 			}
@@ -1521,7 +1538,7 @@ function wppugmill_render_settings_page() {
 				style="width:100%; height:auto; display:block;"></canvas>
 
 			<!-- Legend -->
-			<div style="display:flex; flex-wrap:wrap; gap:12px 20px; margin-top:14px;">
+			<div style="display:flex; flex-wrap:wrap; gap:12px 20px; margin-top:14px; justify-content:center;">
 				<?php foreach ( $bots as $bot_key => $bot_info ) :
 					if ( ! isset( $daily_index[ $bot_key ] ) ) continue;
 				?>
@@ -1608,11 +1625,26 @@ function wppugmill_render_settings_page() {
 							<?php echo esc_html( $resource_labels[ $type_id ] ?? '' ); ?>
 						</td>
 						<?php foreach ( $bot_keys as $bot_key ) :
-							$cnt = $by_resource[ $bot_key ][ $type_id ] ?? 0;
+							$cnt     = $by_resource[ $bot_key ][ $type_id ] ?? 0;
 							$row_total += $cnt;
+							// Network comparison arrow for this bot × resource type
+							$net_res_avg = $network_resource_avgs[ $bot_key ][ $type_id ] ?? null;
+							$cell_arrow  = '';
+							if ( null !== $net_res_avg && $net_res_avg >= 1 ) {
+								$ratio = $cnt / $net_res_avg;
+								if ( $ratio >= 1.2 ) {
+									$cell_arrow = '<span style="font-size:9px; color:#16a34a; margin-left:2px;">&#8593;</span>';
+								} elseif ( $ratio <= 0.8 ) {
+									$cell_arrow = '<span style="font-size:9px; color:#d97706; margin-left:2px;">&#8595;</span>';
+								}
+							} elseif ( null !== $net_res_avg && $net_res_avg < 1 && $cnt > 0 ) {
+								// Network avg near-zero but we have visits — above average
+								$cell_arrow = '<span style="font-size:9px; color:#16a34a; margin-left:2px;">&#8593;</span>';
+							}
 						?>
-						<td style="padding:7px 12px; text-align:center; color:<?php echo $cnt > 0 ? esc_attr( $bots[ $bot_key ]['color'] ) : '#d1d5db'; ?>; font-weight:<?php echo $cnt > 0 ? '600' : '400'; ?>;">
+						<td style="padding:7px 12px; text-align:center; color:<?php echo $cnt > 0 ? esc_attr( $bots[ $bot_key ]['color'] ) : '#d1d5db'; ?>; font-weight:<?php echo $cnt > 0 ? '600' : '400'; ?>; white-space:nowrap;">
 							<?php echo $cnt > 0 ? esc_html( number_format_i18n( $cnt ) ) : '—'; ?>
+							<?php echo $cell_arrow; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built from literals ?>
 						</td>
 						<?php endforeach; ?>
 						<td style="padding:7px 12px; text-align:center; font-weight:600; color:#374151;">
