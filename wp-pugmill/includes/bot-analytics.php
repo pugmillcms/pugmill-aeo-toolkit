@@ -929,6 +929,20 @@ function wppugmill_intelligence_send() {
 		return;
 	}
 
+	// AEO tier: how complete is this site's AEO data?
+	// 0 = no posts with AEO, 1 = 1-9 posts, 2 = 10+ posts
+	$aeo_count = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		"SELECT COUNT(*) FROM {$wpdb->postmeta}
+		 WHERE meta_key = '_wppugmill_aeo'
+		 AND LENGTH(meta_value) > 50"
+	);
+	$aeo_tier = 0;
+	if ( $aeo_count >= 10 ) {
+		$aeo_tier = 2;
+	} elseif ( $aeo_count >= 1 ) {
+		$aeo_tier = 1;
+	}
+
 	// Hash is salted with the site's private instance ID (stored only in their DB,
 	// never transmitted). This prevents rainbow table attacks — even a full list of
 	// known domains cannot reverse the hash without each site's unique UUID.
@@ -936,6 +950,7 @@ function wppugmill_intelligence_send() {
 		'site_id'        => hash( 'sha256', home_url() . wppugmill_instance_id() ),
 		'date'           => gmdate( 'Y-m-d', $yesterday * DAY_IN_SECONDS ),
 		'plugin_version' => WPPUGMILL_VERSION,
+		'aeo_tier'       => $aeo_tier,
 		'bots'           => $bots,
 	);
 
