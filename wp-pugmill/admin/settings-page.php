@@ -1466,7 +1466,7 @@ function wppugmill_render_settings_page() {
 						<div style="flex:1; background:#f0f0f0; border-radius:2px; height:6px; overflow:hidden;">
 							<div style="width:<?php echo $my_pct; ?>%; height:100%; background:<?php echo esc_attr( $bot_info['color'] ); ?>; border-radius:2px;"></div>
 						</div>
-						<span style="font-size:10px; color:<?php echo esc_attr( $bot_info['color'] ); ?>; min-width:28px; text-align:right; flex-shrink:0;"><?php echo esc_html( number_format_i18n( $count ) ); ?></span>
+						<span style="min-width:28px; flex-shrink:0;"></span>
 					</div>
 					<div style="display:flex; align-items:center; gap:4px;">
 						<span style="font-size:9px; color:#7c3aed; min-width:20px; text-align:left; flex-shrink:0;"><?php esc_html_e( 'avg', 'wp-pugmill' ); ?></span>
@@ -1507,7 +1507,7 @@ function wppugmill_render_settings_page() {
 						<div style="flex:1; background:#f0f0f0; border-radius:2px; height:5px; overflow:hidden;">
 							<div style="width:<?php echo $my_pct; ?>%; height:100%; background:<?php echo esc_attr( $bot_info['color'] ); ?>; border-radius:2px;"></div>
 						</div>
-						<span style="font-size:9px; color:<?php echo esc_attr( $bot_info['color'] ); ?>; min-width:24px; text-align:right; flex-shrink:0;"><?php echo esc_html( number_format_i18n( $count ) ); ?></span>
+						<span style="min-width:24px; flex-shrink:0;"></span>
 					</div>
 					<div style="display:flex; align-items:center; gap:3px;">
 						<span style="font-size:9px; color:#7c3aed; min-width:20px; text-align:left; flex-shrink:0;"><?php esc_html_e( 'avg', 'wp-pugmill' ); ?></span>
@@ -1677,11 +1677,25 @@ function wppugmill_render_settings_page() {
 				<tbody>
 				<?php foreach ( $top_posts as $i => $post_row ) : ?>
 				<tr style="background:<?php echo 0 === $i % 2 ? '#fff' : '#f9fafb'; ?>;">
-					<td style="padding:8px 12px; word-break:break-all; font-family:monospace; font-size:11px;">
+					<td style="padding:8px 12px; word-break:break-all; font-size:11px;">
 						<?php if ( $post_row['aeo'] ) : ?>
 						<span style="color:#16a34a; font-weight:700; margin-right:4px;" title="<?php esc_attr_e( 'AEO markdown endpoint was read', 'wp-pugmill' ); ?>">★</span>
 						<?php endif; ?>
-						<?php echo esc_html( $post_row['url'] ); ?>
+						<a href="<?php echo esc_url( home_url( $post_row['url'] ) ); ?>" target="_blank" rel="noopener"
+						   style="font-family:monospace; color:#1d2327; text-decoration:none;"
+						   onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">
+							<?php echo esc_html( $post_row['url'] ); ?>
+						</a>
+						<?php
+						$post_id = url_to_postid( home_url( $post_row['url'] ) );
+						if ( $post_id ) :
+						?>
+						<a href="<?php echo esc_url( get_edit_post_link( $post_id ) ); ?>"
+						   style="margin-left:6px; font-size:10px; color:#7c3aed; text-decoration:none; white-space:nowrap;"
+						   title="<?php esc_attr_e( 'Edit post', 'wp-pugmill' ); ?>">
+							<?php esc_html_e( 'Edit', 'wp-pugmill' ); ?> ›
+						</a>
+						<?php endif; ?>
 					</td>
 					<td style="padding:8px 12px; text-align:center; font-weight:700; color:#374151;">
 						<?php echo esc_html( number_format_i18n( $post_row['total'] ) ); ?>
@@ -1704,22 +1718,6 @@ function wppugmill_render_settings_page() {
 			</table>
 		</div>
 		<?php endif; ?>
-
-		<!-- Download Data ───────────────────────────────────────────────────── -->
-		<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:16px 24px; margin-bottom:24px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-			<span style="font-size:13px; font-weight:600; color:#374151; flex:0 0 auto;"><?php esc_html_e( 'Download Data', 'wp-pugmill' ); ?></span>
-			<a href="<?php echo esc_url( admin_url( 'admin-ajax.php?action=wppugmill_export_csv_daily&nonce=' . $export_nonce ) ); ?>"
-			   style="display:inline-flex; align-items:center; gap:5px; padding:6px 14px; font-size:12px; font-weight:600;
-			          background:#f6f7f7; color:#374151; border:1px solid #ddd; border-radius:4px; text-decoration:none;">
-				⬇ <?php esc_html_e( 'Daily Aggregates CSV', 'wp-pugmill' ); ?>
-			</a>
-			<a href="<?php echo esc_url( admin_url( 'admin-ajax.php?action=wppugmill_export_csv_recent&nonce=' . $export_nonce ) ); ?>"
-			   style="display:inline-flex; align-items:center; gap:5px; padding:6px 14px; font-size:12px; font-weight:600;
-			          background:#f6f7f7; color:#374151; border:1px solid #ddd; border-radius:4px; text-decoration:none;">
-				⬇ <?php esc_html_e( 'Recent Visits CSV', 'wp-pugmill' ); ?>
-			</a>
-			<span style="font-size:11px; color:#9ca3af;"><?php esc_html_e( 'Daily data retained for 90 days. Recent visits retained for 7 days.', 'wp-pugmill' ); ?></span>
-		</div>
 
 		<!-- Recent visits table -->
 		<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px 24px; margin-bottom:32px;">
@@ -1781,6 +1779,22 @@ function wppugmill_render_settings_page() {
 				</tbody>
 			</table>
 			<?php endif; ?>
+		</div>
+
+		<!-- Download Data ───────────────────────────────────────────────────── -->
+		<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:16px 24px; margin-bottom:24px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+			<span style="font-size:13px; font-weight:600; color:#374151; flex:0 0 auto;"><?php esc_html_e( 'Download Data', 'wp-pugmill' ); ?></span>
+			<a href="<?php echo esc_url( admin_url( 'admin-ajax.php?action=wppugmill_export_csv_daily&nonce=' . $export_nonce ) ); ?>"
+			   style="display:inline-flex; align-items:center; gap:5px; padding:6px 14px; font-size:12px; font-weight:600;
+			          background:#f6f7f7; color:#374151; border:1px solid #ddd; border-radius:4px; text-decoration:none;">
+				⬇ <?php esc_html_e( 'Daily Aggregates CSV', 'wp-pugmill' ); ?>
+			</a>
+			<a href="<?php echo esc_url( admin_url( 'admin-ajax.php?action=wppugmill_export_csv_recent&nonce=' . $export_nonce ) ); ?>"
+			   style="display:inline-flex; align-items:center; gap:5px; padding:6px 14px; font-size:12px; font-weight:600;
+			          background:#f6f7f7; color:#374151; border:1px solid #ddd; border-radius:4px; text-decoration:none;">
+				⬇ <?php esc_html_e( 'Recent Visits CSV', 'wp-pugmill' ); ?>
+			</a>
+			<span style="font-size:11px; color:#9ca3af;"><?php esc_html_e( 'Daily data retained for 90 days. Recent visits retained for 7 days.', 'wp-pugmill' ); ?></span>
 		</div>
 
 		<!-- Footer note -->
