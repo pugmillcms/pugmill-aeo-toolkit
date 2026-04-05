@@ -41,14 +41,19 @@ function wppugmill_render_list_column( $column, $post_id ) {
 		return;
 	}
 
+	// _wppugmill_score is pre-loaded in the WP object cache by the list table —
+	// this get_post_meta call makes no extra DB query.
+	$cached_score = get_post_meta( $post_id, '_wppugmill_score', true );
+
 	$health = wppugmill_health_score( $post_id );
 	$score  = $health['score'];
 	$grade  = $health['grade'];
 	$color  = $health['color'];
 
-	// Lazily cache the score for sorting if it hasn't been stored yet.
-	if ( '' === get_post_meta( $post_id, '_wppugmill_score', true ) ) {
-		update_post_meta( $post_id, '_wppugmill_score', (int) $score );
+	// Keep the sort cache in sync. The comparison avoids an unnecessary DB write;
+	// update_post_meta is only called when the cached value is missing or stale.
+	if ( '' === $cached_score || (int) $cached_score !== $score ) {
+		update_post_meta( $post_id, '_wppugmill_score', $score );
 	}
 
 	// Compact dot + number badge
