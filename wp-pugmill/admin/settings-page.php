@@ -1290,6 +1290,15 @@ function wppugmill_render_settings_page() {
 		$top_posts       = wppugmill_bot_analytics_top_posts( 10 );
 		$ai_bots         = array_filter( $bots, function( $b ) { return 'ai'     === $b['type']; } );
 		$search_bots     = array_filter( $bots, function( $b ) { return 'search' === $b['type']; } );
+
+		// 30-day totals per category — used for the row summary cards
+		$ai_total_30     = 0;
+		$search_total_30 = 0;
+		foreach ( $ai_bots     as $k => $_ ) { $ai_total_30     += $summary[ $k ] ?? 0; }
+		foreach ( $search_bots as $k => $_ ) { $search_total_30 += $summary[ $k ] ?? 0; }
+		$combined_30 = $ai_total_30 + $search_total_30;
+		$ai_pct      = $combined_30 > 0 ? round( $ai_total_30     / $combined_30 * 100 ) : 0;
+		$search_pct  = $combined_30 > 0 ? round( $search_total_30 / $combined_30 * 100 ) : 0;
 		$insights_nonce  = wp_create_nonce( 'wppugmill_analytics_insights' );
 		$export_nonce    = wp_create_nonce( 'wppugmill_export_csv' );
 		$cached_insights = get_transient( 'wppugmill_ai_analytics_insights' );
@@ -1438,12 +1447,19 @@ function wppugmill_render_settings_page() {
 		</p>
 		<div style="display:flex; flex-wrap:wrap; gap:14px; margin-bottom:20px;">
 
-			<!-- All-time total card -->
-			<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:16px 20px; min-width:140px; flex:1; text-align:center;">
-				<div style="font-size:28px; font-weight:700; color:#1d2327; line-height:1.1;">
-					<?php echo esc_html( number_format_i18n( $total ) ); ?>
+			<!-- AI crawlers summary card -->
+			<div style="background:#faf7ff; border:1px solid #d4c8f0; border-radius:8px; padding:16px 20px; min-width:110px; flex:1; text-align:center;">
+				<div style="font-size:26px; font-weight:700; color:#7c3aed; line-height:1.1;">
+					<?php echo esc_html( number_format_i18n( $ai_total_30 ) ); ?>
 				</div>
-				<div style="font-size:12px; color:#666; margin-top:4px;"><?php esc_html_e( 'All-time visits', 'wp-pugmill' ); ?></div>
+				<div style="font-size:12px; color:#7c3aed; font-weight:600; margin-top:4px;"><?php esc_html_e( 'AI Crawlers', 'wp-pugmill' ); ?></div>
+				<div style="font-size:11px; color:#9ca3af;"><?php esc_html_e( 'last 30 days', 'wp-pugmill' ); ?></div>
+				<?php if ( $combined_30 > 0 ) : ?>
+				<div style="margin-top:8px; padding-top:8px; border-top:1px solid #e8e0f7; font-size:18px; font-weight:700; color:#7c3aed;">
+					<?php echo esc_html( $ai_pct ); ?>%
+					<div style="font-size:10px; font-weight:400; color:#9ca3af; margin-top:1px;"><?php esc_html_e( 'of bot traffic', 'wp-pugmill' ); ?></div>
+				</div>
+				<?php endif; ?>
 			</div>
 
 			<?php foreach ( $ai_bots as $bot_key => $bot_info ) :
@@ -1487,6 +1503,20 @@ function wppugmill_render_settings_page() {
 			<?php esc_html_e( 'Search Spiders', 'wp-pugmill' ); ?>
 		</p>
 		<div style="display:flex; flex-wrap:wrap; gap:14px; margin-bottom:24px;">
+			<!-- Search spiders summary card -->
+			<div style="background:#f0f9ff; border:1px solid #bae0fd; border-radius:8px; padding:12px 16px; min-width:100px; flex:1; text-align:center;">
+				<div style="font-size:22px; font-weight:700; color:#0369a1; line-height:1.1;">
+					<?php echo esc_html( number_format_i18n( $search_total_30 ) ); ?>
+				</div>
+				<div style="font-size:11px; color:#0369a1; font-weight:600; margin-top:3px;"><?php esc_html_e( 'Search Spiders', 'wp-pugmill' ); ?></div>
+				<div style="font-size:10px; color:#9ca3af;"><?php esc_html_e( 'last 30 days', 'wp-pugmill' ); ?></div>
+				<?php if ( $combined_30 > 0 ) : ?>
+				<div style="margin-top:6px; padding-top:6px; border-top:1px solid #bae0fd; font-size:16px; font-weight:700; color:#0369a1;">
+					<?php echo esc_html( $search_pct ); ?>%
+					<div style="font-size:10px; font-weight:400; color:#9ca3af; margin-top:1px;"><?php esc_html_e( 'of bot traffic', 'wp-pugmill' ); ?></div>
+				</div>
+				<?php endif; ?>
+			</div>
 			<?php foreach ( $search_bots as $bot_key => $bot_info ) :
 				$count   = isset( $summary[ $bot_key ] ) ? $summary[ $bot_key ] : 0;
 				$net_avg = isset( $network_avgs[ $bot_key ] ) ? $network_avgs[ $bot_key ] : null;
