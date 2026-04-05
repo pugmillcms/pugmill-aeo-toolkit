@@ -99,9 +99,13 @@ function wppugmill_ajax_tone_check() {
 		wp_send_json_error( array( 'message' => __( 'No API key configured. Add your key in Settings → WP Pugmill.', 'wp-pugmill' ) ), 400 );
 	}
 
-	$title   = get_the_title( $post );
-	$content = wp_strip_all_tags( apply_filters( 'the_content', $post->post_content ) );
-	$content = html_entity_decode( $content, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+	$title = get_the_title( $post );
+	if ( ! empty( $_POST['draft_content'] ) ) {
+		$content = wp_strip_all_tags( sanitize_textarea_field( wp_unslash( $_POST['draft_content'] ) ) );
+	} else {
+		$content = wp_strip_all_tags( apply_filters( 'the_content', $post->post_content ) );
+		$content = html_entity_decode( $content, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+	}
 	$content = mb_substr( $content, 0, WPPUGMILL_MAX_AI_INPUT );
 
 	if ( empty( trim( $content ) ) ) {

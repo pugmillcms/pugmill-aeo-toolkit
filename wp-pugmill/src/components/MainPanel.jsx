@@ -471,11 +471,10 @@ export function MainPanel() {
 		setToneApplied( {} );
 		setToneSwapErrs( {} );
 		try {
-			await saveIfDirty();
 			const res  = await fetch( ajaxUrl, {
 				method:  'POST',
 				headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-				body:    new URLSearchParams( { action: 'wppugmill_tone_check', nonce: toneNonce, post_id: postId } ),
+				body:    new URLSearchParams( { action: 'wppugmill_tone_check', nonce: toneNonce, post_id: postId, draft_content: draftContent } ),
 			} );
 			const data = await res.json();
 			if ( ! data.success ) throw new Error( data.data?.message || data.data || 'Tone check failed. Please try again.' );
@@ -485,7 +484,7 @@ export function MainPanel() {
 		} finally {
 			setToneLoading( false );
 		}
-	}, [ postId ] );
+	}, [ postId, draftContent ] );
 
 	const runReadingLevel = useCallback( () => {
 		setReadingOpen( true );
@@ -651,7 +650,7 @@ export function MainPanel() {
 						const linksRes  = await fetch( ajaxUrl, {
 							method:  'POST',
 							headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-							body:    new URLSearchParams( { action: 'wppugmill_internal_links', nonce: internalLinksNonce, post_id: postId } ),
+							body:    new URLSearchParams( { action: 'wppugmill_internal_links', nonce: internalLinksNonce, post_id: postId, draft_content: draftContent } ),
 						} );
 						const linksData = await linksRes.json();
 						if ( linksData.success ) {
@@ -959,7 +958,7 @@ export function MainPanel() {
 												onClick={ () => swapFocusPassage( issue, i ) }
 												style={ { fontSize: '11px', padding: '0 12px', ...BUTTON_STYLE } }
 											>
-												{ state === 'loading' ? 'Rewriting…' : '⇄ Swap Content' }
+												{ state === 'loading' ? 'Rewriting…' : '✏ Rewrite' }
 											</Button>
 										) }
 										{ state && state !== 'done' && state !== 'loading' && (
