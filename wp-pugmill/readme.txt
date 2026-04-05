@@ -4,7 +4,7 @@ Tags: AEO, answer engine optimization, AI, llms.txt, schema, structured data, SE
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.0.3
+Stable tag: 1.0.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -139,6 +139,11 @@ Yes. WP Pugmill is focused on AEO (AI discoverability) and does not conflict wit
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.0.4 =
+* **Bug fix**: AEO Health score ring now updates immediately when using inline Generate buttons — previously the score stayed stale until the WordPress data store propagated asynchronously.
+* **Bug fix**: AEO score column on edit.php now self-heals stale cached values (e.g. a cached 100 after fields were removed) on the next page view.
+* **UX**: Confirmation dialog on "Leave network" warns that Bot Analytics will also be disabled.
 
 = 1.0.3 =
 * **Bug fix**: Analytics opt-in state no longer resets when saving other settings (AI API key, SEO options, etc.). The opt-in was stored in the same WordPress settings group as all other plugin options, so any unrelated form save would wipe it to 0. It is now registered under its own group.
