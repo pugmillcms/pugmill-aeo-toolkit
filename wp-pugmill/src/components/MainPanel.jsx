@@ -364,7 +364,7 @@ export function MainPanel() {
 			setToneApplied( ( prev ) => ( { ...prev, [ index ]: true } ) );
 			window.wp.data.dispatch( 'core/editor' ).savePost();
 		} else {
-			setToneSwapErrs( ( prev ) => ( { ...prev, [ index ]: 'Could not locate that passage in the editor — the post may have been edited since the check ran. The fix was not applied.' } ) );
+			setToneSwapErrs( ( prev ) => ( { ...prev, [ index ]: 'Looks like this passage changed after the check ran — the anchor no longer matches. Re-run for fresh results.' } ) );
 		}
 	}
 
@@ -406,7 +406,7 @@ export function MainPanel() {
 					updateBlockAttributes( block.clientId, { content: rewritten } ); applied = true; break;
 				}
 			}
-			if ( ! applied ) throw new Error( 'Original passage not found in post content. Edit manually.' );
+			if ( ! applied ) throw new Error( 'Looks like this passage changed after the check ran — the anchor no longer matches. Re-run for fresh results.' );
 			window.wp.data.dispatch( 'core/editor' ).savePost();
 			fetchUsage();
 			setSwapStates( ( prev ) => ( { ...prev, [ index ]: 'done' } ) );
@@ -455,7 +455,7 @@ export function MainPanel() {
 					return;
 				}
 			}
-			setLinkInserted( ( prev ) => ( { ...prev, [ index ]: 'Anchor text not found in content. Copy and insert manually.' } ) );
+			setLinkInserted( ( prev ) => ( { ...prev, [ index ]: 'Looks like this passage changed after the check ran — the anchor no longer matches. Re-run for fresh results.' } ) );
 		} catch ( err ) {
 			setLinkInserted( ( prev ) => ( { ...prev, [ index ]: err.message } ) );
 		}
