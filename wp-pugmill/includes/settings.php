@@ -185,7 +185,9 @@ function wppugmill_register_settings() {
 		'default' => '',
 	) );
 
-	register_setting( 'wppugmill_settings', 'wppugmill_analytics_opted_in', array(
+	// Registered under its own group so submitting other settings forms
+	// (AI Connector, SEO, etc.) cannot inadvertently reset the opt-in state.
+	register_setting( 'wppugmill_analytics', 'wppugmill_analytics_opted_in', array(
 		'sanitize_callback' => 'absint',
 		'default'           => 0,
 	) );

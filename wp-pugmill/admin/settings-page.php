@@ -1268,7 +1268,7 @@ function wppugmill_render_settings_page() {
 				<?php esc_html_e( 'By opting in, you also join the Pugmill Intelligence network — we watch which bots visit, which of your AEO resources they accessed, how many times, and the date. Those counts are shared with network participants. Your site is identified only by a salted private hash that cannot be traced back to your domain — not even by us. No URLs, no content, no visitor data is ever collected.', 'wp-pugmill' ); ?>
 			</p>
 			<form method="post" action="options.php">
-				<?php settings_fields( 'wppugmill_settings' ); ?>
+				<?php settings_fields( 'wppugmill_analytics' ); ?>
 				<input type="hidden" name="wppugmill_analytics_opted_in" value="1">
 				<?php submit_button( __( 'Activate Analytics + Join Network', 'wp-pugmill' ), 'primary', 'submit', false, array( 'style' => 'font-size:15px; height:40px; padding:0 24px;' ) ); ?>
 			</form>
@@ -2024,7 +2024,7 @@ function wppugmill_render_settings_page() {
 			?></span>
 			<span style="color:#ddd;">|</span>
 			<form method="post" action="options.php" style="margin:0; padding:0;">
-				<?php settings_fields( 'wppugmill_settings' ); ?>
+				<?php settings_fields( 'wppugmill_analytics' ); ?>
 				<input type="hidden" name="wppugmill_analytics_opted_in" value="0">
 				<button type="submit" style="background:none; border:none; padding:0; color:#dc2626; font-size:12px; cursor:pointer; text-decoration:underline;">
 					<?php esc_html_e( 'Leave network', 'wp-pugmill' ); ?>
