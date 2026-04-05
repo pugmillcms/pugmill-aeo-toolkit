@@ -164,6 +164,14 @@ export function MainPanel() {
 	// Health score inline Fix buttons
 	const [ healthFixStates, setHealthFixStates ] = useState( {} );
 
+	// Local AEO override for immediate score feedback after a health fix.
+	// The WP data store update from updateAeo() is async, so the score ring
+	// would stay stale until the store propagates. We hold the just-fixed aeo
+	// here and use it for score computation; clear it once the store catches up.
+	const [ aeoOverride, setAeoOverride ] = useState( null );
+	useEffect( () => { setAeoOverride( null ); }, [ aeo ] );
+	const displayAeo = aeoOverride ?? aeo;
+
 	// Tone Check
 	const [ toneLoading,  setToneLoading  ] = useState( false );
 	const [ toneError,    setToneError    ] = useState( '' );
@@ -250,6 +258,7 @@ export function MainPanel() {
 			if ( f.entities  !== undefined ) updatedAeo.entities  = f.entities;
 			if ( f.keywords  !== undefined ) updatedAeo.keywords  = f.keywords;
 			updateAeo( updatedAeo );
+			setAeoOverride( updatedAeo ); // score updates immediately, before WP store propagates
 			fetchUsage();
 			setHealthFixStates( ( prev ) => ( { ...prev, [ checkId ]: 'done' } ) );
 		} catch ( err ) {
@@ -563,7 +572,7 @@ export function MainPanel() {
 
 			{ /* ── AEO Health ─────────────────────────────────────────────── */ }
 			<AeoHealthPanel
-				aeo={ aeo }
+				aeo={ displayAeo }
 				seo={ seo }
 				draftContent={ draftContent }
 				featuredMediaAltText={ featuredMediaAltText }
