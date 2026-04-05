@@ -1,8 +1,8 @@
 # WP Pugmill — Product Requirements
 
 **Plugin slug:** wp-pugmill
-**Current version:** 0.5.3 (plugin header) / 0.5.2 (WPPUGMILL_VERSION constant) — sync before release
-**readme.txt stable tag:** 0.4.6 — update before release
+**Current version:** 1.0.0
+**readme.txt stable tag:** 1.0.0
 **Author:** Janzen Works
 **License:** GPLv2 or later
 
@@ -37,7 +37,7 @@ Available in all modes. Renders as a `PluginDocumentSettingPanel` in the Gutenbe
 |---|---|---|
 | AI Summary | `_wppugmill_aeo` → `summary` | 2–3 sentence AI-optimized summary for AI crawlers |
 | Q&A Pairs | `_wppugmill_aeo` → `questions` | Array of `{q, a}` objects; generates FAQPage JSON-LD |
-| Named Entities | `_wppugmill_aeo` → `entities` | Array of `{name, type, description}` objects |
+| Named Entities | `_wppugmill_aeo` → `entities` | Array of `{name, type, description, same_as}` objects. `same_as` is optional; accepts Wikipedia/Wikidata URLs only (server-validated). |
 | Keywords | `_wppugmill_aeo` → `keywords` | Array of strings (5–15 terms) |
 
 All AEO data is stored as a single JSON blob in post meta key `_wppugmill_aeo` (via `wppugmill_save_aeo()` / `wppugmill_get_aeo()` in `includes/aeo-meta.php`).
@@ -107,7 +107,7 @@ Available in all modes. Injected server-side — no frontend JavaScript. All out
 - `Event` — name, description, startDate, endDate, location (`Place`), organizer (`Organization`)
 - `LocalBusiness` — configurable subtype, name, description, address (`PostalAddress`), telephone, openingHours, priceRange, logo
 - `VideoObject` — name, description, uploadDate, duration, thumbnailUrl, embedUrl
-- `Review` *(planned — see § Planned: Review Schema)*
+- `Review` — item type (Book, Movie, Product, Software, Course, Game, Music, Restaurant), item name, author/creator, star rating, review body. Outputs `Review` + `Rating` JSON-LD node eligible for Google rich snippets.
 
 Extended schema data stored in `_wppugmill_schema` meta key (JSON). Shape:
 ```json
@@ -117,7 +117,8 @@ Extended schema data stored in `_wppugmill_schema` meta key (JSON). Shape:
   "product":        { "name": "", "description": "", "price": "", "currency": "USD", "availability": "InStock", "brand": "" },
   "event":          { "name": "", "description": "", "start_date": "", "end_date": "", "location_name": "", "location_address": "", "organizer": "" },
   "local_business": { "name": "", "description": "", "address": "", "phone": "", "hours": "", "price_range": "", "business_type": "LocalBusiness" },
-  "video":          { "name": "", "description": "", "upload_date": "", "duration": "", "thumbnail_url": "", "embed_url": "" }
+  "video":          { "name": "", "description": "", "upload_date": "", "duration": "", "thumbnail_url": "", "embed_url": "" },
+  "review":         { "item_name": "", "item_type": "Book", "item_author": "", "rating_value": "5", "best_rating": "5", "review_body": "" }
 }
 ```
 
@@ -163,6 +164,16 @@ Available in all modes. Implementation: `includes/bot-analytics.php`, `admin/bot
 - Per-bot visit counts and trend data stored in a custom DB table (`wppugmill_bot_analytics`)
 - Table created on plugin activation; daily prune scheduled via WP-Cron (`wppugmill_daily_prune`)
 - Dedicated Bot Analytics admin page
+- 7-box symmetric dashboard grid: one summary card (30-day totals + AI%/Search% split) followed by six per-bot cards per row
+- Content Reach table with network comparison arrows (↑ above average, ↓ below average)
+- Top Posts section with live post links and edit shortcuts
+- Download Data export (CSV)
+
+**Pugmill Intelligence Network:**
+- Fetches anonymised per-bot, per-resource-type averages from `pugmill.dev/api/report`
+- Resource types: `html(0)`, `llms_txt(1)`, `llms_full(2)`, `post_markdown(3)`, `site_summary(4)`, `sitemap(5)`, `robots_txt(6)`
+- Network ratios drive Content Reach arrows and the AI Insights Network Benchmark section
+- AI Insights report structured in five sections: Bot Activity, Traffic Trend, Network Benchmark, Content Coverage, Recommendations
 
 ---
 
@@ -240,8 +251,11 @@ Identifies weakest AEO passage. "Get Rewrite" generates improved version. "Swap 
 #### Internal Links
 Suggests internal links from existing site content. "Insert" wraps matched passage in anchor tag. Auto-saves after each insert.
 
+#### Excerpt Generator
+`wppugmill_generate_excerpt` — generates a compelling 1–2 sentence excerpt (max 160 chars) from post title and content. Reads from current draft — no save required.
+
 #### Social Media Draft
-Platform-optimized copy for LinkedIn (700 char), X (280), Facebook (500), Substack (300). Pre-saves before generating.
+`wppugmill_social_draft` — platform-optimised copy for LinkedIn (700 chars), X (280), Facebook (500), Substack Notes (300). Uses AEO metadata as primary signal. Hard-limit backstop trims to word boundary and appends ellipsis if AI still exceeds the limit. Reads from current draft — no save required.
 
 #### Alt Text Generation (Vision)
 `wppugmill_generate_alt_text` — generates alt text for featured or first image.
@@ -292,15 +306,21 @@ Available in AI Connector mode. Displays current hourly API call count vs. confi
 
 Shared `saveIfDirty()` utility checks `isEditedPostDirty()` before saving — no-op when content is unchanged.
 
-**Pre-save (before AI reads content):**
-- Re-run Audit
-- All `ajaxFetch` operations (Internal Links, Reading Level, Headline Variants, Topic Focus analysis)
+**Draft content (no save required):**
+All AI panel operations that *read* content now send `draft_content` (current Gutenberg editor state via `getEditedPostContent()`) in the POST body. PHP handlers prefer `$_POST['draft_content']` over `$post->post_content`. This means AI always operates on the live editor state regardless of save status.
+
+Operations using `draft_content` (no pre-save):
+- All `ajaxFetch` operations: Internal Links, Reading Level, Headline Variants, Topic Focus, Excerpt, Social Draft
 - Tone Check
-- Social Media Draft generation
+- Generate All → Internal Links
+
+**Pre-save (before AI reads content) — exceptions:**
+- Re-run Audit (REST endpoint reads from DB)
+- Social Draft (still pre-saves as belt-and-suspenders for meta reads)
 
 **Post-save (after AI writes to editor):**
 - Apply Tone Fix
-- Swap Focus passage (Topic Focus)
+- Rewrite Focus passage (Topic Focus)
 - Insert Link (Internal Links)
 - Rewrite from Draft / Simplify Draft
 - Use this Title (Headline Variants)
@@ -390,45 +410,6 @@ All three registered via `register_post_meta` with `show_in_rest: true` on all p
 
 ## Planned Enhancements
 
-### Review Schema
-Add `Review` as an optional extended schema type (joins HowTo, Product, Event, LocalBusiness, VideoObject).
-
-**PHP changes (`includes/json-ld.php`):**
-- Add `review` defaults to `wppugmill_get_schema()`: `{item_name, item_type, item_author, rating_value, best_rating, review_body}`
-- Add `'Review'` case to `wppugmill_build_extended_schema_node()` switch
-- Add `wppugmill_build_review_node()` function outputting `Review` schema with `itemReviewed`, `reviewRating`, optional `reviewBody`
-
-**JS changes (requires rebuild):**
-- `src/constants.js`: add `Review` to `SCHEMA_TYPE_OPTIONS`; add `review` defaults to `SCHEMA_DEFAULTS`; add description to `SCHEMA_TYPE_DESCRIPTIONS`
-- `src/hooks.js`: add `review` deep-merge to `useSchemaData()`
-- `src/components/SchemaBuilder.jsx`: add Review form section
-
-**Data shape (new `review` key in `_wppugmill_schema`):**
-```json
-{
-  "item_name":   "",
-  "item_type":   "Book",
-  "item_author": "",
-  "rating_value": "5",
-  "best_rating":  "5",
-  "review_body":  ""
-}
-```
-
-### sameAs on Entity Mentions
-Add an optional `same_as` URL field to each named entity to disambiguate in the knowledge graph.
-
-**PHP changes (`includes/json-ld.php`):**
-- In the `mentions` builder: if `entity['same_as']` is non-empty and a valid URL, add `sameAs` to the entity node
-
-**PHP changes (`includes/ai-generate-aeo.php`):**
-- Update entity extraction prompt to optionally return `same_as` (Wikipedia/Wikidata URI if confident, else omit)
-- Validate `same_as` as URL before storing
-
-**JS changes (requires rebuild):**
-- `src/components/MainPanel.jsx`: add optional URL `TextControl` (`same_as`) to entity row
-- Update entity default in "+ Add Entity" click: `{name: '', type: 'Thing', same_as: ''}`
-
 ### Citation Array
 Add `citation` array to `BlogPosting` schema for external grounding.
 
@@ -444,12 +425,12 @@ Add `citation` array to `BlogPosting` schema for external grounding.
 
 ## Pre-Submission Checklist (WordPress.org)
 
-- [ ] Remove `WPPUGMILL_TEST_KEY` constant from `wp-pugmill.php` (line 31)
-- [ ] Remove `WPPUGMILL_DEV_MODE` bypass from `wppugmill_mode()` in `wp-pugmill.php` (lines 44-47)
+- [ ] Remove `WPPUGMILL_DEV_MODE` bypass from `wppugmill_mode()` in `wp-pugmill.php` (lines 40-43)
 - [ ] Remove `define('WPPUGMILL_DEV_MODE', true)` from Local Sites `wp-config.php`
-- [ ] Sync `WPPUGMILL_VERSION` constant (currently `0.5.2`) with plugin header (currently `0.5.3`)
-- [ ] Update `readme.txt` stable tag from `0.4.6` to current version
+- [ ] Confirm `WPPUGMILL_VERSION` constant matches plugin header (both should be `1.0.0`)
+- [ ] Confirm `readme.txt` stable tag matches current version (`1.0.0`)
 - [ ] Confirm build is current (`npm run build`) — `build/index.js` matches `src/`
+- [ ] Run `npm test` — all 117 tests must pass
 
 ---
 

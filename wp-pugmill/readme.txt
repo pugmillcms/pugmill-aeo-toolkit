@@ -4,7 +4,7 @@ Tags: AEO, answer engine optimization, AI, llms.txt, schema, structured data, SE
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 0.6.8
+Stable tag: 1.0.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -27,6 +27,9 @@ WP Pugmill does for your content what a ceramic pugmill does for clay. It takes 
 De-aired. Wedged. Ready.
 
 = What WP Pugmill Does =
+
+**Pugmill Intelligence Network**
+Your Bot Analytics data is anonymously compared against the broader network of Pugmill sites. See whether your AI crawler traffic is above or below average for each bot — and get context on whether your site is a typical crawl target or an outlier.
 
 **llms.txt Generation**
 Automatically generates `/llms.txt` and `/llms-full.txt` endpoints following the emerging llms.txt open standard. These files tell AI crawlers exactly what your site is about and where to find your best content.
@@ -51,7 +54,7 @@ All AEO metadata is exposed on WordPress REST API responses, making your content
 
 **Free** — Full manual AEO toolkit. Install, fill in your AEO fields, and your content is immediately more AI-discoverable. No account required.
 
-**AI Connector** — Activate with a license key from wppugmill.com and connect your own Claude, GPT-4, or Gemini API key. Generate all AEO metadata for any post in one click, or use **Write from Draft** to rewrite your rough draft into full Answer Unit structure.
+**AI Connector** — Activate with a license key from wppugmill.com and connect your own Claude, GPT-4, or Gemini API key. Generate all AEO metadata for any post in one click, use **Write from Draft** to rewrite your rough draft into full Answer Unit structure, and distribute your content with AI-written social drafts, excerpt copy, and internal link suggestions.
 
 **Pro** *(Coming Soon)* — AI generation powered by WP Pugmill infrastructure. No API key needed. Includes bulk generation, site-wide AEO dashboard, and author voice training.
 
@@ -136,6 +139,36 @@ Yes. WP Pugmill is focused on AEO (AI discoverability) and does not conflict wit
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.0.0 =
+* **UX**: Anchor-not-found messages on Tone Check, Topic Focus, and Internal Links now explain that the passage was likely edited after the check ran, rather than implying a system error. Includes a prompt to re-run for fresh results.
+
+= 0.9.9 =
+* **Draft content**: Tone Check and Generate All → Internal Links now send the current editor draft directly to the AI without requiring a save first. All AI features now operate on the live editor state — no save step required at any point.
+* **PHP**: Tone Check handler now prefers `draft_content` from the POST body over the saved database version, matching the behaviour of all other AI handlers.
+
+= 0.9.8 =
+* **Internal Links**: Fixed "AI returned an unexpected response format" error caused by the AI occasionally returning markdown-fenced JSON. Paragraph validation now uses the current draft content rather than the last saved version.
+* **Draft content**: All `ajaxFetch` panel operations (Internal Links, Topic Focus, Reading Level, Headline Variants, Excerpt, Social Draft) now send current editor content directly — no pre-save required. Eliminates "Post has no content" race condition on unsaved drafts.
+* **UX**: Added "Finish editing your content before generating" hint below the Generate All button. Topic Focus action button renamed from "Swap Content" to "✏ Rewrite".
+* **Bot Analytics**: Network comparison arrows (↑/↓) in the Content Reach table indicate whether your per-bot traffic ratio is above or below the Pugmill network average. Chart legend centred. Top Posts URLs now link to the live post and include an inline Edit link. Download Data block repositioned after the Recent Visits section.
+* **AI Insights**: Five enhancements — AEO conversion rate (AEO endpoint hits as % of total crawl), 15-day traffic trend with per-bot direction and change %, Pugmill Intelligence Network benchmark with above/below-average signals, zero-visit gap callout for bots crawling other sites but not yours, and richer system prompt context for more actionable recommendations. Max tokens increased to 750.
+* **Bot Analytics dashboard**: Replaced "All-time visits" card with per-category 30-day summary cards (AI Crawlers and Search Spiders) showing visit totals and percentage split. New symmetric 7-box layout: one summary card plus six per-bot cards per row.
+
+= 0.9.0 =
+* **Social Media Draft**: New AI Connector feature generates platform-optimised social copy for LinkedIn (700 chars), X/Twitter (280), Facebook (500), and Substack Notes (300). Uses AEO metadata as the primary signal. Hard-limit backstop trims to word boundary and appends ellipsis if the AI still exceeds the limit.
+* **Excerpt Generator**: New AI Connector feature generates a compelling 1–2 sentence excerpt (max 160 chars) from post title and content.
+* **Distribution tab**: Social Draft and Excerpt Generator are grouped in a new Distribution section of the sidebar panel.
+* **Internal Links**: Suggests 3–5 internal linking opportunities with verbatim anchor text, target URL, and surrounding context. "Insert" wraps the anchor directly in the Gutenberg block. Server-side paragraph validation ensures anchors are placed only where the exact text exists.
+
+= 0.8.0 =
+* **Pugmill Intelligence Network**: Bot Analytics now fetches anonymised per-bot, per-resource-type averages from the Pugmill network and compares your site's ratios. Network averages power the Content Reach comparison table and the AI Insights benchmark section.
+* **AI Insights**: Refactored into a structured five-section report: Bot Activity, Traffic Trend, Network Benchmark, Content Coverage, and Recommendations.
+* **Review schema**: Added Review as an extended schema type. Supports item type (Book, Movie, Product, Software, Course, Game, Music, Restaurant), item name, author/creator, star rating, and review body. Outputs a valid Review + Rating node in JSON-LD, eligible for Google rich snippets.
+* **sameAs on entity mentions**: Each Named Entity now has an optional sameAs URL field (Wikipedia/Wikidata only — server-validated). When set, the JSON-LD `mentions` node includes a `sameAs` property for knowledge-graph disambiguation.
+
+= 0.7.1 =
+* **Stability**: Internal stability and error-handling improvements.
 
 = 0.6.8 =
 * **Cleanup**: Remove orphaned AuditPanel.jsx component file.
