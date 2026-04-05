@@ -1432,7 +1432,9 @@ function wppugmill_render_settings_page() {
 			<?php foreach ( $ai_bots as $bot_key => $bot_info ) :
 				$count   = isset( $summary[ $bot_key ] ) ? $summary[ $bot_key ] : 0;
 				$net_avg = isset( $network_avgs[ $bot_key ] ) ? $network_avgs[ $bot_key ] : null;
-				$below   = ( null !== $net_avg && $net_avg > 0 && $count < ( $net_avg * 0.5 ) );
+				$bar_max = max( $count, (int) $net_avg, 1 );
+				$my_pct  = min( 100, (int) round( $count   / $bar_max * 100 ) );
+				$net_pct = min( 100, (int) round( (int) $net_avg / $bar_max * 100 ) );
 			?>
 			<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:16px 20px; min-width:110px; flex:1; text-align:center; border-top:3px solid <?php echo esc_attr( $bot_info['color'] ); ?>;">
 				<div style="font-size:26px; font-weight:700; color:<?php echo esc_attr( $count > 0 ? $bot_info['color'] : '#9ca3af' ); ?>; line-height:1.1;">
@@ -1442,11 +1444,22 @@ function wppugmill_render_settings_page() {
 				<div style="font-size:11px; color:#9ca3af;"><?php esc_html_e( 'last 30 days', 'wp-pugmill' ); ?></div>
 				<?php if ( null !== $net_avg ) : ?>
 				<div style="margin-top:8px; padding-top:8px; border-top:1px solid #f0f0f0;">
-					<div style="font-size:13px; font-weight:600; color:#7c3aed;"><?php echo esc_html( number_format_i18n( $net_avg ) ); ?></div>
-					<div style="font-size:10px; color:#9ca3af;"><?php esc_html_e( 'network avg', 'wp-pugmill' ); ?></div>
-					<?php if ( $below ) : ?>
-					<div style="font-size:10px; color:#dc2626; margin-top:2px; font-weight:600;"><?php esc_html_e( 'below avg', 'wp-pugmill' ); ?></div>
-					<?php endif; ?>
+					<div style="display:flex; align-items:center; gap:4px; margin-bottom:3px;">
+						<div style="flex:1; background:#f0f0f0; border-radius:2px; height:6px; overflow:hidden;">
+							<div style="width:<?php echo $my_pct; ?>%; height:100%; background:<?php echo esc_attr( $bot_info['color'] ); ?>; border-radius:2px;"></div>
+						</div>
+						<span style="font-size:10px; color:<?php echo esc_attr( $bot_info['color'] ); ?>; min-width:28px; text-align:right;"><?php echo esc_html( number_format_i18n( $count ) ); ?></span>
+					</div>
+					<div style="display:flex; align-items:center; gap:4px;">
+						<div style="flex:1; background:#f0f0f0; border-radius:2px; height:6px; overflow:hidden;">
+							<div style="width:<?php echo $net_pct; ?>%; height:100%; background:#7c3aed; border-radius:2px;"></div>
+						</div>
+						<span style="font-size:10px; color:#7c3aed; min-width:28px; text-align:right;"><?php echo esc_html( number_format_i18n( $net_avg ) ); ?></span>
+					</div>
+					<div style="display:flex; justify-content:space-between; margin-top:3px;">
+						<span style="font-size:9px; color:#9ca3af;"><?php esc_html_e( 'you', 'wp-pugmill' ); ?></span>
+						<span style="font-size:9px; color:#7c3aed;"><?php esc_html_e( 'avg', 'wp-pugmill' ); ?></span>
+					</div>
 				</div>
 				<?php endif; ?>
 			</div>
@@ -1462,7 +1475,9 @@ function wppugmill_render_settings_page() {
 			<?php foreach ( $search_bots as $bot_key => $bot_info ) :
 				$count   = isset( $summary[ $bot_key ] ) ? $summary[ $bot_key ] : 0;
 				$net_avg = isset( $network_avgs[ $bot_key ] ) ? $network_avgs[ $bot_key ] : null;
-				$below   = ( null !== $net_avg && $net_avg > 0 && $count < ( $net_avg * 0.5 ) );
+				$bar_max = max( $count, (int) $net_avg, 1 );
+				$my_pct  = min( 100, (int) round( $count   / $bar_max * 100 ) );
+				$net_pct = min( 100, (int) round( (int) $net_avg / $bar_max * 100 ) );
 			?>
 			<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:12px 16px; min-width:100px; flex:1; text-align:center; border-top:3px solid <?php echo esc_attr( $bot_info['color'] ); ?>;">
 				<div style="font-size:22px; font-weight:700; color:<?php echo esc_attr( $count > 0 ? $bot_info['color'] : '#9ca3af' ); ?>; line-height:1.1;">
@@ -1472,11 +1487,22 @@ function wppugmill_render_settings_page() {
 				<div style="font-size:10px; color:#9ca3af;"><?php esc_html_e( 'last 30 days', 'wp-pugmill' ); ?></div>
 				<?php if ( null !== $net_avg ) : ?>
 				<div style="margin-top:6px; padding-top:6px; border-top:1px solid #f0f0f0;">
-					<div style="font-size:12px; font-weight:600; color:#7c3aed;"><?php echo esc_html( number_format_i18n( $net_avg ) ); ?></div>
-					<div style="font-size:10px; color:#9ca3af;"><?php esc_html_e( 'network avg', 'wp-pugmill' ); ?></div>
-					<?php if ( $below ) : ?>
-					<div style="font-size:10px; color:#dc2626; margin-top:2px; font-weight:600;"><?php esc_html_e( 'below avg', 'wp-pugmill' ); ?></div>
-					<?php endif; ?>
+					<div style="display:flex; align-items:center; gap:3px; margin-bottom:2px;">
+						<div style="flex:1; background:#f0f0f0; border-radius:2px; height:5px; overflow:hidden;">
+							<div style="width:<?php echo $my_pct; ?>%; height:100%; background:<?php echo esc_attr( $bot_info['color'] ); ?>; border-radius:2px;"></div>
+						</div>
+						<span style="font-size:9px; color:<?php echo esc_attr( $bot_info['color'] ); ?>; min-width:24px; text-align:right;"><?php echo esc_html( number_format_i18n( $count ) ); ?></span>
+					</div>
+					<div style="display:flex; align-items:center; gap:3px;">
+						<div style="flex:1; background:#f0f0f0; border-radius:2px; height:5px; overflow:hidden;">
+							<div style="width:<?php echo $net_pct; ?>%; height:100%; background:#7c3aed; border-radius:2px;"></div>
+						</div>
+						<span style="font-size:9px; color:#7c3aed; min-width:24px; text-align:right;"><?php echo esc_html( number_format_i18n( $net_avg ) ); ?></span>
+					</div>
+					<div style="display:flex; justify-content:space-between; margin-top:2px;">
+						<span style="font-size:9px; color:#9ca3af;"><?php esc_html_e( 'you', 'wp-pugmill' ); ?></span>
+						<span style="font-size:9px; color:#7c3aed;"><?php esc_html_e( 'avg', 'wp-pugmill' ); ?></span>
+					</div>
 				</div>
 				<?php endif; ?>
 			</div>
