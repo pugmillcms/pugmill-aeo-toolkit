@@ -1475,7 +1475,7 @@ function wppugmill_render_settings_page() {
 				</div>
 				<div style="font-size:12px; color:#666; margin-top:4px;"><?php echo esc_html( $bot_info['label'] ); ?></div>
 				<div style="font-size:11px; color:#9ca3af;"><?php esc_html_e( 'last 30 days', 'wp-pugmill' ); ?></div>
-				<?php if ( null !== $net_avg ) : ?>
+				<?php if ( null !== $net_avg && $count > 0 ) : ?>
 				<div style="margin-top:8px; padding-top:8px; border-top:1px solid #f0f0f0;">
 					<div style="display:flex; align-items:center; gap:4px; margin-bottom:3px;">
 						<span style="font-size:9px; color:#9ca3af; min-width:20px; text-align:left; flex-shrink:0;"><?php esc_html_e( 'you', 'wp-pugmill' ); ?></span>
@@ -1530,7 +1530,7 @@ function wppugmill_render_settings_page() {
 				</div>
 				<div style="font-size:11px; color:#666; margin-top:3px;"><?php echo esc_html( $bot_info['label'] ); ?></div>
 				<div style="font-size:10px; color:#9ca3af;"><?php esc_html_e( 'last 30 days', 'wp-pugmill' ); ?></div>
-				<?php if ( null !== $net_avg ) : ?>
+				<?php if ( null !== $net_avg && $count > 0 ) : ?>
 				<div style="margin-top:6px; padding-top:6px; border-top:1px solid #f0f0f0;">
 					<div style="display:flex; align-items:center; gap:3px; margin-bottom:2px;">
 						<span style="font-size:9px; color:#9ca3af; min-width:20px; text-align:left; flex-shrink:0;"><?php esc_html_e( 'you', 'wp-pugmill' ); ?></span>
