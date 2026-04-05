@@ -4,7 +4,7 @@ Tags: AEO, answer engine optimization, AI, llms.txt, schema, structured data, SE
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.0.0
+Stable tag: 1.0.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -139,6 +139,9 @@ Yes. WP Pugmill is focused on AEO (AI discoverability) and does not conflict wit
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.0.3 =
+* **Bug fix**: Analytics opt-in state no longer resets when saving other settings (AI API key, SEO options, etc.). The opt-in was stored in the same WordPress settings group as all other plugin options, so any unrelated form save would wipe it to 0. It is now registered under its own group.
 
 = 1.0.0 =
 * **UX**: Anchor-not-found messages on Tone Check, Topic Focus, and Internal Links now explain that the passage was likely edited after the check ran, rather than implying a system error. Includes a prompt to re-run for fresh results.
