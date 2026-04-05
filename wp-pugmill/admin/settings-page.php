@@ -1303,7 +1303,7 @@ function wppugmill_render_settings_page() {
 			if ( ! is_wp_error( $net_response ) ) {
 				$net_data      = json_decode( wp_remote_retrieve_body( $net_response ), true ) ?: array();
 				$network_sites = (int) ( $net_data['sites_contributing'] ?? 0 );
-				if ( $network_sites >= 10 && ! empty( $net_data['last_30_days'] ) ) {
+				if ( $network_sites >= 1 && ! empty( $net_data['last_30_days'] ) ) {
 					foreach ( $net_data['last_30_days'] as $bot => $resources ) {
 						$network_avgs[ $bot ] = (int) round( array_sum( $resources ) / $network_sites );
 					}
@@ -1914,7 +1914,7 @@ function wppugmill_render_settings_page() {
 		<?php if ( 'analytics' === $active_tab && get_option( 'wppugmill_analytics_opted_in' ) ) : ?>
 		<div style="margin-top:8px; display:flex; align-items:center; gap:8px; font-size:12px; color:#9ca3af;">
 			<span>&#10003; <?php
-				if ( $network_sites >= 10 ) {
+				if ( $network_sites >= 1 ) {
 					printf(
 						/* translators: %d: number of contributing sites */
 						esc_html__( 'Network averages from %d participating sites', 'wp-pugmill' ),
