@@ -1265,7 +1265,7 @@ function wppugmill_render_settings_page() {
 				<?php esc_html_e( 'See exactly which AI crawlers and search spiders are visiting your site, which pages they read, and whether they\'re engaging with your AEO content.', 'wp-pugmill' ); ?>
 			</p>
 			<p style="color:#555; font-size:14px; line-height:1.7; margin:0 0 24px;">
-				<?php esc_html_e( 'By opting in, you also join the Pugmill Intelligence network — we watch which bots visit, count what they look at, and share those counts with network participants. No URLs, no content, no personal data is ever collected.', 'wp-pugmill' ); ?>
+				<?php esc_html_e( 'By opting in, you also join the Pugmill Intelligence network — we watch which bots visit, which of your AEO resources they accessed, how many times, and the date. Those counts are shared with network participants. Your site is identified only by a salted private hash that cannot be traced back to your domain — not even by us. No URLs, no content, no visitor data is ever collected.', 'wp-pugmill' ); ?>
 			</p>
 			<form method="post" action="options.php">
 				<?php settings_fields( 'wppugmill_settings' ); ?>

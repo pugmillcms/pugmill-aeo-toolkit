@@ -929,8 +929,11 @@ function wppugmill_intelligence_send() {
 		return;
 	}
 
+	// Hash is salted with the site's private instance ID (stored only in their DB,
+	// never transmitted). This prevents rainbow table attacks — even a full list of
+	// known domains cannot reverse the hash without each site's unique UUID.
 	$payload = array(
-		'site_id'        => hash( 'sha256', home_url() ),
+		'site_id'        => hash( 'sha256', home_url() . wppugmill_instance_id() ),
 		'date'           => gmdate( 'Y-m-d', $yesterday * DAY_IN_SECONDS ),
 		'plugin_version' => WPPUGMILL_VERSION,
 		'bots'           => $bots,
