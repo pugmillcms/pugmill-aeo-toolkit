@@ -1445,20 +1445,18 @@ function wppugmill_render_settings_page() {
 				<?php if ( null !== $net_avg ) : ?>
 				<div style="margin-top:8px; padding-top:8px; border-top:1px solid #f0f0f0;">
 					<div style="display:flex; align-items:center; gap:4px; margin-bottom:3px;">
+						<span style="font-size:9px; color:#9ca3af; min-width:20px; text-align:left; flex-shrink:0;"><?php esc_html_e( 'you', 'wp-pugmill' ); ?></span>
 						<div style="flex:1; background:#f0f0f0; border-radius:2px; height:6px; overflow:hidden;">
 							<div style="width:<?php echo $my_pct; ?>%; height:100%; background:<?php echo esc_attr( $bot_info['color'] ); ?>; border-radius:2px;"></div>
 						</div>
-						<span style="font-size:10px; color:<?php echo esc_attr( $bot_info['color'] ); ?>; min-width:28px; text-align:right;"><?php echo esc_html( number_format_i18n( $count ) ); ?></span>
+						<span style="font-size:10px; color:<?php echo esc_attr( $bot_info['color'] ); ?>; min-width:28px; text-align:right; flex-shrink:0;"><?php echo esc_html( number_format_i18n( $count ) ); ?></span>
 					</div>
 					<div style="display:flex; align-items:center; gap:4px;">
+						<span style="font-size:9px; color:#7c3aed; min-width:20px; text-align:left; flex-shrink:0;"><?php esc_html_e( 'avg', 'wp-pugmill' ); ?></span>
 						<div style="flex:1; background:#f0f0f0; border-radius:2px; height:6px; overflow:hidden;">
 							<div style="width:<?php echo $net_pct; ?>%; height:100%; background:#7c3aed; border-radius:2px;"></div>
 						</div>
-						<span style="font-size:10px; color:#7c3aed; min-width:28px; text-align:right;"><?php echo esc_html( number_format_i18n( $net_avg ) ); ?></span>
-					</div>
-					<div style="display:flex; justify-content:space-between; margin-top:3px;">
-						<span style="font-size:9px; color:#9ca3af;"><?php esc_html_e( 'you', 'wp-pugmill' ); ?></span>
-						<span style="font-size:9px; color:#7c3aed;"><?php esc_html_e( 'avg', 'wp-pugmill' ); ?></span>
+						<span style="font-size:10px; color:#7c3aed; min-width:28px; text-align:right; flex-shrink:0;"><?php echo esc_html( number_format_i18n( $net_avg ) ); ?></span>
 					</div>
 				</div>
 				<?php endif; ?>
@@ -1488,20 +1486,18 @@ function wppugmill_render_settings_page() {
 				<?php if ( null !== $net_avg ) : ?>
 				<div style="margin-top:6px; padding-top:6px; border-top:1px solid #f0f0f0;">
 					<div style="display:flex; align-items:center; gap:3px; margin-bottom:2px;">
+						<span style="font-size:9px; color:#9ca3af; min-width:20px; text-align:left; flex-shrink:0;"><?php esc_html_e( 'you', 'wp-pugmill' ); ?></span>
 						<div style="flex:1; background:#f0f0f0; border-radius:2px; height:5px; overflow:hidden;">
 							<div style="width:<?php echo $my_pct; ?>%; height:100%; background:<?php echo esc_attr( $bot_info['color'] ); ?>; border-radius:2px;"></div>
 						</div>
-						<span style="font-size:9px; color:<?php echo esc_attr( $bot_info['color'] ); ?>; min-width:24px; text-align:right;"><?php echo esc_html( number_format_i18n( $count ) ); ?></span>
+						<span style="font-size:9px; color:<?php echo esc_attr( $bot_info['color'] ); ?>; min-width:24px; text-align:right; flex-shrink:0;"><?php echo esc_html( number_format_i18n( $count ) ); ?></span>
 					</div>
 					<div style="display:flex; align-items:center; gap:3px;">
+						<span style="font-size:9px; color:#7c3aed; min-width:20px; text-align:left; flex-shrink:0;"><?php esc_html_e( 'avg', 'wp-pugmill' ); ?></span>
 						<div style="flex:1; background:#f0f0f0; border-radius:2px; height:5px; overflow:hidden;">
 							<div style="width:<?php echo $net_pct; ?>%; height:100%; background:#7c3aed; border-radius:2px;"></div>
 						</div>
-						<span style="font-size:9px; color:#7c3aed; min-width:24px; text-align:right;"><?php echo esc_html( number_format_i18n( $net_avg ) ); ?></span>
-					</div>
-					<div style="display:flex; justify-content:space-between; margin-top:2px;">
-						<span style="font-size:9px; color:#9ca3af;"><?php esc_html_e( 'you', 'wp-pugmill' ); ?></span>
-						<span style="font-size:9px; color:#7c3aed;"><?php esc_html_e( 'avg', 'wp-pugmill' ); ?></span>
+						<span style="font-size:9px; color:#7c3aed; min-width:24px; text-align:right; flex-shrink:0;"><?php echo esc_html( number_format_i18n( $net_avg ) ); ?></span>
 					</div>
 				</div>
 				<?php endif; ?>
