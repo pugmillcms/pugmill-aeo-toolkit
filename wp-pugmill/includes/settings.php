@@ -184,5 +184,10 @@ function wppugmill_register_settings() {
 		},
 		'default' => '',
 	) );
+
+	register_setting( 'wppugmill_settings', 'wppugmill_analytics_opted_in', array(
+		'sanitize_callback' => 'absint',
+		'default'           => 0,
+	) );
 }
 add_action( 'admin_init', 'wppugmill_register_settings' );

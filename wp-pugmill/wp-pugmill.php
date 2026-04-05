@@ -3,7 +3,7 @@
  * Plugin Name: WP Pugmill
  * Plugin URI:  https://wppugmill.com
  * Description: A pugmill turns slop into usable clay. This one turns your existing SEO into structured, AI-ready content — llms.txt, AEO metadata, schema, and sitemaps for ChatGPT, Perplexity, and Gemini.
- * Version:     0.8.0
+ * Version:     0.9.0
  * Author:      Janzen Works
  * Author URI:  https://janzenworks.com
  * License:     GPL-2.0-or-later
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WPPUGMILL_VERSION',         '0.8.0' );
+define( 'WPPUGMILL_VERSION',         '0.9.0' );
 define( 'WPPUGMILL_PLUGIN_DIR',      plugin_dir_path( __FILE__ ) );
 define( 'WPPUGMILL_PLUGIN_URL',      plugin_dir_url( __FILE__ ) );
 define( 'WPPUGMILL_PLUGIN_FILE',     __FILE__ );
@@ -107,6 +107,10 @@ function wppugmill_activate() {
 	if ( ! wp_next_scheduled( 'wppugmill_daily_prune' ) ) {
 		wp_schedule_event( time(), 'daily', 'wppugmill_daily_prune' );
 	}
+	// Schedule daily intelligence send (offset by 1 hour to run after midnight)
+	if ( ! wp_next_scheduled( 'wppugmill_intelligence_send' ) ) {
+		wp_schedule_event( time() + HOUR_IN_SECONDS, 'daily', 'wppugmill_intelligence_send' );
+	}
 	flush_rewrite_rules();
 }
 register_activation_hook( __FILE__, 'wppugmill_activate' );
@@ -116,6 +120,7 @@ register_activation_hook( __FILE__, 'wppugmill_activate' );
  */
 function wppugmill_deactivate() {
 	wp_clear_scheduled_hook( 'wppugmill_daily_prune' );
+	wp_clear_scheduled_hook( 'wppugmill_intelligence_send' );
 	flush_rewrite_rules();
 }
 register_deactivation_hook( __FILE__, 'wppugmill_deactivate' );

@@ -38,6 +38,7 @@ $options = array(
 	'wppugmill_indexnow_key',
 	'wppugmill_llms_full_page_count',
 	'wppugmill_bot_db_version',
+	'wppugmill_analytics_opted_in',
 );
 
 foreach ( $options as $option ) {

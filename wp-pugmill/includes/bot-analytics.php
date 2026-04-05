@@ -349,6 +349,11 @@ function wppugmill_bot_analytics_migrate_v1() {
  * @param int    $resource_type Resource type ID.
  */
 function wppugmill_log_bot_visit( $bot, $url, $resource_type = 0 ) {
+	// Only collect data if the site owner has opted in to the intelligence network.
+	if ( ! get_option( 'wppugmill_analytics_opted_in' ) ) {
+		return;
+	}
+
 	global $wpdb;
 
 	$bot_id = wppugmill_bot_id( $bot );
@@ -860,3 +865,86 @@ function wppugmill_ajax_export_csv_recent() {
 	exit;
 }
 add_action( 'wp_ajax_wppugmill_export_csv_recent', 'wppugmill_ajax_export_csv_recent' );
+
+// ── Pugmill Intelligence — daily send ─────────────────────────────────────────
+
+/**
+ * Resource type ID → slug for the intelligence network payload.
+ *
+ * @return array<int, string>
+ */
+function wppugmill_intelligence_resource_slugs() {
+	return array(
+		0 => 'html',
+		1 => 'llms_txt',
+		2 => 'llms_full',
+		3 => 'post_markdown',
+		4 => 'site_summary',
+		5 => 'sitemap',
+		6 => 'robots_txt',
+	);
+}
+
+/**
+ * Send yesterday's aggregated bot visit data to the Pugmill Intelligence network.
+ * Fires daily via WP-Cron. Silent on failure — never affects the site.
+ */
+function wppugmill_intelligence_send() {
+	if ( ! get_option( 'wppugmill_analytics_opted_in' ) ) {
+		return;
+	}
+
+	global $wpdb;
+
+	$yesterday     = (int) floor( ( time() - DAY_IN_SECONDS ) / DAY_IN_SECONDS );
+	$resource_slugs = wppugmill_intelligence_resource_slugs();
+
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	$rows = $wpdb->get_results( $wpdb->prepare(
+		"SELECT bot_id, resource_type, count
+		 FROM {$wpdb->prefix}wppugmill_bot_daily
+		 WHERE day = %d",
+		$yesterday
+	), ARRAY_A );
+
+	if ( empty( $rows ) ) {
+		return;
+	}
+
+	// Build bots payload: { BotName: { resource_slug: count } }
+	$bots = array();
+	foreach ( $rows as $row ) {
+		$bot_name = wppugmill_bot_name( (int) $row['bot_id'] );
+		$resource = $resource_slugs[ (int) $row['resource_type'] ] ?? null;
+		if ( ! $resource || 'Unknown' === $bot_name ) {
+			continue;
+		}
+		if ( ! isset( $bots[ $bot_name ] ) ) {
+			$bots[ $bot_name ] = array();
+		}
+		$bots[ $bot_name ][ $resource ] = (int) $row['count'];
+	}
+
+	if ( empty( $bots ) ) {
+		return;
+	}
+
+	$payload = array(
+		'site_id'        => hash( 'sha256', home_url() ),
+		'date'           => gmdate( 'Y-m-d', $yesterday * DAY_IN_SECONDS ),
+		'plugin_version' => WPPUGMILL_VERSION,
+		'bots'           => $bots,
+	);
+
+	wp_remote_post(
+		'https://pugmill.dev/api/ingest',
+		array(
+			'timeout'     => 10,
+			'sslverify'   => true,
+			'headers'     => array( 'Content-Type' => 'application/json' ),
+			'body'        => wp_json_encode( $payload ),
+			'blocking'    => false, // fire-and-forget — don't slow down cron
+		)
+	);
+}
+add_action( 'wppugmill_intelligence_send', 'wppugmill_intelligence_send' );
