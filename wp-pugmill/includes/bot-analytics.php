@@ -1012,17 +1012,17 @@ function wppugmill_intelligence_register() {
 	);
 
 	if ( is_wp_error( $response ) ) {
-		return false;
+		return $response->get_error_message();
 	}
 
 	$code = wp_remote_retrieve_response_code( $response );
 	if ( 200 !== (int) $code ) {
-		return false;
+		return 'HTTP ' . $code . ': ' . wp_remote_retrieve_body( $response );
 	}
 
 	$data = json_decode( wp_remote_retrieve_body( $response ), true );
 	if ( empty( $data['network_token'] ) ) {
-		return false;
+		return 'No token in response: ' . wp_remote_retrieve_body( $response );
 	}
 
 	// Persist the token (encrypted) so it survives across cron runs.
@@ -1039,7 +1039,7 @@ function wppugmill_intelligence_register() {
  */
 function wppugmill_on_analytics_opt_in( $old_value, $new_value ) {
 	if ( (int) $new_value === 1 && (int) $old_value !== 1 ) {
-		wppugmill_intelligence_register();
+		wppugmill_intelligence_register(); // return value intentionally ignored
 	}
 }
 add_action( 'update_option_wppugmill_analytics_opted_in', 'wppugmill_on_analytics_opt_in', 10, 2 );
@@ -1234,13 +1234,16 @@ function wppugmill_ajax_manual_send() {
 	$network_token = wppugmill_get_encrypted_option( 'wppugmill_network_token', '' );
 
 	if ( empty( $network_token ) ) {
-		if ( wppugmill_intelligence_register() ) {
+		$reg_result = wppugmill_intelligence_register();
+		if ( true === $reg_result || ( is_string( $reg_result ) && empty( $reg_result ) ) ) {
 			$network_token = wppugmill_get_encrypted_option( 'wppugmill_network_token', '' );
+		} else {
+			wp_send_json_error( 'Registration failed: ' . ( is_string( $reg_result ) ? $reg_result : 'unknown error' ) );
 		}
 	}
 
 	if ( empty( $network_token ) ) {
-		wp_send_json_error( __( 'Registration failed — could not obtain a network token. Check your connection to pugmill.dev.', 'wp-pugmill' ) );
+		wp_send_json_error( __( 'Registration failed — token missing after register. Check your connection to pugmill.dev.', 'wp-pugmill' ) );
 	}
 
 	$submission_hmac = hash_hmac( 'sha256', "{$site_id}:{$date}:" . WPPUGMILL_VERSION, $network_token );
