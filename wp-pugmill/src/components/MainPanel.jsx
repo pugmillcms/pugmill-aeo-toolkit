@@ -685,7 +685,10 @@ export function MainPanel() {
 							if ( s.local_business ) updates.local_business = { ...schema.local_business, ...s.local_business };
 							if ( s.video )          updates.video          = { ...schema.video,          ...s.video          };
 							if ( s.review )         updates.review         = { ...schema.review,         ...s.review         };
-							updateSchema( updates );
+							// Use setMeta directly with explicit newAeo/newSeo rather than
+							// updateSchema(), which closes over stale meta and would clobber
+							// the AEO and SEO fields written earlier in this flow.
+							setMeta( { ...meta, _wppugmill_aeo: newAeo, _wppugmill_seo: newSeo, _wppugmill_schema: JSON.stringify( { ...schema, ...updates } ) } );
 						}
 
 						fetchUsage();

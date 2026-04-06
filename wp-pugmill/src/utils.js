@@ -18,12 +18,16 @@ export async function saveIfDirty() {
 	return new Promise( ( resolve, reject ) => {
 		let saveStarted = false;
 		const unsubscribe = subscribe( () => {
-			const saving = select( 'core/editor' ).isSavingPost();
+			const saving     = select( 'core/editor' ).isSavingPost();
+			const autosaving = select( 'core/editor' ).isAutosavingPost();
+			// isSavingPost() is true during autosaves too — ignore those transitions
+			// so we only resolve against the explicit savePost() we dispatched below.
+			if ( autosaving ) return;
 			if ( ! saveStarted && saving  ) { saveStarted = true; return; }
 			if (   saveStarted && ! saving ) {
 				unsubscribe();
 				select( 'core/editor' ).didPostSaveRequestFail()
-					? reject( new Error( 'Auto-save failed. Please save manually and try again.' ) )
+					? reject( new Error( 'Save failed. Please save manually and try again.' ) )
 					: resolve();
 			}
 		} );
