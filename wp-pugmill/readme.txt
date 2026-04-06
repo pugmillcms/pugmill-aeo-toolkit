@@ -4,7 +4,7 @@ Tags: AEO, answer engine optimization, AI, llms.txt, schema, structured data, SE
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.0.4
+Stable tag: 1.0.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -139,6 +139,11 @@ Yes. WP Pugmill is focused on AEO (AI discoverability) and does not conflict wit
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.0.5 =
+* **Feature**: Pugmill Intelligence Network authentication — daily submissions are now signed with a per-site HMAC token obtained at opt-in registration. Prevents spoofed data from reaching the network.
+* **UX**: "Send now" button on the Analytics tab lets admins manually trigger an intelligence submission and see the server response — useful for testing without waiting for cron.
+* **Fix**: Pressable/managed-host cron reliability — registration happens immediately at opt-in and is retried automatically on the next cron run if the token is missing.
 
 = 1.0.4 =
 * **Bug fix**: AEO Health score ring now updates immediately when using inline Generate buttons — previously the score stayed stale until the WordPress data store propagated asynchronously.

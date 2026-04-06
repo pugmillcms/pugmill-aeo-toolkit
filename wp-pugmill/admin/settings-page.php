@@ -2023,6 +2023,11 @@ function wppugmill_render_settings_page() {
 				}
 			?></span>
 			<span style="color:#ddd;">|</span>
+			<button id="wppugmill-send-now" style="background:none; border:none; padding:0; color:#6b7280; font-size:12px; cursor:pointer; text-decoration:underline;">
+				<?php esc_html_e( 'Send now', 'wp-pugmill' ); ?>
+			</button>
+			<span id="wppugmill-send-now-result" style="font-size:11px;"></span>
+			<span style="color:#ddd;">|</span>
 			<form method="post" action="options.php" style="margin:0; padding:0;">
 				<?php settings_fields( 'wppugmill_analytics' ); ?>
 				<input type="hidden" name="wppugmill_analytics_opted_in" value="0">
@@ -2031,6 +2036,41 @@ function wppugmill_render_settings_page() {
 				</button>
 			</form>
 		</div>
+		<script>
+		( function() {
+			var btn    = document.getElementById( 'wppugmill-send-now' );
+			var result = document.getElementById( 'wppugmill-send-now-result' );
+			if ( ! btn ) return;
+			btn.addEventListener( 'click', function() {
+				btn.disabled = true;
+				btn.textContent = '<?php echo esc_js( __( 'Sending…', 'wp-pugmill' ) ); ?>';
+				result.textContent = '';
+				result.style.color = '#9ca3af';
+				var data = new FormData();
+				data.append( 'action', 'wppugmill_manual_send' );
+				data.append( 'nonce', '<?php echo esc_js( wp_create_nonce( 'wppugmill_manual_send' ) ); ?>' );
+				fetch( ajaxurl, { method: 'POST', body: data } )
+					.then( function( r ) { return r.json(); } )
+					.then( function( json ) {
+						if ( json.success ) {
+							result.textContent = '✓ ' + json.data;
+							result.style.color = '#16a34a';
+						} else {
+							result.textContent = '✗ ' + json.data;
+							result.style.color = '#dc2626';
+						}
+					} )
+					.catch( function() {
+						result.textContent = '✗ Request failed';
+						result.style.color = '#dc2626';
+					} )
+					.finally( function() {
+						btn.disabled = false;
+						btn.textContent = '<?php echo esc_js( __( 'Send now', 'wp-pugmill' ) ); ?>';
+					} );
+			} );
+		}() );
+		</script>
 		<?php endif; ?>
 
 		<?php endif; // end tab switch ?>

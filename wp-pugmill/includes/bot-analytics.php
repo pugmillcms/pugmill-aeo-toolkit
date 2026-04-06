@@ -970,6 +970,80 @@ function wppugmill_ajax_export_csv_recent() {
 }
 add_action( 'wp_ajax_wppugmill_export_csv_recent', 'wppugmill_ajax_export_csv_recent' );
 
+// ── Pugmill Intelligence — registration & daily send ─────────────────────────
+
+/**
+ * Register this site with the Pugmill Intelligence Network.
+ *
+ * Called once when the user opts in. Sends a signed registration request to
+ * the Pugmill CMS server. On success, stores the returned network_token
+ * (encrypted) so `wppugmill_intelligence_send()` can authenticate each
+ * daily submission.
+ *
+ * The HMAC proves this request came from real plugin code — the network secret
+ * is baked into the plugin build and is not transmitted to the end-user's site.
+ */
+function wppugmill_intelligence_register() {
+	$network_secret = WPPUGMILL_NETWORK_SECRET;
+
+	$site_id     = hash( 'sha256', home_url() . wppugmill_instance_id() );
+	$opted_in_at = gmdate( 'c' );
+	$nonce       = bin2hex( random_bytes( 16 ) );
+
+	// Registration HMAC — proves the request originated from the real plugin.
+	$reg_hmac = hash_hmac( 'sha256', "{$site_id}:{$opted_in_at}:{$nonce}", $network_secret );
+
+	$response = wp_remote_post(
+		'https://pugmill.dev/api/ingest/register',
+		array(
+			'timeout'   => 15,
+			'sslverify' => true,
+			'headers'   => array(
+				'Content-Type'  => 'application/json',
+				'Authorization' => 'Bearer ' . $reg_hmac,
+			),
+			'body' => wp_json_encode( array(
+				'site_id'        => $site_id,
+				'opted_in_at'    => $opted_in_at,
+				'nonce'          => $nonce,
+				'plugin_version' => WPPUGMILL_VERSION,
+			) ),
+		)
+	);
+
+	if ( is_wp_error( $response ) ) {
+		return false;
+	}
+
+	$code = wp_remote_retrieve_response_code( $response );
+	if ( 200 !== (int) $code ) {
+		return false;
+	}
+
+	$data = json_decode( wp_remote_retrieve_body( $response ), true );
+	if ( empty( $data['network_token'] ) ) {
+		return false;
+	}
+
+	// Persist the token (encrypted) so it survives across cron runs.
+	wppugmill_save_encrypted_option( 'wppugmill_network_token', $data['network_token'] );
+	return true;
+}
+
+/**
+ * Fire registration when the user opts in.
+ * The option value transitions from 0 → 1 at opt-in.
+ *
+ * @param mixed $old_value Previous option value.
+ * @param mixed $new_value New option value.
+ */
+function wppugmill_on_analytics_opt_in( $old_value, $new_value ) {
+	if ( (int) $new_value === 1 && (int) $old_value !== 1 ) {
+		wppugmill_intelligence_register();
+	}
+}
+add_action( 'update_option_wppugmill_analytics_opted_in', 'wppugmill_on_analytics_opt_in', 10, 2 );
+
 // ── Pugmill Intelligence — daily send ─────────────────────────────────────────
 
 /**
@@ -1050,12 +1124,32 @@ function wppugmill_intelligence_send() {
 	// Hash is salted with the site's private instance ID (stored only in their DB,
 	// never transmitted). This prevents rainbow table attacks — even a full list of
 	// known domains cannot reverse the hash without each site's unique UUID.
+	$site_id       = hash( 'sha256', home_url() . wppugmill_instance_id() );
+	$date          = gmdate( 'Y-m-d', $yesterday * DAY_IN_SECONDS );
+	$network_token = wppugmill_get_encrypted_option( 'wppugmill_network_token', '' );
+
+	// If opted in but not yet registered (e.g. first run after activation), try now.
+	if ( empty( $network_token ) ) {
+		if ( wppugmill_intelligence_register() ) {
+			$network_token = wppugmill_get_encrypted_option( 'wppugmill_network_token', '' );
+		}
+	}
+
+	// Cannot proceed without a token — site is not registered.
+	if ( empty( $network_token ) ) {
+		return;
+	}
+
+	// Submission HMAC — signs this specific day's payload with the site's token.
+	$submission_hmac = hash_hmac( 'sha256', "{$site_id}:{$date}:" . WPPUGMILL_VERSION, $network_token );
+
 	$payload = array(
-		'site_id'        => hash( 'sha256', home_url() . wppugmill_instance_id() ),
-		'date'           => gmdate( 'Y-m-d', $yesterday * DAY_IN_SECONDS ),
+		'site_id'        => $site_id,
+		'date'           => $date,
 		'plugin_version' => WPPUGMILL_VERSION,
 		'aeo_tier'       => $aeo_tier,
 		'bots'           => $bots,
+		'network_token'  => $network_token,
 	);
 
 	wp_remote_post(
@@ -1063,10 +1157,134 @@ function wppugmill_intelligence_send() {
 		array(
 			'timeout'     => 10,
 			'sslverify'   => true,
-			'headers'     => array( 'Content-Type' => 'application/json' ),
+			'headers'     => array(
+				'Content-Type'  => 'application/json',
+				'Authorization' => 'Bearer ' . $submission_hmac,
+			),
 			'body'        => wp_json_encode( $payload ),
 			'blocking'    => false, // fire-and-forget — don't slow down cron
 		)
 	);
 }
 add_action( 'wppugmill_intelligence_send', 'wppugmill_intelligence_send' );
+
+/**
+ * AJAX handler: manually trigger an intelligence send and return the server response.
+ * Admin-only. Used by the "Send now" button on the Analytics tab for testing.
+ */
+function wppugmill_ajax_manual_send() {
+	check_ajax_referer( 'wppugmill_manual_send', 'nonce' );
+
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_send_json_error( __( 'Insufficient permissions.', 'wp-pugmill' ) );
+	}
+
+	if ( ! get_option( 'wppugmill_analytics_opted_in' ) ) {
+		wp_send_json_error( __( 'Not opted in to the Pugmill Intelligence Network.', 'wp-pugmill' ) );
+	}
+
+	global $wpdb;
+
+	$yesterday      = (int) floor( ( time() - DAY_IN_SECONDS ) / DAY_IN_SECONDS );
+	$resource_slugs = wppugmill_intelligence_resource_slugs();
+
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	$rows = $wpdb->get_results( $wpdb->prepare(
+		"SELECT bot_id, resource_type, count
+		 FROM {$wpdb->prefix}wppugmill_bot_daily
+		 WHERE day = %d",
+		$yesterday
+	), ARRAY_A );
+
+	if ( empty( $rows ) ) {
+		wp_send_json_error( __( 'No bot data recorded for yesterday — nothing to send.', 'wp-pugmill' ) );
+	}
+
+	$bots = array();
+	foreach ( $rows as $row ) {
+		$bot_name = wppugmill_bot_name( (int) $row['bot_id'] );
+		$resource = $resource_slugs[ (int) $row['resource_type'] ] ?? null;
+		if ( ! $resource || 'Unknown' === $bot_name ) {
+			continue;
+		}
+		if ( ! isset( $bots[ $bot_name ] ) ) {
+			$bots[ $bot_name ] = array();
+		}
+		$bots[ $bot_name ][ $resource ] = (int) $row['count'];
+	}
+
+	if ( empty( $bots ) ) {
+		wp_send_json_error( __( 'No recognised bot activity for yesterday.', 'wp-pugmill' ) );
+	}
+
+	$aeo_count = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		"SELECT COUNT(*) FROM {$wpdb->postmeta}
+		 WHERE meta_key = '_wppugmill_aeo'
+		 AND LENGTH(meta_value) > 50"
+	);
+	$aeo_tier = 0;
+	if ( $aeo_count >= 10 ) {
+		$aeo_tier = 2;
+	} elseif ( $aeo_count >= 1 ) {
+		$aeo_tier = 1;
+	}
+
+	$site_id       = hash( 'sha256', home_url() . wppugmill_instance_id() );
+	$date          = gmdate( 'Y-m-d', $yesterday * DAY_IN_SECONDS );
+	$network_token = wppugmill_get_encrypted_option( 'wppugmill_network_token', '' );
+
+	if ( empty( $network_token ) ) {
+		if ( wppugmill_intelligence_register() ) {
+			$network_token = wppugmill_get_encrypted_option( 'wppugmill_network_token', '' );
+		}
+	}
+
+	if ( empty( $network_token ) ) {
+		wp_send_json_error( __( 'Registration failed — could not obtain a network token. Check your connection to pugmill.dev.', 'wp-pugmill' ) );
+	}
+
+	$submission_hmac = hash_hmac( 'sha256', "{$site_id}:{$date}:" . WPPUGMILL_VERSION, $network_token );
+
+	$payload = array(
+		'site_id'        => $site_id,
+		'date'           => $date,
+		'plugin_version' => WPPUGMILL_VERSION,
+		'aeo_tier'       => $aeo_tier,
+		'bots'           => $bots,
+		'network_token'  => $network_token,
+	);
+
+	// Blocking so we can report success/failure back to the UI.
+	$response = wp_remote_post(
+		'https://pugmill.dev/api/ingest',
+		array(
+			'timeout'   => 15,
+			'sslverify' => true,
+			'headers'   => array(
+				'Content-Type'  => 'application/json',
+				'Authorization' => 'Bearer ' . $submission_hmac,
+			),
+			'body'      => wp_json_encode( $payload ),
+			'blocking'  => true,
+		)
+	);
+
+	if ( is_wp_error( $response ) ) {
+		wp_send_json_error( $response->get_error_message() );
+	}
+
+	$code = (int) wp_remote_retrieve_response_code( $response );
+	$body = json_decode( wp_remote_retrieve_body( $response ), true );
+
+	if ( 200 === $code ) {
+		wp_send_json_success(
+			/* translators: %s: date string */
+			sprintf( __( 'Sent successfully for %s.', 'wp-pugmill' ), $date )
+		);
+	}
+
+	$server_error = $body['error'] ?? __( 'Unknown error', 'wp-pugmill' );
+	/* translators: 1: HTTP status code, 2: error message from server */
+	wp_send_json_error( sprintf( __( 'Server returned %1$d: %2$s', 'wp-pugmill' ), $code, $server_error ) );
+}
+add_action( 'wp_ajax_wppugmill_manual_send', 'wppugmill_ajax_manual_send' );
