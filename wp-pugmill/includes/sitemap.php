@@ -17,6 +17,25 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // =========================================================================
+// Noindex helper
+// =========================================================================
+
+/**
+ * Return true if this post has WP Pugmill's own per-post noindex flag set.
+ *
+ * @param  int $post_id
+ * @return bool
+ */
+function wppugmill_own_noindex( $post_id ) {
+	$raw = get_post_meta( $post_id, '_wppugmill_seo', true );
+	if ( ! $raw ) {
+		return false;
+	}
+	$seo = json_decode( $raw, true );
+	return ! empty( $seo['noindex'] );
+}
+
+// =========================================================================
 // Rewrite rule
 // =========================================================================
 

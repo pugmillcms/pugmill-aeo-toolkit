@@ -143,7 +143,7 @@ function wppugmill_get_compatibility_data() {
  * @return string
  */
 function wppugmill_preview_sitemap_xml() {
-	if ( ! function_exists( 'wppugmill_sitemap_collect_urls' ) ) {
+	if ( ! function_exists( 'wppugmill_sitemap_collect_urls' ) || ! function_exists( 'wppugmill_own_noindex' ) ) {
 		return '<!-- Sitemap generator not available -->';
 	}
 	$urls   = array_slice( wppugmill_sitemap_collect_urls(), 0, 4 );
