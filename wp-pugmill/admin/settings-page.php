@@ -239,8 +239,8 @@ function wppugmill_render_settings_page() {
 				'author-voice'  => __( 'Author Voice', 'wp-pugmill' ),
 				'compatibility' => __( 'Plugin Compatibility', 'wp-pugmill' ),
 				'sitemap'       => __( 'Sitemap & Robots', 'wp-pugmill' ),
-				'analytics'     => __( 'Bot Analytics', 'wp-pugmill' ),
 				'bulk-aeo'      => __( 'Bulk AEO', 'wp-pugmill' ),
+				'analytics'     => __( 'Bot Analytics', 'wp-pugmill' ),
 			);
 			foreach ( $tabs as $tab_id => $tab_label ) :
 			?>
@@ -2095,9 +2095,9 @@ function wppugmill_render_settings_page() {
 		<!-- ════════════════════════════════════════════════════════════
 		     BULK AEO TAB
 		     ════════════════════════════════════════════════════════════ -->
-		<div style="max-width:680px; margin-top:24px;">
+		<div style="margin-top:24px;">
 			<p style="<?php echo esc_attr( $p_style ); ?>">
-				<?php esc_html_e( 'Generate AEO metadata — summary, Q&A pairs, entities, and keywords — for all your published content in one run. Posts are processed sequentially using your connected AI provider.', 'wp-pugmill' ); ?>
+				<?php esc_html_e( 'Generate AEO metadata — summary, Q&A pairs, entities, and keywords — for all your published content in one run. Posts are processed sequentially using your connected AI provider. Bulk AEO can consume a significant number of tokens depending on your site size; review your AI provider\'s usage limits before running on large sites.', 'wp-pugmill' ); ?>
 			</p>
 
 			<?php if ( 'ai' !== $mode ) : ?>
@@ -2131,16 +2131,25 @@ function wppugmill_render_settings_page() {
 							<?php esc_html_e( 'Skip posts that already have AEO data', 'wp-pugmill' ); ?>
 						</label>
 					</div>
+					<fieldset style="border:none; margin:0; padding:0;">
+						<legend style="font-size:12px; font-weight:600; color:#374151; margin-bottom:8px;"><?php esc_html_e( 'Speed', 'wp-pugmill' ); ?></legend>
+						<select id="wppugmill-bulk-speed" style="font-size:13px; height:28px;">
+							<option value="1500"><?php esc_html_e( 'Fast (1.5s delay)', 'wp-pugmill' ); ?></option>
+							<option value="3000" selected><?php esc_html_e( 'Normal (3s delay)', 'wp-pugmill' ); ?></option>
+							<option value="6000"><?php esc_html_e( 'Careful (6s delay)', 'wp-pugmill' ); ?></option>
+						</select>
+						<p style="font-size:11px; color:#9ca3af; margin:4px 0 0;"><?php esc_html_e( 'Longer delays slow token spend.', 'wp-pugmill' ); ?></p>
+					</fieldset>
 				</div>
 
 				<!-- Stats -->
 				<p id="wppugmill-bulk-stats" style="font-size:12px; color:#9ca3af; margin:0 0 16px;">Loading…</p>
 
-				<!-- Start button -->
+				<!-- Start button — purple pill, matches sidebar AI buttons -->
 				<button
 					id="wppugmill-bulk-start"
-					class="button button-primary"
-					style="<?php echo 'ai' !== $mode ? 'opacity:0.4;' : ''; ?>"
+					class="button"
+					style="background:#7c3aed; border-color:#7c3aed; color:#fff; border-radius:9999px; padding:0 18px; height:32px; line-height:30px; font-size:13px;<?php echo 'ai' !== $mode ? ' opacity:0.4;' : ''; ?>"
 					<?php echo 'ai' !== $mode ? 'disabled' : ''; ?>
 				>
 					<?php esc_html_e( 'Generate AEO for All Content', 'wp-pugmill' ); ?>
@@ -2152,18 +2161,22 @@ function wppugmill_render_settings_page() {
 						<div id="wppugmill-bulk-bar-fill" style="height:100%; background:#7c3aed; border-radius:3px; width:0%; transition:width 0.3s ease;"></div>
 					</div>
 					<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-						<span id="wppugmill-bulk-counter" style="font-size:12px; color:#6b7280;"></span>
+						<div style="display:flex; gap:16px; align-items:center;">
+							<span id="wppugmill-bulk-counter" style="font-size:12px; color:#6b7280;"></span>
+							<span id="wppugmill-bulk-rate"    style="font-size:12px; color:#9ca3af;"></span>
+						</div>
 						<div style="display:flex; gap:8px;">
 							<button id="wppugmill-bulk-pause"  class="button button-secondary" style="font-size:11px; padding:0 10px; height:26px; line-height:24px;"><?php esc_html_e( 'Pause', 'wp-pugmill' ); ?></button>
 							<button id="wppugmill-bulk-cancel" class="button"                  style="font-size:11px; padding:0 10px; height:26px; line-height:24px; color:#dc2626; border-color:#fca5a5;"><?php esc_html_e( 'Cancel', 'wp-pugmill' ); ?></button>
 						</div>
 					</div>
 					<p id="wppugmill-bulk-current" style="font-size:12px; color:#6b7280; margin:0 0 6px; min-height:18px;"></p>
-					<p style="font-size:12px; color:#6b7280; margin:0;">
+					<p style="font-size:12px; color:#6b7280; margin:0 0 6px;">
 						<span style="color:#46b450;">&#10003;</span> <span id="wppugmill-bulk-success">0</span> generated &nbsp;
 						<span style="color:#dc3232;">&#10007;</span> <span id="wppugmill-bulk-failed">0</span> failed &nbsp;
 						<span style="color:#9ca3af;">&#8618;</span> <span id="wppugmill-bulk-skipped">0</span> skipped
 					</p>
+					<p style="font-size:11px; color:#9ca3af; margin:0;"><?php esc_html_e( 'Keep this page open while the run is in progress — navigating away will stop processing.', 'wp-pugmill' ); ?></p>
 				</div>
 
 				<!-- Completion message -->

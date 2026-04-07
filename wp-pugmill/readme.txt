@@ -4,7 +4,7 @@ Tags: AEO, answer engine optimization, AI, llms.txt, schema, structured data, SE
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.0.8
+Stable tag: 1.0.9
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -139,6 +139,15 @@ Yes. WP Pugmill is focused on AEO (AI discoverability) and does not conflict wit
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.0.9 =
+* **Enhancement**: Bulk AEO tab — Bot Analytics moved to far-right tab position.
+* **Enhancement**: Generate button now uses purple pill style matching all other AI action buttons; barber-pole animation plays during an active run.
+* **Enhancement**: Progress card is now full-width (no max-width constraint).
+* **Enhancement**: Speed throttle control — choose Fast (1.5s), Normal (3s), or Careful (6s) delay between posts to manage token spend rate.
+* **Enhancement**: Live calls/hr rate displayed during a run.
+* **Enhancement**: Intro text now includes a token-usage advisory for large sites.
+* **Enhancement**: Browser warns before leaving the page while a run is in progress.
 
 = 1.0.8 =
 * **Feature**: Bulk AEO Generator — new Settings tab (Pro) generates AEO metadata for all published posts and pages in one run. Processes sequentially with pause/resume/cancel controls and live progress.

@@ -9,12 +9,13 @@
 ( function( cfg ) {
 	'use strict';
 
-	var queue   = [];
-	var paused  = false;
-	var stopped = false;
-	var running = false;
-	var results = { success: 0, failed: 0, skipped: 0 };
-	var els     = {};
+	var queue     = [];
+	var paused    = false;
+	var stopped   = false;
+	var running   = false;
+	var results   = { success: 0, failed: 0, skipped: 0 };
+	var runStart  = 0;   // Date.now() when run begins — used for rate calc
+	var els       = {};
 
 	// ── Boot ─────────────────────────────────────────────────────────────────
 
@@ -23,10 +24,12 @@
 			statsText:    document.getElementById( 'wppugmill-bulk-stats' ),
 			postTypeEls:  document.querySelectorAll( 'input[name="wppugmill_bulk_post_types"]' ),
 			skipExisting: document.getElementById( 'wppugmill-bulk-skip-existing' ),
+			speedSelect:  document.getElementById( 'wppugmill-bulk-speed' ),
 			startBtn:     document.getElementById( 'wppugmill-bulk-start' ),
 			progressWrap: document.getElementById( 'wppugmill-bulk-progress' ),
 			barFill:      document.getElementById( 'wppugmill-bulk-bar-fill' ),
 			counter:      document.getElementById( 'wppugmill-bulk-counter' ),
+			rateEl:       document.getElementById( 'wppugmill-bulk-rate' ),
 			currentPost:  document.getElementById( 'wppugmill-bulk-current' ),
 			successCount: document.getElementById( 'wppugmill-bulk-success' ),
 			failedCount:  document.getElementById( 'wppugmill-bulk-failed' ),
@@ -69,6 +72,14 @@
 				paused  = false;
 			} );
 		}
+
+		// Warn if user tries to leave while a run is active.
+		window.addEventListener( 'beforeunload', function( e ) {
+			if ( running ) {
+				e.preventDefault();
+				e.returnValue = '';
+			}
+		} );
 	} );
 
 	// ── Options ───────────────────────────────────────────────────────────────
@@ -156,11 +167,16 @@
 				paused       = false;
 				stopped      = false;
 				running      = true;
+				runStart     = Date.now();
 				results      = { success: 0, failed: 0, skipped: 0 };
 
 				if ( els.progressWrap ) els.progressWrap.style.display = 'block';
 				if ( els.completeMsg  ) els.completeMsg.style.display  = 'none';
-				if ( els.startBtn     ) els.startBtn.style.display     = 'none';
+				if ( els.rateEl       ) els.rateEl.textContent         = '';
+				if ( els.startBtn ) {
+					els.startBtn.style.display = 'none';
+					els.startBtn.classList.add( 'wppugmill-loading' );
+				}
 
 				updateCounters();
 				processAt( 0 );
@@ -171,6 +187,21 @@
 					els.startBtn.textContent = 'Generate AEO for All Content';
 				}
 			} );
+	}
+
+	function getDelay() {
+		var sel = els.speedSelect;
+		var val = sel ? parseInt( sel.value, 10 ) : 3000;
+		return isNaN( val ) ? 3000 : val;
+	}
+
+	function updateRate() {
+		if ( ! els.rateEl ) return;
+		var completed = results.success + results.failed + results.skipped;
+		if ( completed < 2 || ! runStart ) { els.rateEl.textContent = ''; return; }
+		var elapsedHrs = ( Date.now() - runStart ) / 3600000;
+		var rate = Math.round( completed / elapsedHrs );
+		els.rateEl.textContent = '\u2248' + rate + '/hr';
 	}
 
 	function processAt( index ) {
@@ -204,12 +235,14 @@
 					results.failed++;
 				}
 				updateCounters();
-				setTimeout( function() { processAt( index + 1 ); }, 1500 );
+				updateRate();
+				setTimeout( function() { processAt( index + 1 ); }, getDelay() );
 			} )
 			.catch( function() {
 				results.failed++;
 				updateCounters();
-				setTimeout( function() { processAt( index + 1 ); }, 1500 );
+				updateRate();
+				setTimeout( function() { processAt( index + 1 ); }, getDelay() );
 			} );
 	}
 
@@ -242,6 +275,7 @@
 		}
 
 		if ( els.startBtn ) {
+			els.startBtn.classList.remove( 'wppugmill-loading' );
 			els.startBtn.style.display   = '';
 			els.startBtn.disabled        = ! cfg.isProMode;
 			els.startBtn.textContent     = 'Generate AEO for All Content';
