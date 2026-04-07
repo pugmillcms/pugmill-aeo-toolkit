@@ -49,20 +49,36 @@ function wppugmill_ajax_bulk_aeo_get_queue() {
 		$post_types = array( 'post', 'page' );
 	}
 
-	// Fetch all published IDs — IDs only for minimal memory footprint.
-	$all_ids = get_posts( array(
-		'post_type'      => $post_types,
-		'post_status'    => 'publish',
-		'posts_per_page' => -1,
-		'fields'         => 'ids',
-		'no_found_rows'  => true,
-	) );
+	global $wpdb;
+
+	// Build post-type placeholder list for the IN clause.
+	$type_placeholders = implode( ', ', array_fill( 0, count( $post_types ), '%s' ) );
+
+	// Single query: all published IDs + their AEO meta value in one LEFT JOIN.
+	// Much faster than get_posts( fields=>ids ) + N individual get_post_meta() calls.
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+	$rows = $wpdb->get_results(
+		$wpdb->prepare(
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			"SELECT p.ID, pm.meta_value AS aeo_meta
+			 FROM {$wpdb->posts} p
+			 LEFT JOIN {$wpdb->postmeta} pm
+			   ON pm.post_id = p.ID AND pm.meta_key = '_wppugmill_aeo'
+			 WHERE p.post_status = 'publish'
+			   AND p.post_type IN ( {$type_placeholders} )
+			 ORDER BY p.ID ASC",
+			...$post_types
+		),
+		ARRAY_A
+	);
 
 	$total    = 0;
 	$have_aeo = 0;
 	$eligible = array();
 
-	foreach ( $all_ids as $post_id ) {
+	foreach ( (array) $rows as $row ) {
+		$post_id = (int) $row['ID'];
+
 		// Respect noindex — same filter used by llms.txt.
 		if ( function_exists( 'wppugmill_post_is_noindexed' ) && wppugmill_post_is_noindexed( $post_id ) ) {
 			continue;
@@ -71,16 +87,15 @@ function wppugmill_ajax_bulk_aeo_get_queue() {
 		$total++;
 
 		// A post "has AEO" if a non-empty summary exists.
-		$existing = get_post_meta( $post_id, '_wppugmill_aeo', true );
-		$decoded  = $existing ? json_decode( $existing, true ) : null;
-		$has_aeo  = ! empty( $decoded['summary'] );
+		$decoded = $row['aeo_meta'] ? json_decode( $row['aeo_meta'], true ) : null;
+		$has_aeo = ! empty( $decoded['summary'] );
 
 		if ( $has_aeo ) {
 			$have_aeo++;
 		}
 
 		if ( ! $has_aeo || ! $skip_existing ) {
-			$eligible[] = (int) $post_id;
+			$eligible[] = $post_id;
 		}
 	}
 
