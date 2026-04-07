@@ -4,7 +4,7 @@ Tags: AEO, answer engine optimization, AI, llms.txt, schema, structured data, SE
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.0.15
+Stable tag: 1.0.16
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -139,6 +139,12 @@ Yes. WP Pugmill is focused on AEO (AI discoverability) and does not conflict wit
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.0.16 =
+* **Feature**: Bot Analytics tab now shows a "Network Trends" strip with four category cards (AI Crawlers, Training, Search, SEO Bots) sourced from the Pugmill Intelligence Network — displays network-wide visit totals and % change vs prior 30 days for each category.
+* **Enhancement**: Bot Analytics expanded from 12 to 25 known bots across four categories: AI companies (ChatGPT, Claude, Perplexity, Gemini, Amazonbot, Meta, Mistral), training crawlers (Bytespider, Cohere, DeepSeek, Grok, CCBot), traditional search engines (Googlebot, GoogleOther, Bingbot, YandexBot, BaiduBot, Applebot, DuckDuckGo), and commercial SEO bots (Semrush, Ahrefs, Dotbot, Majestic, Barkrowler, AI2Bot).
+* **Feature**: Unknown bot catch-all — any unrecognized bot-like User-Agent is now detected, logged under "Other," and included in the recent activity feed with its parsed name.
+* **Fix**: Bot Analytics tab no longer shows zero-visit bot cards — only bots with actual recorded visits appear.
 
 = 1.0.14 =
 * **Feature**: Plugin Compatibility tab now shows a side-by-side file comparison for sitemap.xml, llms.txt, and robots.txt — each column loads the live URL output and shows a WP Pugmill preview, with radio buttons to choose which plugin handles each file.

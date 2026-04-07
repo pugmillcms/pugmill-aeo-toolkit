@@ -1754,6 +1754,8 @@ function wppugmill_render_settings_page() {
 			'sitemap'       => 5,
 			'robots_txt'    => 6,
 		);
+		$network_categories = array();  // category → { total, prior_total, change_pct, sites }
+
 		if ( get_option( 'wppugmill_analytics_opted_in' ) ) {
 			$net_response = wp_remote_get( 'https://pugmill.dev/api/report', array( 'timeout' => 5, 'sslverify' => true ) );
 			if ( ! is_wp_error( $net_response ) ) {
@@ -1769,6 +1771,10 @@ function wppugmill_render_settings_page() {
 							}
 						}
 					}
+				}
+				// Category-level network trends (new in v1.0.15)
+				if ( ! empty( $net_data['categories'] ) ) {
+					$network_categories = $net_data['categories'];
 				}
 			}
 		}
@@ -1876,6 +1882,68 @@ function wppugmill_render_settings_page() {
 			</div>
 			<?php endif; ?>
 		</div>
+
+		<?php if ( ! empty( $network_categories ) ) : ?>
+		<!-- ── Network Category Trends ──────────────────────────────────── -->
+		<div style="margin:24px 0 0;">
+			<p style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#9ca3af; margin:0 0 8px;">
+				<?php esc_html_e( 'Network Trends', 'wp-pugmill' ); ?>
+			</p>
+			<div style="display:flex; flex-wrap:wrap; gap:12px; margin-bottom:4px;">
+				<?php
+				$cat_display = array(
+					'ai'       => __( 'AI Crawlers', 'wp-pugmill' ),
+					'training' => __( 'Training', 'wp-pugmill' ),
+					'search'   => __( 'Search', 'wp-pugmill' ),
+					'seo'      => __( 'SEO Bots', 'wp-pugmill' ),
+				);
+				foreach ( $cat_display as $cat_key => $cat_label ) :
+					if ( empty( $network_categories[ $cat_key ] ) ) continue;
+					$nc         = $network_categories[ $cat_key ];
+					$nc_total   = (int) ( $nc['total'] ?? 0 );
+					$nc_change  = isset( $nc['change_pct'] ) && ! is_null( $nc['change_pct'] ) ? (int) $nc['change_pct'] : null;
+					$nc_sites   = (int) ( $nc['sites'] ?? 0 );
+					$arrow      = '';
+					$arrow_col  = '#9ca3af';
+					if ( null !== $nc_change ) {
+						if ( $nc_change > 0 )      { $arrow = '&#8593;'; $arrow_col = '#16a34a'; }
+						elseif ( $nc_change < 0 )  { $arrow = '&#8595;'; $arrow_col = '#dc2626'; }
+						else                       { $arrow = '&#8212;'; $arrow_col = '#9ca3af'; }
+					}
+				?>
+				<div style="background:#fff; border:1px solid #e5e7eb; border-radius:8px; padding:14px 18px; min-width:120px; flex:1;">
+					<div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:#9ca3af; margin-bottom:4px;">
+						<?php echo esc_html( $cat_label ); ?>
+					</div>
+					<div style="font-size:22px; font-weight:700; color:#1d2327; line-height:1.1;">
+						<?php echo esc_html( number_format_i18n( $nc_total ) ); ?>
+					</div>
+					<div style="font-size:11px; color:#6b7280; margin-top:2px;"><?php esc_html_e( 'network visits', 'wp-pugmill' ); ?></div>
+					<?php if ( null !== $nc_change ) : ?>
+					<div style="margin-top:8px; font-size:13px; font-weight:600; color:<?php echo esc_attr( $arrow_col ); ?>;">
+						<?php echo wp_kses_post( $arrow ); ?>&nbsp;<?php echo esc_html( abs( $nc_change ) ); ?>%
+						<span style="font-size:11px; font-weight:400; color:#9ca3af;"><?php esc_html_e( 'vs prior 30d', 'wp-pugmill' ); ?></span>
+					</div>
+					<?php endif; ?>
+					<?php if ( $nc_sites > 0 ) : ?>
+					<div style="font-size:11px; color:#9ca3af; margin-top:4px;">
+						<?php echo esc_html( sprintf( _n( '%s site', '%s sites', $nc_sites, 'wp-pugmill' ), number_format_i18n( $nc_sites ) ) ); ?>
+					</div>
+					<?php endif; ?>
+				</div>
+				<?php endforeach; ?>
+			</div>
+			<p style="font-size:11px; color:#9ca3af; margin:6px 0 0;">
+				<?php
+				printf(
+					/* translators: %d = number of sites contributing to network */
+					esc_html( _n( 'Aggregated from %d site in the Pugmill Intelligence Network.', 'Aggregated from %d sites in the Pugmill Intelligence Network.', $network_sites, 'wp-pugmill' ) ),
+					(int) $network_sites
+				);
+				?>
+			</p>
+		</div>
+		<?php endif; ?>
 
 		<!-- AI crawlers label + cards -->
 		<p style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#9ca3af; margin:24px 0 8px;">
