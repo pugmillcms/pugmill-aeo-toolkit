@@ -75,9 +75,14 @@ export function AeoHealthPanel( { aeo, seo, draftContent, featuredMediaAltText, 
 										Use the <strong>Audit</strong> panel for AI-suggested headings.
 									</span>
 								) }
-								{ ! item.pass && fixAction && item.id !== 'has_headings' && (
+								{ ! item.pass && item.id === 'keywords_in_content' && (
+									<span style={ { fontSize: '11px', color: '#999', display: 'block', marginTop: '2px' } }>
+										Use <strong>Keyword Coverage</strong> in the Topic Audit panel to rewrite passages that include your keywords.
+									</span>
+								) }
+								{ ! item.pass && fixAction && item.id !== 'has_headings' && item.id !== 'keywords_in_content' && (
 									fixState === 'done' ? (
-										<span style={ { fontSize: '11px', color: '#46b450', fontWeight: '600' } }>✓ Done</span>
+										<span style={ { fontSize: '11px', color: '#46b450', fontWeight: '600' } }>✓ Applied — save post to keep</span>
 									) : fixState && fixState !== 'loading' ? (
 										<span style={ { fontSize: '11px', color: '#dc3232' } }>{ fixState }</span>
 									) : (

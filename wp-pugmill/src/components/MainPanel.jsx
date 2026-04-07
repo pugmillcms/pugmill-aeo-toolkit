@@ -164,6 +164,13 @@ export function MainPanel() {
 	// Health score inline Fix buttons
 	const [ healthFixStates, setHealthFixStates ] = useState( {} );
 
+	// Controlled open state for AEO field panels — auto-opened after health fixes
+	// so the user can see and save the generated content.
+	const [ summaryPanelOpen,  setSummaryPanelOpen  ] = useState( false );
+	const [ qaPanelOpen,       setQaPanelOpen       ] = useState( false );
+	const [ entitiesPanelOpen, setEntitiesPanelOpen ] = useState( false );
+	const [ keywordsPanelOpen, setKeywordsPanelOpen ] = useState( false );
+
 	// Local AEO override for immediate score feedback after a health fix.
 	// The WP data store update from updateAeo() is async, so the score ring
 	// would stay stale until the store propagates. We hold the just-fixed aeo
@@ -259,6 +266,19 @@ export function MainPanel() {
 			if ( f.keywords  !== undefined ) updatedAeo.keywords  = f.keywords;
 			updateAeo( updatedAeo );
 			setAeoOverride( updatedAeo ); // score updates immediately, before WP store propagates
+
+			// Auto-open the lower panel so the user can see and save the result.
+			( {
+				summary_present:    setSummaryPanelOpen,
+				summary_length:     setSummaryPanelOpen,
+				qa_present:         setQaPanelOpen,
+				qa_coverage:        setQaPanelOpen,
+				questions_natural:  setQaPanelOpen,
+				entities_present:   setEntitiesPanelOpen,
+				entity_specificity: setEntitiesPanelOpen,
+				keywords_present:   setKeywordsPanelOpen,
+			} )[ checkId ]?.( true );
+
 			fetchUsage();
 			setHealthFixStates( ( prev ) => ( { ...prev, [ checkId ]: 'done' } ) );
 		} catch ( err ) {
@@ -720,7 +740,7 @@ export function MainPanel() {
 			<SectionHeader label="AEO" />
 
 			{ /* AI Summary */ }
-			<PanelBody title={ <span>AI Summary<Tick show={ summaryOk } /></span> } initialOpen={ false }>
+			<PanelBody title={ <span>AI Summary<Tick show={ summaryOk } /></span> } opened={ summaryPanelOpen } onToggle={ () => setSummaryPanelOpen( ( o ) => ! o ) }>
 				<TextareaControl
 					help="2–3 sentences describing this content for AI crawlers."
 					value={ aeo.summary }
@@ -746,7 +766,7 @@ export function MainPanel() {
 			</PanelBody>
 
 			{ /* Q&A Pairs */ }
-			<PanelBody title={ <span>Q&A Pairs ({ aeo.questions.length })<Tick show={ qaOk } /></span> } initialOpen={ false }>
+			<PanelBody title={ <span>Q&A Pairs ({ aeo.questions.length })<Tick show={ qaOk } /></span> } opened={ qaPanelOpen } onToggle={ () => setQaPanelOpen( ( o ) => ! o ) }>
 				{ aeo.questions.map( ( qa, i ) => (
 					<div key={ i } style={ { borderBottom: '1px solid #e0e0e0', paddingBottom: '12px', marginBottom: '12px' } }>
 						<TextControl
@@ -789,7 +809,7 @@ export function MainPanel() {
 			</PanelBody>
 
 			{ /* Named Entities */ }
-			<PanelBody title={ <span>Named Entities ({ aeo.entities.length })<Tick show={ entitiesOk } /></span> } initialOpen={ false }>
+			<PanelBody title={ <span>Named Entities ({ aeo.entities.length })<Tick show={ entitiesOk } /></span> } opened={ entitiesPanelOpen } onToggle={ () => setEntitiesPanelOpen( ( o ) => ! o ) }>
 				{ aeo.entities.map( ( entity, i ) => (
 					<div key={ i } style={ { borderBottom: '1px solid #e0e0e0', paddingBottom: '12px', marginBottom: '12px' } }>
 						<TextControl
@@ -844,7 +864,7 @@ export function MainPanel() {
 			</PanelBody>
 
 			{ /* Keywords */ }
-			<PanelBody title={ <span>Keywords { keywordsOk ? <Tick show={ true } /> : <span style={ { fontSize: '11px', fontWeight: '400', color: '#999' } }>({ aeo.keywords.length }/10)</span> }</span> } initialOpen={ false }>
+			<PanelBody title={ <span>Keywords { keywordsOk ? <Tick show={ true } /> : <span style={ { fontSize: '11px', fontWeight: '400', color: '#999' } }>({ aeo.keywords.length }/10)</span> }</span> } opened={ keywordsPanelOpen } onToggle={ () => setKeywordsPanelOpen( ( o ) => ! o ) }>
 				<TextareaControl
 					help="Comma-separated. 5–15 specific, search-focused terms."
 					value={ keywordsString }

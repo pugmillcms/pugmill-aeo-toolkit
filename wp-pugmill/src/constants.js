@@ -224,7 +224,6 @@ export function getAuditFixActions() {
 		entities_present:    { ajaxAction: 'wppugmill_generate_entities',    actionNonce: cfg.entitiesNonce        || '', label: '✨ Generate Entities'   },
 		entity_specificity:  { ajaxAction: 'wppugmill_generate_entities',    actionNonce: cfg.entitiesNonce        || '', label: '✨ Regenerate Entities' },
 		keywords_present:    { ajaxAction: 'wppugmill_generate_keywords',    actionNonce: cfg.keywordsNonce        || '', label: '✨ Generate Keywords'   },
-		keywords_in_content: { ajaxAction: 'wppugmill_fix_keyword_coverage', actionNonce: cfg.fixKeywordsNonce    || '', label: '✨ Fix with AI', requiresPro: true },
 		has_headings:        { ajaxAction: 'wppugmill_suggest_headings',     actionNonce: cfg.suggestHeadingsNonce || '', label: '✨ Suggest Headings'    },
 	};
 }

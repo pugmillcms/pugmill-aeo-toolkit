@@ -4,7 +4,7 @@ Tags: AEO, answer engine optimization, AI, llms.txt, schema, structured data, SE
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.0.12
+Stable tag: 1.0.13
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -139,6 +139,11 @@ Yes. WP Pugmill is focused on AEO (AI discoverability) and does not conflict wit
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.0.13 =
+* **Bug fix**: AEO Health fix buttons now auto-expand the corresponding lower panel (AI Summary, Q&A Pairs, Named Entities, Keywords) after generation so the user can see and save the result.
+* **Bug fix**: "Keywords found in content" no longer shows a broken fix button — it now redirects to the Keyword Coverage tool in Topic Audit where the actual content rewriting happens.
+* **UX**: Health fix "Done" state now reads "Applied — save post to keep" to prompt the user to save.
 
 = 1.0.12 =
 * **Bug fix**: "Keywords found in content" fix button now correctly shows as inactive for non-Pro users instead of showing as clickable and then throwing a license error.
