@@ -1709,10 +1709,23 @@ function wppugmill_render_settings_page() {
 		$by_resource     = wppugmill_bot_analytics_by_resource( $days );
 		$resource_labels = wppugmill_resource_type_labels();
 		$resource_cats   = wppugmill_resource_type_categories();
-		$bots            = wppugmill_bot_config();
+		$all_bots        = wppugmill_bot_config();
 		$top_posts       = wppugmill_bot_analytics_top_posts( 10 );
-		$ai_bots         = array_filter( $bots, function( $b ) { return 'ai'     === $b['type']; } );
-		$search_bots     = array_filter( $bots, function( $b ) { return 'search' === $b['type']; } );
+
+		// Only render bots that have actual visits in the selected period —
+		// no zero rows. Unknown bots (bot_id = 0) are added as 'Other'.
+		$bots = array_filter( $all_bots, function( $b, $k ) use ( $summary ) {
+			return isset( $summary[ $k ] ) && (int) $summary[ $k ] > 0;
+		}, ARRAY_FILTER_USE_BOTH );
+		// Add 'Other' entry if any unknown bots were logged.
+		if ( isset( $summary['Unknown'] ) && (int) $summary['Unknown'] > 0 ) {
+			$bots['Unknown'] = array( 'label' => 'Other Bots', 'color' => '#94a3b8', 'type' => 'other', 'category' => 'other' );
+		}
+
+		$ai_bots      = array_filter( $bots, function( $b ) { return in_array( $b['category'] ?? $b['type'], array( 'ai', 'training' ), true ); } );
+		$search_bots  = array_filter( $bots, function( $b ) { return 'search' === ( $b['category'] ?? $b['type'] ); } );
+		$seo_bots     = array_filter( $bots, function( $b ) { return 'seo'    === ( $b['category'] ?? $b['type'] ); } );
+		$other_bots   = array_filter( $bots, function( $b ) { return 'other'  === ( $b['category'] ?? $b['type'] ); } );
 
 		// 30-day totals per category — used for the row summary cards
 		$ai_total_30     = 0;

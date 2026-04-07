@@ -25,32 +25,50 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WPPUGMILL_BOT_DB_VERSION', '2' );
+define( 'WPPUGMILL_BOT_DB_VERSION', '3' );
 
 // ── Bot ID map ────────────────────────────────────────────────────────────────
 
 /**
- * Canonical bot name → TINYINT ID.
- * Stored as 1 byte instead of varchar(32) (~12 bytes) in the old schema.
+ * Canonical bot name → TINYINT ID (0 reserved for unknown bots).
+ *
+ * IDs 1-12 are legacy — kept stable for backward compatibility with existing
+ * bot_daily rows. New bots are assigned from 13 upward.
  *
  * @return array<string, int>
  */
 function wppugmill_bot_ids() {
 	return array(
-		// AI assistants / LLM crawlers
-		'ChatGPT'    => 1,
-		'Claude'     => 2,
-		'Perplexity' => 3,
-		'Gemini'     => 4,
-		'Amazonbot'  => 5,
-		'Meta'       => 6,
-		// Traditional search spiders
-		'GoogleOther' => 12,
+		// ── AI companies (training + realtime bundled by company) ──────────
+		'ChatGPT'    => 1,   // GPTBot (training), ChatGPT-User, OAI-SearchBot (realtime)
+		'Claude'     => 2,   // ClaudeBot (training), Claude-User (realtime)
+		'Perplexity' => 3,   // PerplexityBot (training + realtime)
+		'Gemini'     => 4,   // Google-Extended
+		'Amazonbot'  => 5,   // Amazonbot (training), Amzn-User (realtime)
+		'Meta'       => 6,   // Meta-ExternalAgent (training)
+		// ── Search engines ────────────────────────────────────────────────
 		'Googlebot'   => 7,
 		'Bingbot'     => 8,
 		'Applebot'    => 9,
-		'DuckDuckBot' => 10,
-		'Bytespider'  => 11,
+		'DuckDuckBot' => 10,  // DuckDuckBot + DuckAssistBot
+		'Bytespider'  => 11,  // ByteDance (TikTok) — training crawler
+		'GoogleOther' => 12,
+		// ── New AI training crawlers ───────────────────────────────────────
+		'Cohere'     => 13,   // cohere-ai, CohereAI
+		'DeepSeek'   => 14,   // DeepSeekBot
+		'Grok'       => 15,   // GrokBot, xAI-Grok
+		'CCBot'      => 16,   // Common Crawl (feeds many LLM training sets)
+		'Mistral'    => 17,   // MistralAI-User, MistralBot
+		// ── New search engines ────────────────────────────────────────────
+		'YandexBot'  => 18,
+		'BaiduBot'   => 19,
+		// ── Commercial SEO / analytics bots ──────────────────────────────
+		'SemrushBot' => 20,
+		'AhrefsBot'  => 21,
+		'DotBot'     => 22,
+		'MJ12bot'    => 23,
+		'Barkrowler' => 24,
+		'AI2Bot'     => 25,
 	);
 }
 
@@ -117,29 +135,47 @@ function wppugmill_resource_type_categories() {
 /**
  * Map canonical bot names to their UA substrings.
  *
+ * Order matters: more-specific entries (Google-Extended) must appear before
+ * broader ones (Googlebot) so the correct bot is matched first.
+ *
  * @return array<string, string[]>
  */
 function wppugmill_bot_fingerprints() {
 	return array(
-		// AI assistants — checked first so Google-Extended (Gemini) beats Googlebot
+		// ── AI companies ─────────────────────────────────────────────────
+		// Checked before search engines so Google-Extended beats Googlebot.
 		'ChatGPT'    => array( 'GPTBot', 'ChatGPT-User', 'OAI-SearchBot' ),
-		'Claude'     => array( 'ClaudeBot', 'anthropic-ai' ),
-		'Perplexity' => array( 'PerplexityBot' ),
+		'Claude'     => array( 'ClaudeBot', 'Claude-User', 'anthropic-ai' ),
+		'Perplexity' => array( 'PerplexityBot', 'Perplexity-User' ),
 		'Gemini'     => array( 'Google-Extended' ),
-		'Amazonbot'  => array( 'Amazonbot' ),
-		'Meta'       => array( 'meta-externalagent' ),
-		// Traditional search spiders — checked after AI bots
+		'Amazonbot'  => array( 'Amazonbot', 'Amzn-User' ),
+		'Meta'       => array( 'meta-externalagent', 'Meta-ExternalFetcher' ),
+		'Cohere'     => array( 'cohere-ai', 'CohereAI', 'CohereBot' ),
+		'DeepSeek'   => array( 'DeepSeekBot' ),
+		'Grok'       => array( 'GrokBot', 'xAI-Grok', 'grok-' ),
+		'CCBot'      => array( 'CCBot' ),
+		'Mistral'    => array( 'MistralAI-User', 'MistralBot', 'mistralai' ),
+		// ── Search engines ────────────────────────────────────────────────
 		'GoogleOther' => array( 'GoogleOther' ),
 		'Googlebot'   => array( 'Googlebot' ),
 		'Bingbot'     => array( 'bingbot' ),
-		'Applebot'    => array( 'Applebot' ),
-		'DuckDuckBot' => array( 'DuckDuckBot' ),
+		'Applebot'    => array( 'Applebot-Extended', 'Applebot' ),
+		'DuckDuckBot' => array( 'DuckDuckBot', 'DuckAssistBot' ),
 		'Bytespider'  => array( 'Bytespider' ),
+		'YandexBot'   => array( 'YandexBot', 'YaDirectFetcher' ),
+		'BaiduBot'    => array( 'Baiduspider', 'BaiduSpider' ),
+		// ── Commercial SEO / analytics bots ──────────────────────────────
+		'SemrushBot'  => array( 'SemrushBot' ),
+		'AhrefsBot'   => array( 'AhrefsBot' ),
+		'DotBot'      => array( 'DotBot', 'dotbot' ),
+		'MJ12bot'     => array( 'MJ12bot' ),
+		'Barkrowler'  => array( 'Barkrowler' ),
+		'AI2Bot'      => array( 'AI2Bot', 'Ai2Bot' ),
 	);
 }
 
 /**
- * Detect if a UA string belongs to a known AI bot.
+ * Detect if a UA string belongs to a known bot.
  *
  * @param  string       $ua
  * @return string|false  Canonical bot name, or false.
@@ -155,6 +191,59 @@ function wppugmill_detect_ai_bot( $ua ) {
 			}
 		}
 	}
+	return false;
+}
+
+/**
+ * Parse a human-readable bot name from a User-Agent string.
+ * Returns the leading token before '/', '(', or whitespace.
+ *
+ * @param  string $ua
+ * @return string
+ */
+function wppugmill_parse_bot_name_from_ua( $ua ) {
+	if ( preg_match( '/^([A-Za-z][A-Za-z0-9_\-\.]{1,40})/', $ua, $m ) ) {
+		return $m[1];
+	}
+	return substr( $ua, 0, 32 );
+}
+
+/**
+ * Detect whether an unrecognised UA string is a bot of some kind.
+ *
+ * Returns a parsed display name if the UA looks like a bot, false otherwise.
+ * Browser-like UAs (Mozilla + Chrome/Safari/Firefox) are always ignored.
+ *
+ * @param  string       $ua
+ * @return string|false  Parsed bot name, or false.
+ */
+function wppugmill_detect_unknown_bot( $ua ) {
+	if ( empty( $ua ) ) {
+		return false;
+	}
+
+	// Skip browser-like UAs — they'll always dwarf real bots in volume.
+	if ( false !== stripos( $ua, 'Mozilla/' ) ) {
+		if ( false !== stripos( $ua, 'Chrome/' ) ||
+			 false !== stripos( $ua, 'Safari/' ) ||
+			 false !== stripos( $ua, 'Firefox/' ) ) {
+			return false;
+		}
+	}
+
+	// Bot signal keywords — any hit in the UA string = treat as a bot.
+	static $signals = array(
+		'bot', 'spider', 'crawl', 'fetch', 'scraper', 'checker',
+		'scanner', 'monitor', 'wget', 'curl', 'python-requests',
+		'python/', 'go-http-client', 'java/', 'okhttp', 'libwww',
+		'Slurp', 'ia_archiver', 'archive.org_bot',
+	);
+	foreach ( $signals as $signal ) {
+		if ( false !== stripos( $ua, $signal ) ) {
+			return wppugmill_parse_bot_name_from_ua( $ua );
+		}
+	}
+
 	return false;
 }
 
@@ -217,10 +306,12 @@ function wppugmill_bot_analytics_install() {
 	) {$cc};";
 
 	// Recent visits ring-buffer — actual URLs for the activity table.
+	// bot_name stores the parsed UA name for unknown bots (bot_id = 0).
 	// Pruned to 7 days daily; never grows large.
 	$recent_sql = "CREATE TABLE {$wpdb->prefix}wppugmill_bot_recent (
 		id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
 		bot_id        TINYINT UNSIGNED NOT NULL,
+		bot_name      VARCHAR(64) NOT NULL DEFAULT '',
 		resource_type TINYINT UNSIGNED NOT NULL DEFAULT 0,
 		url           VARCHAR(500) NOT NULL DEFAULT '',
 		visited_at    INT UNSIGNED NOT NULL,
@@ -231,6 +322,15 @@ function wppugmill_bot_analytics_install() {
 	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 	dbDelta( $daily_sql );
 	dbDelta( $recent_sql );
+
+	// v3: add bot_name column to bot_recent for unknown bot display names.
+	// dbDelta doesn't add columns to existing tables, so we use ALTER TABLE.
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	$cols = $wpdb->get_col( "DESCRIBE {$wpdb->prefix}wppugmill_bot_recent", 0 );
+	if ( ! in_array( 'bot_name', (array) $cols, true ) ) {
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$wpdb->query( "ALTER TABLE {$wpdb->prefix}wppugmill_bot_recent ADD COLUMN bot_name VARCHAR(64) NOT NULL DEFAULT '' AFTER bot_id" );
+	}
 
 	update_option( 'wppugmill_bot_db_version', WPPUGMILL_BOT_DB_VERSION );
 }
@@ -252,6 +352,7 @@ function wppugmill_bot_analytics_maybe_install() {
 	if ( '1' === $installed ) {
 		wppugmill_bot_analytics_migrate_v1();
 	}
+	// v2 → v3: install() already runs the ALTER TABLE for bot_name column.
 }
 add_action( 'plugins_loaded', 'wppugmill_bot_analytics_maybe_install' );
 
@@ -342,13 +443,16 @@ function wppugmill_bot_analytics_migrate_v1() {
  *
  * Two writes:
  *  1. Upsert into bot_daily (aggregate counter, deduped by PK).
+ *     Unknown bots (bot_id = 0) are all aggregated together.
  *  2. Insert into bot_recent (ring-buffer, for the activity table).
+ *     Unknown bots store their parsed name in the bot_name column.
  *
- * @param string $bot           Canonical bot name.
+ * @param string $bot           Canonical bot name (empty string for unknowns).
  * @param string $url           Request URI (stored in recent only).
  * @param int    $resource_type Resource type ID.
+ * @param string $unknown_name  Parsed UA name — used only when $bot is empty.
  */
-function wppugmill_log_bot_visit( $bot, $url, $resource_type = 0 ) {
+function wppugmill_log_bot_visit( $bot, $url, $resource_type = 0, $unknown_name = '' ) {
 	// Only collect data if the site owner has opted in to the intelligence network.
 	if ( ! get_option( 'wppugmill_analytics_opted_in' ) ) {
 		return;
@@ -356,9 +460,15 @@ function wppugmill_log_bot_visit( $bot, $url, $resource_type = 0 ) {
 
 	global $wpdb;
 
-	$bot_id = wppugmill_bot_id( $bot );
-	if ( ! $bot_id ) {
-		return;
+	if ( $bot ) {
+		$bot_id      = wppugmill_bot_id( $bot );
+		$stored_name = '';         // known bots: name derived from ID at read time
+		if ( ! $bot_id ) {
+			return; // unrecognised canonical name — shouldn't happen
+		}
+	} else {
+		$bot_id      = 0;          // sentinel: unknown bot
+		$stored_name = substr( $unknown_name ?: 'Unknown', 0, 64 );
 	}
 
 	$day = (int) floor( time() / DAY_IN_SECONDS );
@@ -375,16 +485,17 @@ function wppugmill_log_bot_visit( $bot, $url, $resource_type = 0 ) {
 		$day
 	) );
 
-	// Append to recent visits ring-buffer.
+	// Append to recent visits ring-buffer (includes bot_name for unknowns).
 	$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$wpdb->prefix . 'wppugmill_bot_recent',
 		array(
 			'bot_id'        => $bot_id,
+			'bot_name'      => $stored_name,
 			'resource_type' => (int) $resource_type,
 			'url'           => substr( (string) $url, 0, 500 ),
 			'visited_at'    => time(),
 		),
-		array( '%d', '%d', '%s', '%d' )
+		array( '%d', '%s', '%d', '%s', '%d' )
 	);
 
 	// Hard cap: keep only the 500 most recent rows so the table stays bounded
@@ -417,14 +528,20 @@ function wppugmill_maybe_log_bot_visit() {
 	$ua  = isset( $_SERVER['HTTP_USER_AGENT'] ) ? wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) : ''; // phpcs:ignore
 	$bot = wppugmill_detect_ai_bot( $ua );
 
-	if ( ! $bot ) {
-		return;
-	}
-
 	$resource_type = wppugmill_detect_resource_type();
 	$url           = isset( $_SERVER['REQUEST_URI'] ) ? wp_unslash( $_SERVER['REQUEST_URI'] ) : ''; // phpcs:ignore
 
-	wppugmill_log_bot_visit( $bot, $url, $resource_type );
+	if ( $bot ) {
+		wppugmill_log_bot_visit( $bot, $url, $resource_type );
+		return;
+	}
+
+	// Unknown-bot fallback: log anything that walks and quacks like a bot
+	// but wasn't in the known fingerprint list.
+	$unknown_name = wppugmill_detect_unknown_bot( $ua );
+	if ( $unknown_name ) {
+		wppugmill_log_bot_visit( '', $url, $resource_type, $unknown_name );
+	}
 }
 add_action( 'init', 'wppugmill_maybe_log_bot_visit', 99 );
 
@@ -570,7 +687,7 @@ function wppugmill_bot_analytics_recent( $limit = 50 ) {
 
 	$rows = (array) $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$wpdb->prepare(
-			"SELECT bot_id, resource_type, url, visited_at
+			"SELECT bot_id, bot_name, resource_type, url, visited_at
 			 FROM {$wpdb->prefix}wppugmill_bot_recent
 			 ORDER BY visited_at DESC, id DESC
 			 LIMIT %d",
@@ -582,9 +699,14 @@ function wppugmill_bot_analytics_recent( $limit = 50 ) {
 	$labels = wppugmill_resource_type_labels();
 	$result = array();
 	foreach ( $rows as $row ) {
-		$type     = (int) $row['resource_type'];
+		$type   = (int) $row['resource_type'];
+		$bot_id = (int) $row['bot_id'];
+		// bot_id = 0 → unknown bot; use bot_name stored at log time.
+		$bot    = ( 0 === $bot_id )
+			? ( ! empty( $row['bot_name'] ) ? $row['bot_name'] : 'Unknown' )
+			: wppugmill_bot_name( $bot_id );
 		$result[] = array(
-			'bot'            => wppugmill_bot_name( $row['bot_id'] ),
+			'bot'            => $bot,
 			'resource_type'  => $type,
 			'resource_label' => $labels[ $type ] ?? 'Unknown',
 			'url'            => $row['url'],
@@ -941,7 +1063,7 @@ function wppugmill_ajax_export_csv_recent() {
 	global $wpdb;
 
 	$rows = (array) $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		"SELECT bot_id, resource_type, url, visited_at
+		"SELECT bot_id, bot_name, resource_type, url, visited_at
 		 FROM {$wpdb->prefix}wppugmill_bot_recent
 		 ORDER BY visited_at DESC",
 		ARRAY_A
@@ -957,9 +1079,13 @@ function wppugmill_ajax_export_csv_recent() {
 	fputcsv( $out, array( 'Timestamp (UTC)', 'Bot', 'Resource Type', 'URL' ) );
 
 	foreach ( $rows as $row ) {
+		$bot_id  = (int) $row['bot_id'];
+		$display = ( 0 === $bot_id )
+			? ( ! empty( $row['bot_name'] ) ? $row['bot_name'] : 'Unknown' )
+			: wppugmill_bot_name( $bot_id );
 		fputcsv( $out, array(
 			gmdate( 'Y-m-d H:i:s', (int) $row['visited_at'] ),
-			wppugmill_bot_name( (int) $row['bot_id'] ),
+			$display,
 			$labels[ (int) $row['resource_type'] ] ?? 'Unknown',
 			$row['url'],
 		) );
@@ -1090,11 +1216,13 @@ function wppugmill_intelligence_send() {
 	}
 
 	// Build bots payload: { BotName: { resource_slug: count } }
+	// Unknown bots (bot_id = 0) are sent as 'Other' — the server can aggregate.
 	$bots = array();
 	foreach ( $rows as $row ) {
-		$bot_name = wppugmill_bot_name( (int) $row['bot_id'] );
+		$bot_id   = (int) $row['bot_id'];
+		$bot_name = ( 0 === $bot_id ) ? 'Other' : wppugmill_bot_name( $bot_id );
 		$resource = $resource_slugs[ (int) $row['resource_type'] ] ?? null;
-		if ( ! $resource || 'Unknown' === $bot_name ) {
+		if ( ! $resource ) {
 			continue;
 		}
 		if ( ! isset( $bots[ $bot_name ] ) ) {
