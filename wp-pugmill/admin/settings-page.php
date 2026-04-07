@@ -1994,14 +1994,20 @@ function wppugmill_render_settings_page() {
 						<?php echo esc_html( number_format_i18n( $count ) ); ?>
 					</span>
 				</div>
-				<!-- You bar (thick) -->
-				<div style="background:#e5e7eb; border-radius:2px; height:6px; overflow:hidden; margin-bottom:2px;">
-					<div style="width:<?php echo esc_attr( $my_pct ); ?>%; height:100%; background:<?php echo esc_attr( $bot_info['color'] ); ?>; border-radius:2px;"></div>
+				<!-- You bar -->
+				<div style="display:flex; align-items:center; gap:5px; margin-bottom:2px;">
+					<span style="font-size:9px; color:#9ca3af; width:18px; flex-shrink:0;"><?php esc_html_e( 'you', 'wp-pugmill' ); ?></span>
+					<div style="flex:1; background:#e5e7eb; border-radius:2px; height:6px; overflow:hidden;">
+						<div style="width:<?php echo esc_attr( $my_pct ); ?>%; height:100%; background:<?php echo esc_attr( $bot_info['color'] ); ?>; border-radius:2px;"></div>
+					</div>
 				</div>
 				<?php if ( null !== $net_avg ) : ?>
-				<!-- Avg bar (thin) -->
-				<div style="background:#e5e7eb; border-radius:2px; height:3px; overflow:hidden;">
-					<div style="width:<?php echo esc_attr( $avg_pct ); ?>%; height:100%; background:#7c3aed; border-radius:2px;"></div>
+				<!-- Avg bar -->
+				<div style="display:flex; align-items:center; gap:5px;">
+					<span style="font-size:9px; color:#7c3aed; width:18px; flex-shrink:0;"><?php esc_html_e( 'avg', 'wp-pugmill' ); ?></span>
+					<div style="flex:1; background:#e5e7eb; border-radius:2px; height:6px; overflow:hidden;">
+						<div style="width:<?php echo esc_attr( $avg_pct ); ?>%; height:100%; background:#7c3aed; border-radius:2px;"></div>
+					</div>
 				</div>
 				<?php endif; ?>
 			</div>
