@@ -4,7 +4,7 @@ Tags: AEO, answer engine optimization, AI, llms.txt, schema, structured data, SE
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.0.17
+Stable tag: 1.0.18
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -139,6 +139,11 @@ Yes. WP Pugmill is focused on AEO (AI discoverability) and does not conflict wit
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.0.18 =
+* **Enhancement**: Bulk AEO now processes posts one at a time with a configurable pause between requests — prevents server overload and stays within AI provider rate limits.
+* **Feature**: New "Priority" sort in Bulk AEO — choose Newest first (default), Most commented first, or Oldest first so your highest-traffic content gets AEO data first.
+* **UX**: Bulk AEO page now explains how processing works (sequential with delays) and prompts users to check their AI provider spend before running on large sites.
 
 = 1.0.17 =
 * **Fix**: Bulk AEO queue builder now uses a single JOIN query instead of one `get_post_meta()` call per post — eliminates N+1 DB queries that caused timeouts on large sites (1000+ posts).

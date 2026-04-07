@@ -40,6 +40,7 @@ function wppugmill_ajax_bulk_aeo_get_queue() {
 
 	$post_types_param = sanitize_text_field( wp_unslash( $_POST['post_types'] ?? 'all' ) );
 	$skip_existing    = isset( $_POST['skip_existing'] ) && '1' === $_POST['skip_existing'];
+	$sort_by          = sanitize_text_field( wp_unslash( $_POST['sort_by'] ?? 'newest' ) );
 
 	if ( 'post' === $post_types_param ) {
 		$post_types = array( 'post' );
@@ -48,6 +49,14 @@ function wppugmill_ajax_bulk_aeo_get_queue() {
 	} else {
 		$post_types = array( 'post', 'page' );
 	}
+
+	// Map sort_by to a safe, whitelisted ORDER BY clause.
+	$order_map = array(
+		'newest'    => 'p.post_date DESC',
+		'commented' => 'p.comment_count DESC, p.post_date DESC',
+		'oldest'    => 'p.post_date ASC',
+	);
+	$order_by = $order_map[ $sort_by ] ?? $order_map['newest'];
 
 	global $wpdb;
 
@@ -66,7 +75,7 @@ function wppugmill_ajax_bulk_aeo_get_queue() {
 			   ON pm.post_id = p.ID AND pm.meta_key = '_wppugmill_aeo'
 			 WHERE p.post_status = 'publish'
 			   AND p.post_type IN ( {$type_placeholders} )
-			 ORDER BY p.ID ASC",
+			 ORDER BY {$order_by}",
 			...$post_types
 		),
 		ARRAY_A

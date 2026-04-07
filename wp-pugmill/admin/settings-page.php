@@ -2583,8 +2583,15 @@ function wppugmill_render_settings_page() {
 		     ════════════════════════════════════════════════════════════ -->
 		<div style="margin-top:24px;">
 			<p style="<?php echo esc_attr( $p_style ); ?>">
-				<?php esc_html_e( 'Generate AEO metadata — summary, Q&A pairs, entities, and keywords — for all your published content in one run. Posts are processed sequentially using your connected AI provider. Bulk AEO can consume a significant number of tokens depending on your site size; review your AI provider\'s usage limits before running on large sites.', 'wp-pugmill' ); ?>
+				<?php esc_html_e( 'Generate a summary, Q&amp;A pairs, entities, and keywords for every published post and page using your connected AI provider.', 'wp-pugmill' ); ?>
 			</p>
+			<div style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:6px; padding:12px 16px; margin-bottom:16px; font-size:12px; color:#6b7280; line-height:1.6;">
+				<strong style="color:#374151;"><?php esc_html_e( 'How it works:', 'wp-pugmill' ); ?></strong>
+				<?php esc_html_e( 'Posts are processed one at a time with a short pause between each request. This prevents your WordPress server from being overwhelmed by simultaneous requests and keeps your AI provider usage within rate limits — most accounts start on lower-tier plans with strict per-minute caps. For large sites, you can run Bulk AEO in multiple sessions: posts that already have AEO data are skipped automatically when you run again.', 'wp-pugmill' ); ?>
+				<br><br>
+				<strong style="color:#374151;"><?php esc_html_e( 'Check your AI spend first:', 'wp-pugmill' ); ?></strong>
+				<?php esc_html_e( 'Generating AEO for hundreds of posts can add up quickly. Before running on a large site, review your AI provider\'s usage dashboard so there are no surprises on your bill.', 'wp-pugmill' ); ?>
+			</div>
 
 			<?php if ( 'ai' !== $mode ) : ?>
 			<!-- Locked state — not Pro -->
@@ -2618,13 +2625,22 @@ function wppugmill_render_settings_page() {
 						</label>
 					</div>
 					<fieldset style="border:none; margin:0; padding:0;">
-						<legend style="font-size:12px; font-weight:600; color:#374151; margin-bottom:8px;"><?php esc_html_e( 'AI Processing Speed', 'wp-pugmill' ); ?></legend>
-						<select id="wppugmill-bulk-speed" style="font-size:13px; height:28px;">
-							<option value="1500"><?php esc_html_e( 'Fast (1.5s delay)', 'wp-pugmill' ); ?></option>
-							<option value="3000" selected><?php esc_html_e( 'Normal (3s delay)', 'wp-pugmill' ); ?></option>
-							<option value="6000"><?php esc_html_e( 'Careful (6s delay)', 'wp-pugmill' ); ?></option>
+						<legend style="font-size:12px; font-weight:600; color:#374151; margin-bottom:8px;"><?php esc_html_e( 'Priority', 'wp-pugmill' ); ?></legend>
+						<select id="wppugmill-bulk-sort" style="font-size:13px; height:28px;">
+							<option value="newest"   ><?php esc_html_e( 'Newest first',         'wp-pugmill' ); ?></option>
+							<option value="commented"><?php esc_html_e( 'Most commented first', 'wp-pugmill' ); ?></option>
+							<option value="oldest"   ><?php esc_html_e( 'Oldest first',         'wp-pugmill' ); ?></option>
 						</select>
-						<p style="font-size:11px; color:#9ca3af; margin:4px 0 0;"><?php esc_html_e( 'Longer delays slow token spend.', 'wp-pugmill' ); ?></p>
+						<p style="font-size:11px; color:#9ca3af; margin:4px 0 0;"><?php esc_html_e( 'Recent posts are most likely still getting traffic.', 'wp-pugmill' ); ?></p>
+					</fieldset>
+					<fieldset style="border:none; margin:0; padding:0;">
+						<legend style="font-size:12px; font-weight:600; color:#374151; margin-bottom:8px;"><?php esc_html_e( 'Request Delay', 'wp-pugmill' ); ?></legend>
+						<select id="wppugmill-bulk-speed" style="font-size:13px; height:28px;">
+							<option value="1500"><?php esc_html_e( 'Fast (1.5s between posts)', 'wp-pugmill' ); ?></option>
+							<option value="3000" selected><?php esc_html_e( 'Normal (3s between posts)', 'wp-pugmill' ); ?></option>
+							<option value="6000"><?php esc_html_e( 'Careful (6s between posts)', 'wp-pugmill' ); ?></option>
+						</select>
+						<p style="font-size:11px; color:#9ca3af; margin:4px 0 0;"><?php esc_html_e( 'Longer delays reduce rate limit risk and AI spend rate.', 'wp-pugmill' ); ?></p>
 					</fieldset>
 				</div>
 

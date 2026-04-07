@@ -24,6 +24,7 @@
 			statsText:    document.getElementById( 'wppugmill-bulk-stats' ),
 			postTypeEls:  document.querySelectorAll( 'input[name="wppugmill_bulk_post_types"]' ),
 			skipExisting: document.getElementById( 'wppugmill-bulk-skip-existing' ),
+			sortSelect:   document.getElementById( 'wppugmill-bulk-sort' ),
 			speedSelect:  document.getElementById( 'wppugmill-bulk-speed' ),
 			startBtn:     document.getElementById( 'wppugmill-bulk-start' ),
 			progressWrap: document.getElementById( 'wppugmill-bulk-progress' ),
@@ -90,7 +91,8 @@
 			if ( el.checked ) postTypes = el.value;
 		} );
 		var skipExisting = ( els.skipExisting && els.skipExisting.checked ) ? '1' : '0';
-		return { post_types: postTypes, skip_existing: skipExisting };
+		var sortBy = els.sortSelect ? els.sortSelect.value : 'newest';
+		return { post_types: postTypes, skip_existing: skipExisting, sort_by: sortBy };
 	}
 
 	// ── Stats ─────────────────────────────────────────────────────────────────
@@ -105,6 +107,7 @@
 		data.append( 'nonce',         cfg.nonce );
 		data.append( 'post_types',    opts.post_types );
 		data.append( 'skip_existing', opts.skip_existing );
+		data.append( 'sort_by',       opts.sort_by );
 
 		fetch( cfg.ajaxUrl, { method: 'POST', body: data } )
 			.then( function( r ) { return r.json(); } )
@@ -144,6 +147,7 @@
 		data.append( 'nonce',         cfg.nonce );
 		data.append( 'post_types',    opts.post_types );
 		data.append( 'skip_existing', opts.skip_existing );
+		data.append( 'sort_by',       opts.sort_by );
 
 		if ( els.startBtn ) {
 			els.startBtn.disabled     = true;
