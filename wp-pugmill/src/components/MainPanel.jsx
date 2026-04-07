@@ -710,6 +710,11 @@ export function MainPanel() {
 					Finish editing your content before generating — the AI reads your current draft.
 				</p>
 			) }
+			{ ! IS_AI_MODE && (
+				<p style={ { margin: '6px 0 0', fontSize: '11px', color: '#9ca3af', lineHeight: '1.5', textAlign: 'center' } }>
+					Generate All is available with WP Pugmill Pro.
+				</p>
+			) }
 
 			{ /* ── AEO section ───────────────────────────────────────────────── */ }
 			<SectionHeader label="AEO" />

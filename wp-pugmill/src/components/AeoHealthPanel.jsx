@@ -86,7 +86,7 @@ export function AeoHealthPanel( { aeo, seo, draftContent, featuredMediaAltText, 
 												label="Generate"
 												isActive={ fixState === 'loading' }
 												anyPending={ fixState === 'loading' }
-												locked={ ! IS_AI_MODE && ! HAS_API_KEY }
+												locked={ fixAction.requiresPro ? ! IS_AI_MODE : ( ! IS_AI_MODE && ! HAS_API_KEY ) }
 												onClick={ () => onFix( item.id ) }
 											/>
 										</div>

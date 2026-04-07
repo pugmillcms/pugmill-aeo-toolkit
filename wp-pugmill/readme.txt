@@ -4,7 +4,7 @@ Tags: AEO, answer engine optimization, AI, llms.txt, schema, structured data, SE
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.0.11
+Stable tag: 1.0.12
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -139,6 +139,11 @@ Yes. WP Pugmill is focused on AEO (AI discoverability) and does not conflict wit
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.0.12 =
+* **Bug fix**: "Keywords found in content" fix button now correctly shows as inactive for non-Pro users instead of showing as clickable and then throwing a license error.
+* **UI**: Generate All button now shows a "Available with WP Pugmill Pro" note for non-Pro users.
+* **Fix**: Pro license error message no longer duplicates "WP Pugmill" in the text.
 
 = 1.0.11 =
 * **Bug fix**: Sidebar resize handle no longer sticks when the mouse leaves the browser window mid-drag.
