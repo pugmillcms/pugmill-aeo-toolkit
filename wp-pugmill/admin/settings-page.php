@@ -1968,7 +1968,7 @@ function wppugmill_render_settings_page() {
 					<div style="font-size:26px; font-weight:700; color:<?php echo esc_attr( $q['accent'] ); ?>; line-height:1.1;">
 						<?php echo esc_html( number_format_i18n( $q['total'] ) ); ?>
 					</div>
-					<div style="font-size:11px; color:#6b7280; line-height:1.5; margin-top:4px; max-width:220px;">
+					<div style="font-size:11px; color:#6b7280; line-height:1.5; margin-top:4px;">
 						<?php echo esc_html( $q['desc'] ); ?>
 					</div>
 				</div>
