@@ -4,7 +4,7 @@ Tags: AEO, answer engine optimization, AI, llms.txt, schema, structured data, SE
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.0.18
+Stable tag: 1.0.19
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -139,6 +139,12 @@ Yes. WP Pugmill is focused on AEO (AI discoverability) and does not conflict wit
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.0.19 =
+* **Redesign**: Bot Analytics tab now uses a 2×2 quadrant layout — AI Crawlers, Training Crawlers, Search Engines, and SEO Bots each get their own panel with a sorted bot list and proportional bars.
+* **Feature**: Each bot row shows a thick bar (your site) and a thin purple bar (network average) on a shared scale, so you can see at a glance whether you're above or below the network.
+* **Fix**: SEO bots (Semrush, Ahrefs, etc.) now appear in their own dedicated quadrant instead of being excluded from the top-level view.
+* **UX**: Network trend (% change vs prior 30 days) moves inline to each quadrant header. Legend at bottom notes the 30-day window and network average bar.
 
 = 1.0.18 =
 * **Enhancement**: Bulk AEO now processes posts one at a time with a configurable pause between requests — prevents server overload and stays within AI provider rate limits.
