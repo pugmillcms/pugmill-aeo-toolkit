@@ -201,7 +201,7 @@
 		if ( completed < 2 || ! runStart ) { els.rateEl.textContent = ''; return; }
 		var elapsedHrs = ( Date.now() - runStart ) / 3600000;
 		var rate = Math.round( completed / elapsedHrs );
-		els.rateEl.textContent = '\u2248' + rate + ' posts/hr';
+		els.rateEl.textContent = '\u2248' + rate + ' AI calls/hr';
 	}
 
 	function processAt( index ) {
