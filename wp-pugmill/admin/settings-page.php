@@ -2132,7 +2132,7 @@ function wppugmill_render_settings_page() {
 						</label>
 					</div>
 					<fieldset style="border:none; margin:0; padding:0;">
-						<legend style="font-size:12px; font-weight:600; color:#374151; margin-bottom:8px;"><?php esc_html_e( 'Speed', 'wp-pugmill' ); ?></legend>
+						<legend style="font-size:12px; font-weight:600; color:#374151; margin-bottom:8px;"><?php esc_html_e( 'AI Processing Speed', 'wp-pugmill' ); ?></legend>
 						<select id="wppugmill-bulk-speed" style="font-size:13px; height:28px;">
 							<option value="1500"><?php esc_html_e( 'Fast (1.5s delay)', 'wp-pugmill' ); ?></option>
 							<option value="3000" selected><?php esc_html_e( 'Normal (3s delay)', 'wp-pugmill' ); ?></option>
