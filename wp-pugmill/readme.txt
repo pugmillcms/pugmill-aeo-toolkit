@@ -4,7 +4,7 @@ Tags: AEO, answer engine optimization, AI, llms.txt, schema, structured data, SE
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.0.20
+Stable tag: 1.0.21
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -139,6 +139,9 @@ Yes. WP Pugmill is focused on AEO (AI discoverability) and does not conflict wit
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.0.21 =
+* **UX**: Bot Analytics quadrant headers now include a one-line description of each category so users understand the difference between AI Crawlers, Training Crawlers, Search Engines, and SEO Bots.
 
 = 1.0.20 =
 * **UI**: Bot Analytics quadrant bars now equal height (6px each); "you" and "avg" labels added to the left of each bar row.

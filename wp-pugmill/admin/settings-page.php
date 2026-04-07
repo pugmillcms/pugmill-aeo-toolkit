@@ -1890,6 +1890,7 @@ function wppugmill_render_settings_page() {
 		$quadrant_defs = array(
 			'ai'       => array(
 				'label'     => __( 'AI Crawlers', 'wp-pugmill' ),
+				'desc'      => __( 'Answer engines like ChatGPT and Perplexity that read your content to respond to user queries in real time.', 'wp-pugmill' ),
 				'bots'      => $ai_bots,
 				'total'     => $ai_total_30,
 				'accent'    => '#7c3aed',
@@ -1899,6 +1900,7 @@ function wppugmill_render_settings_page() {
 			),
 			'training' => array(
 				'label'     => __( 'Training Crawlers', 'wp-pugmill' ),
+				'desc'      => __( 'Bots collecting data to train foundation models. Not tied to live user queries — your content may end up in a future AI\'s knowledge base.', 'wp-pugmill' ),
 				'bots'      => $training_bots,
 				'total'     => $training_total_30,
 				'accent'    => '#0891b2',
@@ -1908,6 +1910,7 @@ function wppugmill_render_settings_page() {
 			),
 			'search'   => array(
 				'label'     => __( 'Search Engines', 'wp-pugmill' ),
+				'desc'      => __( 'Traditional search spiders indexing your content for results pages on Google, Bing, and others.', 'wp-pugmill' ),
 				'bots'      => $search_bots,
 				'total'     => $search_total_30,
 				'accent'    => '#0369a1',
@@ -1917,6 +1920,7 @@ function wppugmill_render_settings_page() {
 			),
 			'seo'      => array(
 				'label'     => __( 'SEO Bots', 'wp-pugmill' ),
+				'desc'      => __( 'Commercial tools like Semrush and Ahrefs auditing backlinks, rankings, and site health — not related to AI or search indexing.', 'wp-pugmill' ),
 				'bots'      => $seo_bots,
 				'total'     => $seo_total_30,
 				'accent'    => '#374151',
@@ -1963,6 +1967,9 @@ function wppugmill_render_settings_page() {
 					</div>
 					<div style="font-size:26px; font-weight:700; color:<?php echo esc_attr( $q['accent'] ); ?>; line-height:1.1;">
 						<?php echo esc_html( number_format_i18n( $q['total'] ) ); ?>
+					</div>
+					<div style="font-size:11px; color:#6b7280; line-height:1.5; margin-top:4px; max-width:220px;">
+						<?php echo esc_html( $q['desc'] ); ?>
 					</div>
 				</div>
 				<?php if ( null !== $nc_change ) : ?>
