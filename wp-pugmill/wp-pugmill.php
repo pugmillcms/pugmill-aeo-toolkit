@@ -67,6 +67,7 @@ require_once WPPUGMILL_PLUGIN_DIR . 'includes/rest-api.php';
 require_once WPPUGMILL_PLUGIN_DIR . 'includes/ai.php';
 require_once WPPUGMILL_PLUGIN_DIR . 'includes/health.php';
 require_once WPPUGMILL_PLUGIN_DIR . 'includes/bot-analytics.php';
+require_once WPPUGMILL_PLUGIN_DIR . 'includes/bulk-aeo.php';
 
 // Auto-updates via GitHub Releases (Plugin Update Checker)
 if ( is_admin() ) {

@@ -4,7 +4,7 @@ Tags: AEO, answer engine optimization, AI, llms.txt, schema, structured data, SE
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.0.7
+Stable tag: 1.0.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -139,6 +139,9 @@ Yes. WP Pugmill is focused on AEO (AI discoverability) and does not conflict wit
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.0.8 =
+* **Feature**: Bulk AEO Generator — new Settings tab (Pro) generates AEO metadata for all published posts and pages in one run. Processes sequentially with pause/resume/cancel controls and live progress.
 
 = 1.0.7 =
 * **Bug fix**: Generate All no longer reverts the AEO health score after completing — a stale closure in the schema suggestion step was overwriting the freshly-generated AEO and SEO metadata.
