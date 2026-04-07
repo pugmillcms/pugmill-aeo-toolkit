@@ -4,7 +4,7 @@ Tags: AEO, answer engine optimization, AI, llms.txt, schema, structured data, SE
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.0.13
+Stable tag: 1.0.14
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -139,6 +139,11 @@ Yes. WP Pugmill is focused on AEO (AI discoverability) and does not conflict wit
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.0.14 =
+* **Feature**: Plugin Compatibility tab now shows a side-by-side file comparison for sitemap.xml, llms.txt, and robots.txt — each column loads the live URL output and shows a WP Pugmill preview, with radio buttons to choose which plugin handles each file.
+* **Feature**: New options to disable WP Pugmill's sitemap.xml generator and robots.txt additions independently (defers to other plugins like Jetpack, Yoast, or Rank Math).
+* **Enhancement**: Compatibility checker now detects sitemap and robots.txt conflicts from Jetpack, Yoast SEO, Rank Math, AIOSEO, Google XML Sitemaps, and XML Sitemap & Google News.
 
 = 1.0.13 =
 * **Bug fix**: AEO Health fix buttons now auto-expand the corresponding lower panel (AI Summary, Q&A Pairs, Named Entities, Keywords) after generation so the user can see and save the result.

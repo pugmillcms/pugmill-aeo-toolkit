@@ -41,6 +41,11 @@ function wppugmill_maybe_serve_sitemap() {
 		return;
 	}
 
+	// User has chosen to let another plugin handle the sitemap — step aside.
+	if ( get_option( 'wppugmill_disable_sitemap' ) ) {
+		return;
+	}
+
 	// Prevent WordPress redirect_canonical from 301-ing us away.
 	remove_filter( 'template_redirect', 'redirect_canonical' );
 
@@ -160,6 +165,10 @@ function wppugmill_sitemap_date( $date ) {
  * @param bool    $update
  */
 function wppugmill_ping_search_engines( $post_id, $post, $update ) {
+	// Don't ping with our sitemap URL if another plugin is handling the sitemap.
+	if ( get_option( 'wppugmill_disable_sitemap' ) ) {
+		return;
+	}
 	if ( 'publish' !== $post->post_status ) {
 		return;
 	}
@@ -271,6 +280,11 @@ function wppugmill_filter_robots_txt( $output, $public ) {
 	if ( $custom !== '' ) {
 		// Full replacement — user is in control.
 		return $custom;
+	}
+
+	// User has chosen not to let WP Pugmill append to robots.txt — leave it alone.
+	if ( get_option( 'wppugmill_disable_robots_append' ) ) {
+		return $output;
 	}
 
 	// Default: append Sitemap: and LLMs-Txt: directives when public.

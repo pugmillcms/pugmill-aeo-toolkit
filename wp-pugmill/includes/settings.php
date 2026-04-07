@@ -172,6 +172,26 @@ function wppugmill_register_settings() {
 		},
 		'default' => 0,
 	) );
+	register_setting( 'wppugmill_settings', 'wppugmill_disable_sitemap', array(
+		'sanitize_callback' => function( $value ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing
+			if ( ! isset( $_POST['wppugmill_disable_sitemap'] ) ) {
+				return get_option( 'wppugmill_disable_sitemap', 0 );
+			}
+			return ! empty( $value ) ? 1 : 0;
+		},
+		'default' => 0,
+	) );
+	register_setting( 'wppugmill_settings', 'wppugmill_disable_robots_append', array(
+		'sanitize_callback' => function( $value ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing
+			if ( ! isset( $_POST['wppugmill_disable_robots_append'] ) ) {
+				return get_option( 'wppugmill_disable_robots_append', 0 );
+			}
+			return ! empty( $value ) ? 1 : 0;
+		},
+		'default' => 0,
+	) );
 
 	// Robots.txt custom content
 	register_setting( 'wppugmill_settings', 'wppugmill_robots_txt_custom', array(
