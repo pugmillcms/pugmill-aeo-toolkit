@@ -116,8 +116,9 @@
 		document.body.style.cursor        = 'ew-resize';
 		document.body.style.userSelect    = 'none';
 
-		document.addEventListener( 'mousemove', onMouseMove );
-		document.addEventListener( 'mouseup',   onMouseUp );
+		document.addEventListener( 'mousemove',  onMouseMove );
+		document.addEventListener( 'mouseup',    onMouseUp );
+		document.addEventListener( 'mouseleave', onMouseUp );
 
 		e.preventDefault();
 	}
@@ -141,8 +142,9 @@
 
 		localStorage.setItem( STORAGE_KEY, sidebar.offsetWidth );
 
-		document.removeEventListener( 'mousemove', onMouseMove );
-		document.removeEventListener( 'mouseup',   onMouseUp );
+		document.removeEventListener( 'mousemove',  onMouseMove );
+		document.removeEventListener( 'mouseup',    onMouseUp );
+		document.removeEventListener( 'mouseleave', onMouseUp );
 	}
 
 	/**
