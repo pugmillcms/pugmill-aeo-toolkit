@@ -1278,6 +1278,21 @@ function wppugmill_intelligence_send() {
 	// Submission HMAC — signs this specific day's payload with the site's token.
 	$submission_hmac = hash_hmac( 'sha256', "{$site_id}:{$date}:" . WPPUGMILL_VERSION, $network_token );
 
+	// Per-bot crawl intelligence signals for yesterday.
+	// Structure: { BotName: { metric: { bucket: tally } } }
+	// Only included when the function exists (requires bot-intelligence.php v2+).
+	$signals = array();
+	if ( function_exists( 'wppugmill_intel_get_signals_30d' ) ) {
+		$raw_signals = wppugmill_intel_get_signals_30d( 1 ); // yesterday only
+		// Strip internal-only keys (e.g. '_site') before transmitting.
+		foreach ( $raw_signals as $bot_key => $bot_signals ) {
+			if ( substr( $bot_key, 0, 1 ) === '_' ) {
+				continue;
+			}
+			$signals[ $bot_key ] = $bot_signals;
+		}
+	}
+
 	$payload = array(
 		'site_id'        => $site_id,
 		'date'           => $date,
@@ -1286,6 +1301,10 @@ function wppugmill_intelligence_send() {
 		'bots'           => $bots,
 		'network_token'  => $network_token,
 	);
+
+	if ( ! empty( $signals ) ) {
+		$payload['signals'] = $signals;
+	}
 
 	/**
 	 * Filter the intelligence network payload before transmission.
@@ -1391,6 +1410,17 @@ function wppugmill_ajax_manual_send() {
 
 	$submission_hmac = hash_hmac( 'sha256', "{$site_id}:{$date}:" . WPPUGMILL_VERSION, $network_token );
 
+	$signals = array();
+	if ( function_exists( 'wppugmill_intel_get_signals_30d' ) ) {
+		$raw_signals = wppugmill_intel_get_signals_30d( 1 );
+		foreach ( $raw_signals as $bot_key => $bot_signals ) {
+			if ( substr( $bot_key, 0, 1 ) === '_' ) {
+				continue;
+			}
+			$signals[ $bot_key ] = $bot_signals;
+		}
+	}
+
 	$payload = array(
 		'site_id'        => $site_id,
 		'date'           => $date,
@@ -1399,6 +1429,10 @@ function wppugmill_ajax_manual_send() {
 		'bots'           => $bots,
 		'network_token'  => $network_token,
 	);
+
+	if ( ! empty( $signals ) ) {
+		$payload['signals'] = $signals;
+	}
 
 	/** This filter is documented in wppugmill_intelligence_send(). */
 	$payload = apply_filters( 'wppugmill_intelligence_payload', $payload, $yesterday );
