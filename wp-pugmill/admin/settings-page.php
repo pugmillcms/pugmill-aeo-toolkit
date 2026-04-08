@@ -2017,6 +2017,7 @@ function wppugmill_render_settings_page() {
 					</div>
 					<div style="font-size:26px; font-weight:700; color:<?php echo esc_attr( $q['accent'] ); ?>; line-height:1.1;">
 						<?php echo esc_html( number_format_i18n( $q['total'] ) ); ?>
+						<span style="font-size:13px; font-weight:400; color:#6b7280;"><?php esc_html_e( 'Visits', 'wp-pugmill' ); ?></span>
 					</div>
 					<div style="font-size:11px; color:#6b7280; line-height:1.5; margin-top:4px;">
 						<?php echo esc_html( $q['desc'] ); ?>
@@ -2119,110 +2120,292 @@ function wppugmill_render_settings_page() {
 			<?php endif; ?>
 		</div>
 
-		<!-- Content reach — resource type breakdown ──────────────────────── -->
+		<!-- Content Reach ───────────────────────────────────────────────────── -->
 		<?php
-		// Build a flat list of resource type IDs that actually have data
-		$active_types = array();
-		foreach ( $by_resource as $bot_res ) {
-			foreach ( $bot_res as $type_id => $cnt ) {
-				if ( $cnt > 0 ) {
-					$active_types[ $type_id ] = true;
+		// Column order: AEO group first, then Discovery, then Page Crawls
+		$col_order_by_cat = array(
+			'aeo'       => array( 1, 2, 3, 4 ),
+			'discovery' => array( 5, 6 ),
+			'crawl'     => array( 0 ),
+		);
+
+		// Filter to columns that have actual data
+		$active_cols_by_cat = array();
+		foreach ( $col_order_by_cat as $cat => $type_ids ) {
+			foreach ( $type_ids as $type_id ) {
+				if ( isset( $active_types[ $type_id ] ) ) {
+					$active_cols_by_cat[ $cat ][] = $type_id;
 				}
 			}
 		}
-		ksort( $active_types );
-		$bot_keys = array_keys( $bots );
+
+		// Flat ordered list of active columns
+		$active_cols_ordered = array();
+		foreach ( $active_cols_by_cat as $cat => $cols ) {
+			foreach ( $cols as $type_id ) {
+				$active_cols_ordered[] = $type_id;
+			}
+		}
 		?>
-		<?php if ( ! empty( $active_types ) ) : ?>
+		<?php if ( ! empty( $active_cols_ordered ) ) : ?>
 		<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px 24px; margin-bottom:24px;">
 			<h3 style="margin:0 0 4px; font-size:14px; font-weight:600;">
 				<?php esc_html_e( 'Content Reach', 'wp-pugmill' ); ?>
 			</h3>
 			<p style="margin:0 0 16px; font-size:12px; color:#666;">
-				<?php esc_html_e( 'Which content types each bot is consuming — last 30 days. AEO endpoints show bots reading your optimized content directly.', 'wp-pugmill' ); ?>
+				<?php esc_html_e( 'Which content types each bot is consuming — last 30 days. AEO endpoints show bots reading your optimised content directly.', 'wp-pugmill' ); ?>
 			</p>
 			<div style="overflow-x:auto;">
 			<table class="widefat" style="font-size:12px; border-collapse:collapse;">
 				<thead>
+					<!-- Group header row -->
 					<tr style="background:#f6f7f7;">
-						<th style="padding:8px 12px; text-align:left; font-weight:600; white-space:nowrap; width:160px;"><?php esc_html_e( 'Content Type', 'wp-pugmill' ); ?></th>
-						<?php foreach ( $bots as $bot_key => $bot_info ) : ?>
-						<th style="padding:8px 12px; text-align:center; font-weight:600; white-space:nowrap;">
-							<span style="display:inline-flex; align-items:center; gap:5px;">
-								<span style="width:8px; height:8px; border-radius:50%; background:<?php echo esc_attr( $bot_info['color'] ); ?>; flex-shrink:0;"></span>
-								<?php echo esc_html( $bot_info['label'] ); ?>
-							</span>
+						<th style="padding:8px 12px; text-align:left; font-weight:600; white-space:nowrap; width:160px;" rowspan="2">
+							<?php esc_html_e( 'Bot', 'wp-pugmill' ); ?>
+						</th>
+						<?php foreach ( $active_cols_by_cat as $cat => $cols ) :
+							if ( empty( $cols ) ) continue;
+						?>
+						<th colspan="<?php echo count( $cols ); ?>"
+							style="padding:6px 12px; text-align:center; font-size:10px; font-weight:700;
+							       text-transform:uppercase; letter-spacing:.06em;
+							       color:<?php echo esc_attr( $cat_badge[ $cat ] ); ?>;
+							       border-bottom:1px solid #e5e7eb;">
+							<?php echo esc_html( $cat_labels[ $cat ] ); ?>
 						</th>
 						<?php endforeach; ?>
-						<th style="padding:8px 12px; text-align:center; font-weight:600;"><?php esc_html_e( 'Total', 'wp-pugmill' ); ?></th>
+						<th style="padding:8px 12px; text-align:center; font-weight:600; white-space:nowrap;" rowspan="2">
+							<?php esc_html_e( 'Total', 'wp-pugmill' ); ?>
+						</th>
+					</tr>
+					<!-- Column name row -->
+					<tr style="background:#f6f7f7;">
+						<?php foreach ( $active_cols_ordered as $type_id ) : ?>
+						<th style="padding:6px 12px; text-align:center; font-weight:500; white-space:nowrap; font-size:11px; color:#555; border-bottom:1px solid #e5e7eb;">
+							<?php echo esc_html( $resource_labels[ $type_id ] ?? '' ); ?>
+						</th>
+						<?php endforeach; ?>
 					</tr>
 				</thead>
 				<tbody>
-				<?php
-				// Group rows by category for visual separation
-				$cat_order    = array( 'aeo', 'discovery', 'crawl' );
-				$cat_labels   = array( 'aeo' => 'AEO Endpoints', 'discovery' => 'Discovery', 'crawl' => 'Page Crawls' );
-				$cat_colors   = array( 'aeo' => '#f0fdf4', 'discovery' => '#eff6ff', 'crawl' => '#fafafa' );
-				$cat_badge    = array( 'aeo' => '#16a34a', 'discovery' => '#2563eb', 'crawl' => '#9ca3af' );
-				$printed_cat  = array();
-				foreach ( $cat_order as $cat ) :
-					// Collect types in this category that have data
-					$cat_types = array();
-					foreach ( $active_types as $type_id => $_ ) {
-						if ( isset( $resource_cats[ $type_id ] ) && $resource_cats[ $type_id ] === $cat ) {
-							$cat_types[] = $type_id;
-						}
+				<?php foreach ( $bots as $bot_key => $bot_info ) :
+					// Row total across all active columns
+					$row_total = 0;
+					foreach ( $active_cols_ordered as $type_id ) {
+						$row_total += (int) ( $by_resource[ $bot_key ][ $type_id ] ?? 0 );
 					}
-					if ( empty( $cat_types ) ) continue;
+					if ( 0 === $row_total ) continue;
+					$row_bg = ( 0 === ( $bot_row_idx ?? 0 ) % 2 ) ? '#fff' : '#f9fafb';
+					$bot_row_idx = ( $bot_row_idx ?? 0 ) + 1;
 				?>
-					<tr style="background:#f6f7f7;">
-						<td colspan="<?php echo count( $bots ) + 2; ?>"
-						    style="padding:6px 12px;">
-							<span style="font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em;
-							      color:<?php echo esc_attr( $cat_badge[ $cat ] ); ?>;">
-								<?php echo esc_html( $cat_labels[ $cat ] ); ?>
-							</span>
-						</td>
-					</tr>
-					<?php foreach ( $cat_types as $type_id ) :
-						$row_total = 0;
-					?>
-					<tr style="background:<?php echo esc_attr( $cat_colors[ $cat ] ); ?>;">
-						<td style="padding:7px 12px; font-weight:500; white-space:nowrap;">
-							<?php echo esc_html( $resource_labels[ $type_id ] ?? '' ); ?>
-						</td>
-						<?php foreach ( $bot_keys as $bot_key ) :
-							$cnt     = $by_resource[ $bot_key ][ $type_id ] ?? 0;
-							$row_total += $cnt;
-							// Network comparison arrow for this bot × resource type
-							$net_res_avg = $network_resource_avgs[ $bot_key ][ $type_id ] ?? null;
-							$cell_arrow  = '';
-							if ( null !== $net_res_avg && $net_res_avg >= 1 ) {
-								$ratio = $cnt / $net_res_avg;
-								if ( $ratio >= 1.2 ) {
-									$cell_arrow = '<span style="font-size:9px; color:#16a34a; margin-left:2px;">&#8593;</span>';
-								} elseif ( $ratio <= 0.8 ) {
-									$cell_arrow = '<span style="font-size:9px; color:#d97706; margin-left:2px;">&#8595;</span>';
-								}
-							} elseif ( null !== $net_res_avg && $net_res_avg < 1 && $cnt > 0 ) {
-								// Network avg near-zero but we have visits — above average
+				<tr style="background:<?php echo esc_attr( $row_bg ); ?>;">
+					<!-- Bot name with colour dot -->
+					<td style="padding:8px 12px; white-space:nowrap;">
+						<span style="display:inline-flex; align-items:center; gap:6px; font-size:12px; color:#374151;">
+							<span style="width:8px; height:8px; border-radius:50%; background:<?php echo esc_attr( $bot_info['color'] ); ?>; flex-shrink:0;"></span>
+							<?php echo esc_html( $bot_info['label'] ); ?>
+						</span>
+					</td>
+					<!-- One cell per active content type -->
+					<?php foreach ( $active_cols_ordered as $type_id ) :
+						$cnt         = (int) ( $by_resource[ $bot_key ][ $type_id ] ?? 0 );
+						$net_res_avg = $network_resource_avgs[ $bot_key ][ $type_id ] ?? null;
+						$cell_arrow  = '';
+						if ( null !== $net_res_avg && $net_res_avg >= 1 ) {
+							$ratio = $cnt / $net_res_avg;
+							if ( $ratio >= 1.2 ) {
 								$cell_arrow = '<span style="font-size:9px; color:#16a34a; margin-left:2px;">&#8593;</span>';
+							} elseif ( $ratio <= 0.8 ) {
+								$cell_arrow = '<span style="font-size:9px; color:#d97706; margin-left:2px;">&#8595;</span>';
 							}
-						?>
-						<td style="padding:7px 12px; text-align:center; color:<?php echo $cnt > 0 ? esc_attr( $bots[ $bot_key ]['color'] ) : '#d1d5db'; ?>; font-weight:<?php echo $cnt > 0 ? '600' : '400'; ?>; white-space:nowrap;">
-							<?php echo $cnt > 0 ? esc_html( number_format_i18n( $cnt ) ) : '—'; ?>
-							<?php echo $cell_arrow; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built from literals ?>
-						</td>
-						<?php endforeach; ?>
-						<td style="padding:7px 12px; text-align:center; font-weight:600; color:#374151;">
-							<?php echo esc_html( number_format_i18n( $row_total ) ); ?>
-						</td>
-					</tr>
+						} elseif ( null !== $net_res_avg && $net_res_avg < 1 && $cnt > 0 ) {
+							$cell_arrow = '<span style="font-size:9px; color:#16a34a; margin-left:2px;">&#8593;</span>';
+						}
+					?>
+					<td style="padding:7px 12px; text-align:center; color:<?php echo $cnt > 0 ? esc_attr( $bot_info['color'] ) : '#d1d5db'; ?>; font-weight:<?php echo $cnt > 0 ? '600' : '400'; ?>; white-space:nowrap;">
+						<?php echo $cnt > 0 ? esc_html( number_format_i18n( $cnt ) ) : '—'; ?>
+						<?php echo $cell_arrow; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped — built from literals ?>
+					</td>
 					<?php endforeach; ?>
+					<!-- Row total -->
+					<td style="padding:7px 12px; text-align:center; font-weight:600; color:#374151;">
+						<?php echo esc_html( number_format_i18n( $row_total ) ); ?>
+					</td>
+				</tr>
 				<?php endforeach; ?>
 				</tbody>
 			</table>
 			</div>
+			<?php if ( ! empty( $network_avgs ) ) : ?>
+			<p style="font-size:11px; color:#9ca3af; margin:8px 0 0;">
+				<?php esc_html_e( '↑ ↓ = above / below network average for that content type', 'wp-pugmill' ); ?>
+			</p>
+			<?php endif; ?>
+		</div>
+		<?php endif; ?>
+
+		<!-- Crawl Intelligence ───────────────────────────────────────────────── -->
+		<?php
+		// Label + colour maps for each signal
+		$wc_labels  = array( '<500' => 'Short', '500-1500' => 'Medium', '1500+' => 'Long' );
+		$fr_labels  = array( '0-7d' => 'Fresh', '8-30d' => 'Recent', '31-180d' => 'Mature', '180d+' => 'Archive' );
+		$fd_labels  = array( 'low' => 'Low', 'medium' => 'Medium', 'high' => 'High' );
+		$fd_colors  = array( 'low' => '#9ca3af', 'medium' => '#d97706', 'high' => '#16a34a' );
+
+		// Helper: return key of the bucket with the highest tally, or null.
+		$dom = function( $dist ) {
+			if ( empty( $dist ) ) return null;
+			arsort( $dist );
+			reset( $dist );
+			return key( $dist );
+		};
+
+		// Filter intel signals to bots we know about
+		$intel_bots = array_filter( $intel_signals, function( $_, $k ) use ( $bots ) {
+			return isset( $bots[ $k ] );
+		}, ARRAY_FILTER_USE_BOTH );
+
+		$ci_row_idx = 0;
+		?>
+		<?php if ( ! empty( $intel_bots ) ) : ?>
+		<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px 24px; margin-bottom:24px;">
+			<h3 style="margin:0 0 4px; font-size:14px; font-weight:600;">
+				<?php esc_html_e( 'Crawl Intelligence', 'wp-pugmill' ); ?>
+			</h3>
+			<p style="margin:0 0 16px; font-size:12px; color:#666;">
+				<?php esc_html_e( 'What bots are actually finding when they visit — content quality, crawl behaviour, and performance signals, last 30 days.', 'wp-pugmill' ); ?>
+			</p>
+			<div style="overflow-x:auto;">
+			<table class="widefat" style="font-size:12px; border-collapse:collapse;">
+				<thead>
+					<!-- Group header row -->
+					<tr style="background:#f6f7f7;">
+						<th style="padding:8px 12px; text-align:left; font-weight:600; white-space:nowrap; width:160px;" rowspan="2">
+							<?php esc_html_e( 'Bot', 'wp-pugmill' ); ?>
+						</th>
+						<th colspan="3" style="padding:6px 12px; text-align:center; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#7c3aed; border-bottom:1px solid #e5e7eb;">
+							<?php esc_html_e( 'Content Quality', 'wp-pugmill' ); ?>
+						</th>
+						<th colspan="3" style="padding:6px 12px; text-align:center; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#0369a1; border-bottom:1px solid #e5e7eb;">
+							<?php esc_html_e( 'Crawl Behaviour', 'wp-pugmill' ); ?>
+						</th>
+						<th colspan="1" style="padding:6px 12px; text-align:center; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#374151; border-bottom:1px solid #e5e7eb;">
+							<?php esc_html_e( 'Performance', 'wp-pugmill' ); ?>
+						</th>
+					</tr>
+					<!-- Column names -->
+					<tr style="background:#f6f7f7;">
+						<th style="padding:6px 12px; text-align:center; font-weight:500; font-size:11px; color:#555; border-bottom:1px solid #e5e7eb; white-space:nowrap;"><?php esc_html_e( 'Word Count', 'wp-pugmill' ); ?></th>
+						<th style="padding:6px 12px; text-align:center; font-weight:500; font-size:11px; color:#555; border-bottom:1px solid #e5e7eb; white-space:nowrap;"><?php esc_html_e( 'Freshness', 'wp-pugmill' ); ?></th>
+						<th style="padding:6px 12px; text-align:center; font-weight:500; font-size:11px; color:#555; border-bottom:1px solid #e5e7eb; white-space:nowrap;"><?php esc_html_e( 'Fact Density', 'wp-pugmill' ); ?></th>
+						<th style="padding:6px 12px; text-align:center; font-weight:500; font-size:11px; color:#555; border-bottom:1px solid #e5e7eb; white-space:nowrap;"><?php esc_html_e( 'URL Depth', 'wp-pugmill' ); ?></th>
+						<th style="padding:6px 12px; text-align:center; font-weight:500; font-size:11px; color:#555; border-bottom:1px solid #e5e7eb; white-space:nowrap;"><?php esc_html_e( 'URL Type', 'wp-pugmill' ); ?></th>
+						<th style="padding:6px 12px; text-align:center; font-weight:500; font-size:11px; color:#555; border-bottom:1px solid #e5e7eb; white-space:nowrap;"><?php esc_html_e( '404 Rate', 'wp-pugmill' ); ?></th>
+						<th style="padding:6px 12px; text-align:center; font-weight:500; font-size:11px; color:#555; border-bottom:1px solid #e5e7eb; white-space:nowrap;"><?php esc_html_e( 'Avg ms', 'wp-pugmill' ); ?></th>
+					</tr>
+				</thead>
+				<tbody>
+				<?php foreach ( $intel_bots as $bot_key => $sig ) :
+					if ( ! isset( $bots[ $bot_key ] ) ) continue;
+					$bot_info = $bots[ $bot_key ];
+					$ci_bg    = ( 0 === $ci_row_idx % 2 ) ? '#fff' : '#f9fafb';
+					$ci_row_idx++;
+
+					// ── Content Quality ──────────────────────────────────────
+					$wc_dom  = $dom( $sig['word_count'] ?? array() );
+					$wc_lbl  = $wc_labels[ $wc_dom ] ?? '—';
+
+					$fr_dom  = $dom( $sig['content_freshness'] ?? array() );
+					$fr_lbl  = $fr_labels[ $fr_dom ] ?? '—';
+
+					$fd_dom  = $dom( $sig['fact_density'] ?? array() );
+					$fd_lbl  = $fd_labels[ $fd_dom ] ?? '—';
+					$fd_col  = $fd_colors[ $fd_dom ] ?? '#9ca3af';
+
+					// ── Crawl Behaviour ──────────────────────────────────────
+					$depth_dom = $dom( $sig['url_depth'] ?? array() );
+					$depth_lbl = ( null !== $depth_dom ) ? 'Depth ' . $depth_dom : '—';
+
+					$url_dist  = $sig['url_type'] ?? array();
+					$url_clean = (int) ( $url_dist['clean'] ?? 0 );
+					$url_param = (int) ( $url_dist['parameterized'] ?? 0 );
+					$url_total = $url_clean + $url_param;
+					if ( $url_total > 0 ) {
+						$url_lbl = $url_param / $url_total <= 0.2 ? 'Clean' : 'Mixed';
+						$url_col = 'Clean' === $url_lbl ? '#16a34a' : '#d97706';
+					} else {
+						$url_lbl = '—';
+						$url_col = '#9ca3af';
+					}
+
+					$status_dist = $sig['http_status'] ?? array();
+					$s_ok  = (int) ( $status_dist['200'] ?? 0 );
+					$s_404 = (int) ( $status_dist['404'] ?? 0 );
+					$s_tot = $s_ok + $s_404;
+					if ( $s_tot > 0 ) {
+						$rate_404 = round( $s_404 / $s_tot * 100 );
+						$r404_lbl = $rate_404 . '%';
+						$r404_col = $rate_404 >= 10 ? '#dc2626' : ( $rate_404 >= 3 ? '#d97706' : '#16a34a' );
+					} else {
+						$r404_lbl = '—';
+						$r404_col = '#9ca3af';
+					}
+
+					// ── Performance ──────────────────────────────────────────
+					$gen_sum   = (int) ( $sig['php_gen_ms_sum']['all'] ?? 0 );
+					$gen_count = (int) ( $sig['php_gen_ms_count']['all'] ?? 0 );
+					if ( $gen_count > 0 ) {
+						$avg_ms     = (int) round( $gen_sum / $gen_count );
+						$avg_ms_lbl = number_format_i18n( $avg_ms ) . ' ms';
+						$avg_ms_col = $avg_ms >= 1000 ? '#dc2626' : ( $avg_ms >= 500 ? '#d97706' : '#16a34a' );
+					} else {
+						$avg_ms_lbl = '—';
+						$avg_ms_col = '#9ca3af';
+					}
+				?>
+				<tr style="background:<?php echo esc_attr( $ci_bg ); ?>;">
+					<td style="padding:8px 12px; white-space:nowrap;">
+						<span style="display:inline-flex; align-items:center; gap:6px; font-size:12px; color:#374151;">
+							<span style="width:8px; height:8px; border-radius:50%; background:<?php echo esc_attr( $bot_info['color'] ); ?>; flex-shrink:0;"></span>
+							<?php echo esc_html( $bot_info['label'] ); ?>
+						</span>
+					</td>
+					<!-- Word Count -->
+					<td style="padding:7px 12px; text-align:center; color:<?php echo ( '—' !== $wc_lbl ) ? esc_attr( $bot_info['color'] ) : '#d1d5db'; ?>; font-weight:<?php echo ( '—' !== $wc_lbl ) ? '600' : '400'; ?>;">
+						<?php echo esc_html( $wc_lbl ); ?>
+					</td>
+					<!-- Freshness -->
+					<td style="padding:7px 12px; text-align:center; color:<?php echo ( '—' !== $fr_lbl ) ? esc_attr( $bot_info['color'] ) : '#d1d5db'; ?>; font-weight:<?php echo ( '—' !== $fr_lbl ) ? '600' : '400'; ?>;">
+						<?php echo esc_html( $fr_lbl ); ?>
+					</td>
+					<!-- Fact Density -->
+					<td style="padding:7px 12px; text-align:center; color:<?php echo esc_attr( $fd_col ); ?>; font-weight:<?php echo ( '—' !== $fd_lbl ) ? '600' : '400'; ?>;">
+						<?php echo esc_html( $fd_lbl ); ?>
+					</td>
+					<!-- URL Depth -->
+					<td style="padding:7px 12px; text-align:center; color:<?php echo ( '—' !== $depth_lbl ) ? '#374151' : '#d1d5db'; ?>; font-weight:<?php echo ( '—' !== $depth_lbl ) ? '600' : '400'; ?>;">
+						<?php echo esc_html( $depth_lbl ); ?>
+					</td>
+					<!-- URL Type -->
+					<td style="padding:7px 12px; text-align:center; color:<?php echo esc_attr( $url_col ); ?>; font-weight:<?php echo ( '—' !== $url_lbl ) ? '600' : '400'; ?>;">
+						<?php echo esc_html( $url_lbl ); ?>
+					</td>
+					<!-- 404 Rate -->
+					<td style="padding:7px 12px; text-align:center; color:<?php echo esc_attr( $r404_col ); ?>; font-weight:<?php echo ( '—' !== $r404_lbl ) ? '600' : '400'; ?>;">
+						<?php echo esc_html( $r404_lbl ); ?>
+					</td>
+					<!-- Avg ms -->
+					<td style="padding:7px 12px; text-align:center; color:<?php echo esc_attr( $avg_ms_col ); ?>; font-weight:<?php echo ( '—' !== $avg_ms_lbl ) ? '600' : '400'; ?>;">
+						<?php echo esc_html( $avg_ms_lbl ); ?>
+					</td>
+				</tr>
+				<?php endforeach; ?>
+				</tbody>
+			</table>
+			</div>
+			<p style="font-size:11px; color:#9ca3af; margin:8px 0 0;">
+				<?php esc_html_e( 'Dominant value shown per signal. Fact Density: green = high structured content, amber = medium, grey = low. 404 Rate: green < 3%, amber 3–9%, red ≥ 10%. Avg ms: green < 500ms, amber 500–999ms, red ≥ 1s.', 'wp-pugmill' ); ?>
+			</p>
 		</div>
 		<?php endif; ?>
 
