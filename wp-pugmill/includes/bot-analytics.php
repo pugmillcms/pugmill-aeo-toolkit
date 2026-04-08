@@ -202,10 +202,17 @@ function wppugmill_detect_ai_bot( $ua ) {
  * @return string
  */
 function wppugmill_parse_bot_name_from_ua( $ua ) {
+	// Prefer the domain from any embedded URL — most bots include their info page.
+	// e.g. "AhrefsBot/7.0; +https://ahrefs.com/robot/" → "ahrefs.com"
+	if ( preg_match( '/https?:\/\/(?:www\.)?([a-zA-Z0-9][a-zA-Z0-9\-]*\.[a-zA-Z]{2,})/i', $ua, $m ) ) {
+		return strtolower( $m[1] );
+	}
+	// Fall back to the leading alphabetic token (e.g. "curl", "python-requests").
 	if ( preg_match( '/^([A-Za-z][A-Za-z0-9_\-\.]{1,40})/', $ua, $m ) ) {
 		return $m[1];
 	}
-	return substr( $ua, 0, 32 );
+	// Truly unidentifiable — return empty so the caller can show "Unknown N".
+	return '';
 }
 
 /**
@@ -1280,6 +1287,14 @@ function wppugmill_intelligence_send() {
 		'network_token'  => $network_token,
 	);
 
+	/**
+	 * Filter the intelligence network payload before transmission.
+	 *
+	 * @param array $payload   Payload array.
+	 * @param int   $yesterday Unix-day integer for the reported day.
+	 */
+	$payload = apply_filters( 'wppugmill_intelligence_payload', $payload, $yesterday );
+
 	wp_remote_post(
 		'https://pugmill.dev/api/ingest',
 		array(
@@ -1384,6 +1399,9 @@ function wppugmill_ajax_manual_send() {
 		'bots'           => $bots,
 		'network_token'  => $network_token,
 	);
+
+	/** This filter is documented in wppugmill_intelligence_send(). */
+	$payload = apply_filters( 'wppugmill_intelligence_payload', $payload, $yesterday );
 
 	// Blocking so we can report success/failure back to the UI.
 	$response = wp_remote_post(
