@@ -169,7 +169,7 @@ Available in all modes. Implementation: `includes/bot-analytics.php`, `admin/bot
 - Top Posts section with live post links and edit shortcuts
 - Download Data export (CSV)
 
-**Pugmill Intelligence Network:**
+**Pugmill AEO Intelligence Network:**
 - Fetches anonymised per-bot, per-resource-type averages from `pugmill.dev/api/report`
 - Resource types: `html(0)`, `llms_txt(1)`, `llms_full(2)`, `post_markdown(3)`, `site_summary(4)`, `sitemap(5)`, `robots_txt(6)`
 - Network ratios drive Content Reach arrows and the AI Insights Network Benchmark section

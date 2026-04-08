@@ -1727,7 +1727,7 @@ function wppugmill_render_settings_page() {
 				<?php esc_html_e( 'See exactly which AI crawlers and search spiders are visiting your site, which pages they read, and whether they\'re engaging with your AEO content.', 'wp-pugmill' ); ?>
 			</p>
 			<p style="color:#555; font-size:14px; line-height:1.7; margin:0 0 24px;">
-				<?php esc_html_e( 'By opting in, you also join the Pugmill Intelligence network — we watch which bots visit, which of your AEO resources they accessed, how many times, and the date. Those counts are shared with network participants. Your site is identified only by a salted private hash that cannot be traced back to your domain — not even by us. No URLs, no content, no visitor data is ever collected.', 'wp-pugmill' ); ?>
+				<?php esc_html_e( 'By opting in, you also join the Pugmill AEO Intelligence Network — we watch which bots visit, which of your AEO resources they accessed, how many times, and the date. Those counts are shared with network participants. Your site is identified only by a salted private hash that cannot be traced back to your domain — not even by us. No URLs, no content, no visitor data is ever collected.', 'wp-pugmill' ); ?>
 			</p>
 			<form method="post" action="options.php">
 				<?php settings_fields( 'wppugmill_analytics' ); ?>
@@ -2755,7 +2755,7 @@ function wppugmill_render_settings_page() {
 						$network_sites
 					);
 				} else {
-					esc_html_e( 'Pugmill Intelligence Network — network averages appear once 10+ sites contribute', 'wp-pugmill' );
+					esc_html_e( 'Pugmill AEO Intelligence Network — network averages appear once 10+ sites contribute', 'wp-pugmill' );
 				}
 			?></span>
 			<span style="color:#ddd;">|</span>
@@ -2767,7 +2767,7 @@ function wppugmill_render_settings_page() {
 			<form method="post" action="options.php" style="margin:0; padding:0;">
 				<?php settings_fields( 'wppugmill_analytics' ); ?>
 				<input type="hidden" name="wppugmill_analytics_opted_in" value="0">
-				<button type="submit" onclick="return confirm('<?php echo esc_js( __( 'Leave the Pugmill Intelligence Network? This will also disable Bot Analytics — your historical data stays on your site but you will no longer see crawler or spider activity.', 'wp-pugmill' ) ); ?>')" style="background:none; border:none; padding:0; color:#dc2626; font-size:12px; cursor:pointer; text-decoration:underline;">
+				<button type="submit" onclick="return confirm('<?php echo esc_js( __( 'Leave the Pugmill AEO Intelligence Network? This will also disable Bot Analytics — your historical data stays on your site but you will no longer see crawler or spider activity.', 'wp-pugmill' ) ); ?>')" style="background:none; border:none; padding:0; color:#dc2626; font-size:12px; cursor:pointer; text-decoration:underline;">
 					<?php esc_html_e( 'Leave network', 'wp-pugmill' ); ?>
 				</button>
 			</form>

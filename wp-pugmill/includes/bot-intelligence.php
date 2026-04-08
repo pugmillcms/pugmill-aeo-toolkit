@@ -1,6 +1,6 @@
 <?php
 /**
- * WP Pugmill — Pugmill Intelligence Network: rich signal capture.
+ * WP Pugmill — Pugmill AEO Intelligence Network: rich signal capture.
  *
  * Captures anonymized, server-side-only signals from known AI bot visits
  * and appends them to the daily intelligence payload sent to pugmillaeo.com.

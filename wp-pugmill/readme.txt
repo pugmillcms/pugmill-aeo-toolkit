@@ -4,7 +4,7 @@ Tags: AEO, answer engine optimization, AI, llms.txt, schema, structured data, SE
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.0.36
+Stable tag: 1.0.37
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -28,7 +28,7 @@ De-aired. Wedged. Ready.
 
 = What WP Pugmill Does =
 
-**Pugmill Intelligence Network**
+**Pugmill AEO Intelligence Network**
 Your Bot Analytics data is anonymously compared against the broader network of Pugmill sites. See whether your AI crawler traffic is above or below average for each bot — and get context on whether your site is a typical crawl target or an outlier.
 
 **llms.txt Generation**
@@ -62,7 +62,7 @@ All AEO metadata is exposed on WordPress REST API responses, making your content
 
 This plugin connects to the following external services:
 
-**Pugmill Intelligence Network** (anonymous bot traffic benchmarking)
+**Pugmill AEO Intelligence Network** (anonymous bot traffic benchmarking)
 When you opt in to Bot Analytics (Settings → WP Pugmill → Bot Analytics), the plugin:
 - Registers your site with a one-way hashed site ID (SHA-256 of your home URL + a randomly generated instance ID). Your URL is never transmitted directly.
 - Submits anonymized daily bot traffic counts (bot name, resource type, visit count) to pugmill.dev once per day via a scheduled background task.
@@ -154,6 +154,9 @@ Yes. WP Pugmill is focused on AEO (AI discoverability) and does not conflict wit
 
 == Changelog ==
 
+= 1.0.37 =
+* **Branding**: Renamed "Pugmill Intelligence Network" → "Pugmill AEO Intelligence Network" throughout the plugin UI, prompts, and code comments.
+
 = 1.0.36 =
 * **Enhancement**: Get AI Analytics now includes per-bot Crawl Intelligence signals (word count, freshness, fact density, URL depth, URL type) from this site in the analysis context, plus network-average signals from pugmillaeo.com for comparison. New "## Crawl Intelligence" section in the AI report interprets what bots are reading and how it compares to the network.
 
@@ -190,7 +193,7 @@ Yes. WP Pugmill is focused on AEO (AI discoverability) and does not conflict wit
 
 = 1.0.25 =
 * **Feature**: GitHub-based auto-update re-enabled (Plugin Update Checker). Sites running WP Pugmill will now receive update notifications in WP Admin → Plugins automatically.
-* **Feature**: Bot signal capture — anonymised content signals (word count, content freshness, fact density, etc.) are now captured server-side and submitted to the Pugmill Intelligence Network daily.
+* **Feature**: Bot signal capture — anonymised content signals (word count, content freshness, fact density, etc.) are now captured server-side and submitted to the Pugmill AEO Intelligence Network daily.
 
 = 1.0.24 =
 * **Feature**: AI-powered "Get steps" button on each plugin conflict in the Compatibility tab — gives step-by-step instructions for resolving the conflict using the configured AI provider.
@@ -199,7 +202,7 @@ Yes. WP Pugmill is focused on AEO (AI discoverability) and does not conflict wit
 = 1.0.23 =
 * **Fix**: Reorder Bot Analytics quadrant grid — AI Crawlers (top-left), Search Engines (top-right), SEO Bots (bottom-left), Training Crawlers (bottom-right). Mobile view stacks in the same order.
 * **Fix**: Removed Plugin Update Checker (GitHub-based auto-update) in preparation for WordPress.org directory submission.
-* **Docs**: Added Pugmill Intelligence Network to External Services disclosure in readme.txt.
+* **Docs**: Added Pugmill AEO Intelligence Network to External Services disclosure in readme.txt.
 * **Code**: Clarified that WPPUGMILL_NETWORK_SECRET is a public protocol version identifier, not a private secret.
 
 = 1.0.22 =
@@ -226,7 +229,7 @@ Yes. WP Pugmill is focused on AEO (AI discoverability) and does not conflict wit
 * **Fix**: Bulk AEO queue builder now uses a single JOIN query instead of one `get_post_meta()` call per post — eliminates N+1 DB queries that caused timeouts on large sites (1000+ posts).
 
 = 1.0.16 =
-* **Feature**: Bot Analytics tab now shows a "Network Trends" strip with four category cards (AI Crawlers, Training, Search, SEO Bots) sourced from the Pugmill Intelligence Network — displays network-wide visit totals and % change vs prior 30 days for each category.
+* **Feature**: Bot Analytics tab now shows a "Network Trends" strip with four category cards (AI Crawlers, Training, Search, SEO Bots) sourced from the Pugmill AEO Intelligence Network — displays network-wide visit totals and % change vs prior 30 days for each category.
 * **Enhancement**: Bot Analytics expanded from 12 to 25 known bots across four categories: AI companies (ChatGPT, Claude, Perplexity, Gemini, Amazonbot, Meta, Mistral), training crawlers (Bytespider, Cohere, DeepSeek, Grok, CCBot), traditional search engines (Googlebot, GoogleOther, Bingbot, YandexBot, BaiduBot, Applebot, DuckDuckGo), and commercial SEO bots (Semrush, Ahrefs, Dotbot, Majestic, Barkrowler, AI2Bot).
 * **Feature**: Unknown bot catch-all — any unrecognized bot-like User-Agent is now detected, logged under "Other," and included in the recent activity feed with its parsed name.
 * **Fix**: Bot Analytics tab no longer shows zero-visit bot cards — only bots with actual recorded visits appear.
@@ -272,7 +275,7 @@ Yes. WP Pugmill is focused on AEO (AI discoverability) and does not conflict wit
 * **Debug**: Registration errors now surface the actual HTTP response in the "Send now" button for easier diagnosis.
 
 = 1.0.5 =
-* **Feature**: Pugmill Intelligence Network authentication — daily submissions are now signed with a per-site HMAC token obtained at opt-in registration. Prevents spoofed data from reaching the network.
+* **Feature**: Pugmill AEO Intelligence Network authentication — daily submissions are now signed with a per-site HMAC token obtained at opt-in registration. Prevents spoofed data from reaching the network.
 * **UX**: "Send now" button on the Analytics tab lets admins manually trigger an intelligence submission and see the server response — useful for testing without waiting for cron.
 * **Fix**: Pressable/managed-host cron reliability — registration happens immediately at opt-in and is retried automatically on the next cron run if the token is missing.
 
@@ -296,7 +299,7 @@ Yes. WP Pugmill is focused on AEO (AI discoverability) and does not conflict wit
 * **Draft content**: All `ajaxFetch` panel operations (Internal Links, Topic Focus, Reading Level, Headline Variants, Excerpt, Social Draft) now send current editor content directly — no pre-save required. Eliminates "Post has no content" race condition on unsaved drafts.
 * **UX**: Added "Finish editing your content before generating" hint below the Generate All button. Topic Focus action button renamed from "Swap Content" to "✏ Rewrite".
 * **Bot Analytics**: Network comparison arrows (↑/↓) in the Content Reach table indicate whether your per-bot traffic ratio is above or below the Pugmill network average. Chart legend centred. Top Posts URLs now link to the live post and include an inline Edit link. Download Data block repositioned after the Recent Visits section.
-* **AI Insights**: Five enhancements — AEO conversion rate (AEO endpoint hits as % of total crawl), 15-day traffic trend with per-bot direction and change %, Pugmill Intelligence Network benchmark with above/below-average signals, zero-visit gap callout for bots crawling other sites but not yours, and richer system prompt context for more actionable recommendations. Max tokens increased to 750.
+* **AI Insights**: Five enhancements — AEO conversion rate (AEO endpoint hits as % of total crawl), 15-day traffic trend with per-bot direction and change %, Pugmill AEO Intelligence Network benchmark with above/below-average signals, zero-visit gap callout for bots crawling other sites but not yours, and richer system prompt context for more actionable recommendations. Max tokens increased to 750.
 * **Bot Analytics dashboard**: Replaced "All-time visits" card with per-category 30-day summary cards (AI Crawlers and Search Spiders) showing visit totals and percentage split. New symmetric 7-box layout: one summary card plus six per-bot cards per row.
 
 = 0.9.0 =
@@ -306,7 +309,7 @@ Yes. WP Pugmill is focused on AEO (AI discoverability) and does not conflict wit
 * **Internal Links**: Suggests 3–5 internal linking opportunities with verbatim anchor text, target URL, and surrounding context. "Insert" wraps the anchor directly in the Gutenberg block. Server-side paragraph validation ensures anchors are placed only where the exact text exists.
 
 = 0.8.0 =
-* **Pugmill Intelligence Network**: Bot Analytics now fetches anonymised per-bot, per-resource-type averages from the Pugmill network and compares your site's ratios. Network averages power the Content Reach comparison table and the AI Insights benchmark section.
+* **Pugmill AEO Intelligence Network**: Bot Analytics now fetches anonymised per-bot, per-resource-type averages from the Pugmill network and compares your site's ratios. Network averages power the Content Reach comparison table and the AI Insights benchmark section.
 * **AI Insights**: Refactored into a structured five-section report: Bot Activity, Traffic Trend, Network Benchmark, Content Coverage, and Recommendations.
 * **Review schema**: Added Review as an extended schema type. Supports item type (Book, Movie, Product, Software, Course, Game, Music, Restaurant), item name, author/creator, star rating, and review body. Outputs a valid Review + Rating node in JSON-LD, eligible for Google rich snippets.
 * **sameAs on entity mentions**: Each Named Entity now has an optional sameAs URL field (Wikipedia/Wikidata only — server-validated). When set, the JSON-LD `mentions` node includes a `sameAs` property for knowledge-graph disambiguation.

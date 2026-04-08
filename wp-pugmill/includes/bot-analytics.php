@@ -936,7 +936,7 @@ function wppugmill_bot_analytics_insights_context() {
 
 				$network_context = array(
 					'sites_in_network'  => $network_sites,
-					'note'              => 'Pugmill Intelligence Network: per-site 30-day averages',
+					'note'              => 'Pugmill AEO Intelligence Network: per-site 30-day averages',
 					'benchmarks'        => $benchmarks,
 					'zero_visit_bots'   => $zero_bots,
 					'crawl_signals'     => $net_signals,
@@ -1023,7 +1023,7 @@ Compare each bot's first 15 days versus last 15 days. Name which bots are rising
 If crawl_signals data is present in the site data: interpret what the bots are actually reading. Signal meanings — word_count buckets: <500 = short posts, 500-1500 = standard posts, 1500+ = long-form; content_freshness buckets: 0-7d = very fresh, 8-30d = recent, 31-180d = aging, 180d+ = stale; fact_density: high = lots of structured markup (tables, lists, headings), medium = some, low = mostly prose; url_depth: 0-1 = homepage/top-level, 2-3 = standard pages, 4+ = deep crawl; url_type: clean = SEO-friendly URLs, parameterized = query string URLs. Note dominant patterns per bot and what they imply about content preferences. If network_benchmark.crawl_signals is also present, compare this site to network averages — call out meaningful differences (e.g., bots here reading much fresher or longer content than network average). If no crawl_signals data is present, skip this section entirely.
 
 ## Network Benchmark
-If network_benchmark data is present: for each bot, state whether this site is well above average, above average, at average, below average, or well below average compared to the Pugmill Intelligence Network (the ratio field tells you: ≥ 2.0 = well above, ≥ 1.1 = above, 0.9–1.1 = at average, ≥ 0.5 = below, < 0.5 = well below). For every bot listed in zero_visit_bots (bots the network sees but this site has zero visits from), name them and say the typical site gets N visits — this is a gap. If no network_benchmark data is present, skip this section entirely.
+If network_benchmark data is present: for each bot, state whether this site is well above average, above average, at average, below average, or well below average compared to the Pugmill AEO Intelligence Network (the ratio field tells you: ≥ 2.0 = well above, ≥ 1.1 = above, 0.9–1.1 = at average, ≥ 0.5 = below, < 0.5 = well below). For every bot listed in zero_visit_bots (bots the network sees but this site has zero visits from), name them and say the typical site gets N visits — this is a gap. If no network_benchmark data is present, skip this section entirely.
 
 ## Content Coverage
 Which pages or post types are crawled most, which resource types are hit most, and any patterns worth noting (ignored sections, repeat visits on specific posts, etc.).
@@ -1144,7 +1144,7 @@ add_action( 'wp_ajax_wppugmill_export_csv_recent', 'wppugmill_ajax_export_csv_re
 // ── Pugmill Intelligence — registration & daily send ─────────────────────────
 
 /**
- * Register this site with the Pugmill Intelligence Network.
+ * Register this site with the Pugmill AEO Intelligence Network.
  *
  * Called once when the user opts in. Sends a signed registration request to
  * the Pugmill CMS server. On success, stores the returned network_token
@@ -1235,7 +1235,7 @@ function wppugmill_intelligence_resource_slugs() {
 }
 
 /**
- * Send yesterday's aggregated bot visit data to the Pugmill Intelligence network.
+ * Send yesterday's aggregated bot visit data to the Pugmill AEO Intelligence Network.
  * Fires daily via WP-Cron. Silent on failure — never affects the site.
  */
 function wppugmill_intelligence_send() {
@@ -1380,7 +1380,7 @@ function wppugmill_ajax_manual_send() {
 	}
 
 	if ( ! get_option( 'wppugmill_analytics_opted_in' ) ) {
-		wp_send_json_error( __( 'Not opted in to the Pugmill Intelligence Network.', 'wp-pugmill' ) );
+		wp_send_json_error( __( 'Not opted in to the Pugmill AEO Intelligence Network.', 'wp-pugmill' ) );
 	}
 
 	global $wpdb;
