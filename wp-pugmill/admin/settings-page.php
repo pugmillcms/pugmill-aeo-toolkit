@@ -2122,6 +2122,21 @@ function wppugmill_render_settings_page() {
 
 		<!-- Content Reach ───────────────────────────────────────────────────── -->
 		<?php
+		// Build active_types from by_resource data (which columns have any visits)
+		$active_types = array();
+		foreach ( $by_resource as $bot_res ) {
+			foreach ( $bot_res as $type_id => $cnt ) {
+				if ( $cnt > 0 ) {
+					$active_types[ $type_id ] = true;
+				}
+			}
+		}
+		ksort( $active_types );
+
+		// Category label + colour maps (shared by Content Reach and legacy code)
+		$cat_labels = array( 'aeo' => 'AEO Endpoints', 'discovery' => 'Discovery', 'crawl' => 'Page Crawls' );
+		$cat_badge  = array( 'aeo' => '#16a34a',        'discovery' => '#2563eb',   'crawl' => '#9ca3af' );
+
 		// Column order: AEO group first, then Discovery, then Page Crawls
 		$col_order_by_cat = array(
 			'aeo'       => array( 1, 2, 3, 4 ),
