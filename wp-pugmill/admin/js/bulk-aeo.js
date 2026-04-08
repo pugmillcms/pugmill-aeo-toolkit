@@ -26,6 +26,7 @@
 			skipExisting: document.getElementById( 'wppugmill-bulk-skip-existing' ),
 			sortSelect:   document.getElementById( 'wppugmill-bulk-sort' ),
 			speedSelect:  document.getElementById( 'wppugmill-bulk-speed' ),
+			batchSelect:  document.getElementById( 'wppugmill-bulk-batch' ),
 			startBtn:     document.getElementById( 'wppugmill-bulk-start' ),
 			progressWrap: document.getElementById( 'wppugmill-bulk-progress' ),
 			barFill:      document.getElementById( 'wppugmill-bulk-bar-fill' ),
@@ -50,6 +51,11 @@
 		} );
 		if ( els.skipExisting ) {
 			els.skipExisting.addEventListener( 'change', fetchStats );
+		}
+
+		// Update button label when batch size changes.
+		if ( els.batchSelect ) {
+			els.batchSelect.addEventListener( 'change', updateStartBtnLabel );
 		}
 
 		els.startBtn.addEventListener( 'click', startRun );
@@ -95,6 +101,26 @@
 		return { post_types: postTypes, skip_existing: skipExisting, sort_by: sortBy };
 	}
 
+	// Returns the batch limit as an integer. 0 = unlimited (All).
+	function getBatchLimit() {
+		var sel = els.batchSelect;
+		if ( ! sel ) return 0;
+		var val = parseInt( sel.value, 10 );
+		return isNaN( val ) ? 0 : val;
+	}
+
+	// Returns the appropriate start button label given the current batch setting.
+	function startBtnLabel() {
+		var limit = getBatchLimit();
+		return limit > 0 ? 'Generate AEO for Next ' + limit + ' Posts' : 'Generate AEO for All Content';
+	}
+
+	function updateStartBtnLabel() {
+		if ( els.startBtn && ! running ) {
+			els.startBtn.textContent = startBtnLabel();
+		}
+	}
+
 	// ── Stats ─────────────────────────────────────────────────────────────────
 
 	function fetchStats() {
@@ -123,11 +149,12 @@
 					s.have_aeo + ' complete';
 
 				// Store IDs for the upcoming run.
-				queue       = json.data.ids;
+				queue        = json.data.ids;
 				queue._index = 0;
 
 				if ( els.startBtn ) {
-					els.startBtn.disabled = ! cfg.isProMode || queue.length === 0;
+					els.startBtn.disabled    = ! cfg.isProMode || queue.length === 0;
+					els.startBtn.textContent = startBtnLabel();
 				}
 			} )
 			.catch( function() {
@@ -150,8 +177,8 @@
 		data.append( 'sort_by',       opts.sort_by );
 
 		if ( els.startBtn ) {
-			els.startBtn.disabled     = true;
-			els.startBtn.textContent  = 'Starting…';
+			els.startBtn.disabled    = true;
+			els.startBtn.textContent = 'Starting…';
 		}
 
 		fetch( cfg.ajaxUrl, { method: 'POST', body: data } )
@@ -160,13 +187,16 @@
 				if ( ! json.success || ! json.data.ids.length ) {
 					if ( els.startBtn ) {
 						els.startBtn.disabled    = false;
-						els.startBtn.textContent = 'Generate AEO for All Content';
+						els.startBtn.textContent = startBtnLabel();
 					}
 					if ( els.statsText ) els.statsText.textContent = 'Nothing to generate.';
 					return;
 				}
 
-				queue        = json.data.ids;
+				// Apply batch limit — slice the full queue down to the cap.
+				var allIds = json.data.ids;
+				var limit  = getBatchLimit();
+				queue        = limit > 0 ? allIds.slice( 0, limit ) : allIds;
 				queue._index = 0;
 				paused       = false;
 				stopped      = false;
@@ -188,7 +218,7 @@
 			.catch( function() {
 				if ( els.startBtn ) {
 					els.startBtn.disabled    = false;
-					els.startBtn.textContent = 'Generate AEO for All Content';
+					els.startBtn.textContent = startBtnLabel();
 				}
 			} );
 	}
@@ -282,7 +312,7 @@
 			els.startBtn.classList.remove( 'wppugmill-loading' );
 			els.startBtn.style.display   = '';
 			els.startBtn.disabled        = ! cfg.isProMode;
-			els.startBtn.textContent     = 'Generate AEO for All Content';
+			els.startBtn.textContent     = startBtnLabel();
 		}
 
 		// Refresh stats to reflect the newly generated AEO.

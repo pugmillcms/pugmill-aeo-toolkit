@@ -2874,6 +2874,17 @@ function wppugmill_render_settings_page() {
 						</select>
 						<p style="font-size:11px; color:#9ca3af; margin:4px 0 0;"><?php esc_html_e( 'Longer delays reduce rate limit risk and AI spend rate.', 'wp-pugmill' ); ?></p>
 					</fieldset>
+					<fieldset style="border:none; margin:0; padding:0;">
+						<legend style="font-size:12px; font-weight:600; color:#374151; margin-bottom:8px;"><?php esc_html_e( 'Batch Size', 'wp-pugmill' ); ?></legend>
+						<select id="wppugmill-bulk-batch" style="font-size:13px; height:28px;">
+							<option value="50"><?php esc_html_e( '50 posts', 'wp-pugmill' ); ?></option>
+							<option value="100" selected><?php esc_html_e( '100 posts', 'wp-pugmill' ); ?></option>
+							<option value="250"><?php esc_html_e( '250 posts', 'wp-pugmill' ); ?></option>
+							<option value="500"><?php esc_html_e( '500 posts', 'wp-pugmill' ); ?></option>
+							<option value="0"><?php esc_html_e( 'All', 'wp-pugmill' ); ?></option>
+						</select>
+						<p style="font-size:11px; color:#9ca3af; margin:4px 0 0;"><?php esc_html_e( 'Max posts per run. Run again to continue where you left off.', 'wp-pugmill' ); ?></p>
+					</fieldset>
 				</div>
 
 				<!-- Stats -->
