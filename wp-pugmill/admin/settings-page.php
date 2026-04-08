@@ -2176,7 +2176,7 @@ function wppugmill_render_settings_page() {
 				<thead>
 					<!-- Group header row -->
 					<tr style="background:#f6f7f7;">
-						<th style="padding:8px 12px; text-align:left; font-weight:600; white-space:nowrap; width:160px;" rowspan="2">
+						<th style="padding:8px 12px; text-align:left; font-weight:600; white-space:nowrap; width:160px; border-bottom:1px solid #e5e7eb; border-right:2px solid #e5e7eb;" rowspan="2">
 							<?php esc_html_e( 'Bot', 'wp-pugmill' ); ?>
 						</th>
 						<?php foreach ( $active_cols_by_cat as $cat => $cols ) :
@@ -2190,7 +2190,7 @@ function wppugmill_render_settings_page() {
 							<?php echo esc_html( $cat_labels[ $cat ] ); ?>
 						</th>
 						<?php endforeach; ?>
-						<th style="padding:8px 12px; text-align:center; font-weight:600; white-space:nowrap;" rowspan="2">
+						<th style="padding:8px 12px; text-align:center; font-weight:600; white-space:nowrap; border-left:2px solid #e5e7eb; border-bottom:1px solid #e5e7eb;" rowspan="2">
 							<?php esc_html_e( 'Total', 'wp-pugmill' ); ?>
 						</th>
 					</tr>
@@ -2216,7 +2216,7 @@ function wppugmill_render_settings_page() {
 				?>
 				<tr style="background:<?php echo esc_attr( $row_bg ); ?>;">
 					<!-- Bot name with colour dot -->
-					<td style="padding:8px 12px; white-space:nowrap;">
+					<td style="padding:8px 12px; white-space:nowrap; border-right:2px solid #e5e7eb;">
 						<span style="display:inline-flex; align-items:center; gap:6px; font-size:12px; color:#374151;">
 							<span style="width:8px; height:8px; border-radius:50%; background:<?php echo esc_attr( $bot_info['color'] ); ?>; flex-shrink:0;"></span>
 							<?php echo esc_html( $bot_info['label'] ); ?>
@@ -2244,7 +2244,7 @@ function wppugmill_render_settings_page() {
 					</td>
 					<?php endforeach; ?>
 					<!-- Row total -->
-					<td style="padding:7px 12px; text-align:center; font-weight:600; color:#374151;">
+					<td style="padding:7px 12px; text-align:center; font-weight:600; color:#374151; border-left:2px solid #e5e7eb;">
 						<?php echo esc_html( number_format_i18n( $row_total ) ); ?>
 					</td>
 				</tr>
