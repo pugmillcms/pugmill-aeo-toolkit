@@ -4,7 +4,7 @@ Tags: AEO, answer engine optimization, AI, llms.txt, schema, structured data, SE
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.0.25
+Stable tag: 1.0.26
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -153,6 +153,9 @@ Yes. WP Pugmill is focused on AEO (AI discoverability) and does not conflict wit
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.0.26 =
+* **Internal**: Bot signal capture upgraded to store signals per-bot (schema v2). Enables the upcoming Crawl Intelligence UI table.
 
 = 1.0.25 =
 * **Feature**: GitHub-based auto-update re-enabled (Plugin Update Checker). Sites running WP Pugmill will now receive update notifications in WP Admin → Plugins automatically.
