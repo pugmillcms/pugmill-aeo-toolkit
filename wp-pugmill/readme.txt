@@ -4,7 +4,7 @@ Tags: AEO, answer engine optimization, AI, llms.txt, schema, structured data, SE
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.0.28
+Stable tag: 1.0.29
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -153,6 +153,9 @@ Yes. WP Pugmill is focused on AEO (AI discoverability) and does not conflict wit
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.0.29 =
+* **Fix**: Critical error on Bot Analytics page — $intel_signals was never assigned, causing a PHP 8 TypeError (array_filter on null) that killed the page after Content Reach rendered.
 
 = 1.0.28 =
 * **Fix**: Critical error on Bot Analytics page — $active_types, $cat_labels, and $cat_badge were undefined after the Content Reach table refactor; added function_exists() guard on wppugmill_intel_get_signals_30d().

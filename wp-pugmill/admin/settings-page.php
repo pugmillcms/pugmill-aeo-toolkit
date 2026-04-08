@@ -1750,6 +1750,7 @@ function wppugmill_render_settings_page() {
 		$resource_cats   = wppugmill_resource_type_categories();
 		$all_bots        = wppugmill_bot_config();
 		$top_posts       = wppugmill_bot_analytics_top_posts( 10 );
+		$intel_signals   = function_exists( 'wppugmill_intel_get_signals_30d' ) ? wppugmill_intel_get_signals_30d( $days ) : array();
 
 		// Only render bots that have actual visits in the selected period —
 		// no zero rows. Unknown bots (bot_id = 0) are added as 'Other'.
