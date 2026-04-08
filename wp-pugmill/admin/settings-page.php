@@ -1799,7 +1799,7 @@ function wppugmill_render_settings_page() {
 		$network_categories = array();  // category → { total, prior_total, change_pct, sites }
 
 		if ( get_option( 'wppugmill_analytics_opted_in' ) ) {
-			$net_response = wp_remote_get( 'https://pugmill.dev/api/report', array( 'timeout' => 5, 'sslverify' => true ) );
+			$net_response = wp_remote_get( 'https://pugmillaeo.com/api/report', array( 'timeout' => 5, 'sslverify' => true ) );
 			if ( ! is_wp_error( $net_response ) ) {
 				$net_data      = json_decode( wp_remote_retrieve_body( $net_response ), true ) ?: array();
 				$network_sites = (int) ( $net_data['sites_contributing'] ?? 0 );

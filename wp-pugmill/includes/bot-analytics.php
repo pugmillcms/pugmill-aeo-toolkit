@@ -874,7 +874,7 @@ function wppugmill_bot_analytics_insights_context() {
 	// ── Network benchmark ────────────────────────────────────────────────────
 	$network_context = null;
 	if ( get_option( 'wppugmill_analytics_opted_in' ) ) {
-		$net_response = wp_remote_get( 'https://pugmill.dev/api/report', array( 'timeout' => 8, 'sslverify' => true ) );
+		$net_response = wp_remote_get( 'https://pugmillaeo.com/api/report', array( 'timeout' => 8, 'sslverify' => true ) );
 		if ( ! is_wp_error( $net_response ) ) {
 			$net_data      = json_decode( wp_remote_retrieve_body( $net_response ), true ) ?: array();
 			$network_sites = (int) ( $net_data['sites_contributing'] ?? 0 );
@@ -1127,7 +1127,7 @@ function wppugmill_intelligence_register() {
 	$reg_hmac = hash_hmac( 'sha256', "{$site_id}:{$opted_in_at}:{$nonce}", $network_secret );
 
 	$response = wp_remote_post(
-		'https://pugmill.dev/api/ingest/register',
+		'https://pugmillaeo.com/api/ingest/register',
 		array(
 			'timeout'   => 15,
 			'sslverify' => true,
@@ -1315,7 +1315,7 @@ function wppugmill_intelligence_send() {
 	$payload = apply_filters( 'wppugmill_intelligence_payload', $payload, $yesterday );
 
 	wp_remote_post(
-		'https://pugmill.dev/api/ingest',
+		'https://pugmillaeo.com/api/ingest',
 		array(
 			'timeout'     => 10,
 			'sslverify'   => true,
@@ -1405,7 +1405,7 @@ function wppugmill_ajax_manual_send() {
 	}
 
 	if ( empty( $network_token ) ) {
-		wp_send_json_error( __( 'Registration failed — token missing after register. Check your connection to pugmill.dev.', 'wp-pugmill' ) );
+		wp_send_json_error( __( 'Registration failed — token missing after register. Check your connection to pugmillaeo.com.', 'wp-pugmill' ) );
 	}
 
 	$submission_hmac = hash_hmac( 'sha256', "{$site_id}:{$date}:" . WPPUGMILL_VERSION, $network_token );
@@ -1439,7 +1439,7 @@ function wppugmill_ajax_manual_send() {
 
 	// Blocking so we can report success/failure back to the UI.
 	$response = wp_remote_post(
-		'https://pugmill.dev/api/ingest',
+		'https://pugmillaeo.com/api/ingest',
 		array(
 			'timeout'   => 15,
 			'sslverify' => true,

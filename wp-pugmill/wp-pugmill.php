@@ -3,7 +3,7 @@
  * Plugin Name: WP Pugmill
  * Plugin URI:  https://wppugmill.com
  * Description: A pugmill turns slop into usable clay. This one turns your existing SEO into structured, AI-ready content — llms.txt, AEO metadata, schema, and sitemaps for ChatGPT, Perplexity, and Gemini.
- * Version:     1.0.34
+ * Version:     1.0.35
  * Author:      Janzen Works
  * Author URI:  https://janzenworks.com
  * License:     GPL-2.0-or-later
@@ -33,7 +33,7 @@ define( 'WPPUGMILL_MAX_AI_INPUT',     8000 ); // character cap — approximately
 // secret. Its purpose is to version-gate the HMAC scheme so both sides agree on
 // the algorithm, not to keep a value hidden. The actual per-site secret is the
 // network_token returned at registration and stored encrypted in the database.
-// This value must match PUGMILL_NETWORK_SECRET on the pugmill.dev server.
+// This value must match PUGMILL_NETWORK_SECRET on the pugmillaeo.com server.
 define( 'WPPUGMILL_NETWORK_SECRET',   'pugmill-network-v1' );
 
 /**
