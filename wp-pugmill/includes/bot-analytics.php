@@ -871,6 +871,12 @@ function wppugmill_bot_analytics_insights_context() {
 		);
 	}
 
+	// ── Local crawl intelligence signals ─────────────────────────────────────
+	$local_signals = array();
+	if ( function_exists( 'wppugmill_intel_get_signals_30d' ) ) {
+		$local_signals = wppugmill_intel_get_signals_30d( 30 );
+	}
+
 	// ── Network benchmark ────────────────────────────────────────────────────
 	$network_context = null;
 	if ( get_option( 'wppugmill_analytics_opted_in' ) ) {
@@ -904,11 +910,36 @@ function wppugmill_bot_analytics_insights_context() {
 						);
 					}
 				}
+
+				// Network crawl intelligence signals (per-bot averages across contributing sites).
+				$net_signals = array();
+				if ( ! empty( $net_data['signals'] ) ) {
+					foreach ( $net_data['signals'] as $bot => $metrics ) {
+						if ( ! is_array( $metrics ) ) {
+							continue;
+						}
+						foreach ( $metrics as $metric => $buckets ) {
+							if ( ! is_array( $buckets ) ) {
+								continue;
+							}
+							foreach ( $buckets as $bucket => $vals ) {
+								if ( isset( $vals['tally_sum'], $vals['site_count'] ) && $vals['site_count'] > 0 ) {
+									$net_signals[ $bot ][ $metric ][ $bucket ] = array(
+										'network_avg_per_site' => round( $vals['tally_sum'] / $vals['site_count'], 1 ),
+										'site_count'           => (int) $vals['site_count'],
+									);
+								}
+							}
+						}
+					}
+				}
+
 				$network_context = array(
-					'sites_in_network' => $network_sites,
-					'note'             => 'Pugmill Intelligence Network: per-site 30-day averages',
-					'benchmarks'       => $benchmarks,
-					'zero_visit_bots'  => $zero_bots,
+					'sites_in_network'  => $network_sites,
+					'note'              => 'Pugmill Intelligence Network: per-site 30-day averages',
+					'benchmarks'        => $benchmarks,
+					'zero_visit_bots'   => $zero_bots,
+					'crawl_signals'     => $net_signals,
 				);
 			}
 		}
@@ -933,6 +964,10 @@ function wppugmill_bot_analytics_insights_context() {
 			);
 		}, $top_posts ),
 	);
+
+	if ( ! empty( $local_signals ) ) {
+		$context['crawl_signals'] = $local_signals;
+	}
 
 	if ( null !== $network_context ) {
 		$context['network_benchmark'] = $network_context;
@@ -976,13 +1011,16 @@ function wppugmill_ajax_analytics_insights() {
 
 	$system = "You are an expert in AI search and Answer Engine Optimization (AEO). You receive bot traffic data from a WordPress site using the WP Pugmill AEO plugin. Analyze the data and write a concise, insightful report in plain text — no markdown except the section headings below.
 
-Structure your response with exactly these five section headings, each on its own line preceded by '## ':
+Structure your response with exactly these six section headings, each on its own line preceded by '## ':
 
 ## Bot Activity
 Which bots are most active and what that signals (citation activity, indexing depth, content discovery phase). Note AEO endpoint hits (llms.txt, llms-full.txt, Post Markdown, Site Summary) as strong positive signals — they mean a bot is reading your optimized content directly. Mention the AEO conversion percentage (what share of visits hit AEO endpoints vs generic HTML/sitemap crawling) and whether it is healthy.
 
 ## Traffic Trend
 Compare each bot's first 15 days versus last 15 days. Name which bots are rising, falling, or flat and what that implies. If a bot appears only in the second half, call it out as newly active — that is worth watching.
+
+## Crawl Intelligence
+If crawl_signals data is present in the site data: interpret what the bots are actually reading. Signal meanings — word_count buckets: <500 = short posts, 500-1500 = standard posts, 1500+ = long-form; content_freshness buckets: 0-7d = very fresh, 8-30d = recent, 31-180d = aging, 180d+ = stale; fact_density: high = lots of structured markup (tables, lists, headings), medium = some, low = mostly prose; url_depth: 0-1 = homepage/top-level, 2-3 = standard pages, 4+ = deep crawl; url_type: clean = SEO-friendly URLs, parameterized = query string URLs. Note dominant patterns per bot and what they imply about content preferences. If network_benchmark.crawl_signals is also present, compare this site to network averages — call out meaningful differences (e.g., bots here reading much fresher or longer content than network average). If no crawl_signals data is present, skip this section entirely.
 
 ## Network Benchmark
 If network_benchmark data is present: for each bot, state whether this site is well above average, above average, at average, below average, or well below average compared to the Pugmill Intelligence Network (the ratio field tells you: ≥ 2.0 = well above, ≥ 1.1 = above, 0.9–1.1 = at average, ≥ 0.5 = below, < 0.5 = well below). For every bot listed in zero_visit_bots (bots the network sees but this site has zero visits from), name them and say the typical site gets N visits — this is a gap. If no network_benchmark data is present, skip this section entirely.
@@ -991,13 +1029,13 @@ If network_benchmark data is present: for each bot, state whether this site is w
 Which pages or post types are crawled most, which resource types are hit most, and any patterns worth noting (ignored sections, repeat visits on specific posts, etc.).
 
 ## Recommendations
-Give 3–4 specific, prioritized actions. For any bot that is below average or a zero-visit gap, give a targeted fix. Use this guidance: ChatGPT — enrich llms.txt with Q&A pairs and AEO summaries, ChatGPT reads it directly; Perplexity — prioritize AEO summaries on high-traffic posts, Perplexity cites in real-time so freshness matters; ClaudeBot — keep sitemap current and add AEO markup to all posts; Gemini — Schema.org JSON-LD is key; Bingbot — clean sitemaps and solid meta descriptions; if AEO conversion rate is under 10%, recommend running Generate All AEO on top posts first. Only mention bots present in the data or identified as network gaps.
+Give 3–5 specific, prioritized actions. For any bot that is below average or a zero-visit gap, give a targeted fix. Where crawl_signals reveal a pattern, turn it into a recommendation (e.g., if bots are mostly reading short posts, recommend expanding key posts to 1500+ words; if freshness skews stale, recommend updating top posts). Use this bot-specific guidance: ChatGPT — enrich llms.txt with Q&A pairs and AEO summaries, ChatGPT reads it directly; Perplexity — prioritize AEO summaries on high-traffic posts, Perplexity cites in real-time so freshness matters; ClaudeBot — keep sitemap current and add AEO markup to all posts; Gemini — Schema.org JSON-LD is key; Bingbot — clean sitemaps and solid meta descriptions; if AEO conversion rate is under 10%, recommend running Generate All AEO on top posts first. Only mention bots present in the data or identified as network gaps.
 
-Rules: blank line between each heading and its paragraph. No bullet lists. 2–4 sentences per section. Total response under 450 words.";
+Rules: blank line between each heading and its paragraph. No bullet lists. 2–4 sentences per section. Total response under 550 words.";
 
 	$user = "Site: " . get_bloginfo( 'name' ) . " (" . home_url() . ")\n\nBot analytics data:\n\n" . $ctx_json . "\n\nProvide your analysis.";
 
-	$result = wppugmill_call_ai( $provider, $api_key, $system, $user, 750 );
+	$result = wppugmill_call_ai( $provider, $api_key, $system, $user, 900 );
 
 	if ( is_wp_error( $result ) ) {
 		wp_send_json_error( $result->get_error_message() );
