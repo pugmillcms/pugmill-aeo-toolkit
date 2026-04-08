@@ -2302,10 +2302,10 @@ function wppugmill_render_settings_page() {
 						<th colspan="3" style="padding:6px 12px; text-align:center; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#7c3aed; border-bottom:1px solid #e5e7eb;">
 							<?php esc_html_e( 'Content Quality', 'wp-pugmill' ); ?>
 						</th>
-						<th colspan="3" style="padding:6px 12px; text-align:center; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#0369a1; border-bottom:1px solid #e5e7eb;">
-							<?php esc_html_e( 'Crawl Behaviour', 'wp-pugmill' ); ?>
+						<th colspan="3" style="padding:6px 12px; text-align:center; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#0369a1; border-bottom:1px solid #e5e7eb; border-left:2px solid #e5e7eb;">
+							<?php esc_html_e( 'Crawl Behavior', 'wp-pugmill' ); ?>
 						</th>
-						<th colspan="1" style="padding:6px 12px; text-align:center; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#374151; border-bottom:1px solid #e5e7eb;">
+						<th colspan="1" style="padding:6px 12px; text-align:center; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#374151; border-bottom:1px solid #e5e7eb; border-left:2px solid #e5e7eb;">
 							<?php esc_html_e( 'Performance', 'wp-pugmill' ); ?>
 						</th>
 					</tr>
@@ -2314,10 +2314,10 @@ function wppugmill_render_settings_page() {
 						<th style="padding:6px 12px; text-align:center; font-weight:500; font-size:11px; color:#555; border-bottom:1px solid #e5e7eb; white-space:nowrap;"><?php esc_html_e( 'Word Count', 'wp-pugmill' ); ?></th>
 						<th style="padding:6px 12px; text-align:center; font-weight:500; font-size:11px; color:#555; border-bottom:1px solid #e5e7eb; white-space:nowrap;"><?php esc_html_e( 'Freshness', 'wp-pugmill' ); ?></th>
 						<th style="padding:6px 12px; text-align:center; font-weight:500; font-size:11px; color:#555; border-bottom:1px solid #e5e7eb; white-space:nowrap;"><?php esc_html_e( 'Fact Density', 'wp-pugmill' ); ?></th>
-						<th style="padding:6px 12px; text-align:center; font-weight:500; font-size:11px; color:#555; border-bottom:1px solid #e5e7eb; white-space:nowrap;"><?php esc_html_e( 'URL Depth', 'wp-pugmill' ); ?></th>
+						<th style="padding:6px 12px; text-align:center; font-weight:500; font-size:11px; color:#555; border-bottom:1px solid #e5e7eb; white-space:nowrap; border-left:2px solid #e5e7eb;"><?php esc_html_e( 'URL Depth', 'wp-pugmill' ); ?></th>
 						<th style="padding:6px 12px; text-align:center; font-weight:500; font-size:11px; color:#555; border-bottom:1px solid #e5e7eb; white-space:nowrap;"><?php esc_html_e( 'URL Type', 'wp-pugmill' ); ?></th>
 						<th style="padding:6px 12px; text-align:center; font-weight:500; font-size:11px; color:#555; border-bottom:1px solid #e5e7eb; white-space:nowrap;"><?php esc_html_e( '404 Rate', 'wp-pugmill' ); ?></th>
-						<th style="padding:6px 12px; text-align:center; font-weight:500; font-size:11px; color:#555; border-bottom:1px solid #e5e7eb; white-space:nowrap;"><?php esc_html_e( 'Avg ms', 'wp-pugmill' ); ?></th>
+						<th style="padding:6px 12px; text-align:center; font-weight:500; font-size:11px; color:#555; border-bottom:1px solid #e5e7eb; white-space:nowrap; border-left:2px solid #e5e7eb;"><?php esc_html_e( 'Avg ms', 'wp-pugmill' ); ?></th>
 					</tr>
 				</thead>
 				<tbody>
@@ -2338,7 +2338,7 @@ function wppugmill_render_settings_page() {
 					$fd_lbl  = $fd_labels[ $fd_dom ] ?? '—';
 					$fd_col  = $fd_colors[ $fd_dom ] ?? '#9ca3af';
 
-					// ── Crawl Behaviour ──────────────────────────────────────
+					// ── Crawl Behavior ───────────────────────────────────────
 					$depth_dom = $dom( $sig['url_depth'] ?? array() );
 					$depth_lbl = ( null !== $depth_dom ) ? 'Depth ' . $depth_dom : '—';
 
@@ -2399,7 +2399,7 @@ function wppugmill_render_settings_page() {
 						<?php echo esc_html( $fd_lbl ); ?>
 					</td>
 					<!-- URL Depth -->
-					<td style="padding:7px 12px; text-align:center; color:<?php echo ( '—' !== $depth_lbl ) ? '#374151' : '#d1d5db'; ?>; font-weight:<?php echo ( '—' !== $depth_lbl ) ? '600' : '400'; ?>;">
+					<td style="padding:7px 12px; text-align:center; color:<?php echo ( '—' !== $depth_lbl ) ? '#374151' : '#d1d5db'; ?>; font-weight:<?php echo ( '—' !== $depth_lbl ) ? '600' : '400'; ?>; border-left:2px solid #e5e7eb;">
 						<?php echo esc_html( $depth_lbl ); ?>
 					</td>
 					<!-- URL Type -->
@@ -2411,7 +2411,7 @@ function wppugmill_render_settings_page() {
 						<?php echo esc_html( $r404_lbl ); ?>
 					</td>
 					<!-- Avg ms -->
-					<td style="padding:7px 12px; text-align:center; color:<?php echo esc_attr( $avg_ms_col ); ?>; font-weight:<?php echo ( '—' !== $avg_ms_lbl ) ? '600' : '400'; ?>;">
+					<td style="padding:7px 12px; text-align:center; color:<?php echo esc_attr( $avg_ms_col ); ?>; font-weight:<?php echo ( '—' !== $avg_ms_lbl ) ? '600' : '400'; ?>; border-left:2px solid #e5e7eb;">
 						<?php echo esc_html( $avg_ms_lbl ); ?>
 					</td>
 				</tr>
