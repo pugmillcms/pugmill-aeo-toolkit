@@ -2832,7 +2832,7 @@ function wppugmill_render_settings_page() {
 
 			<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px 24px; margin-top:4px;">
 
-				<!-- Options -->
+				<!-- Options — row 1: Content + Skip -->
 				<div style="display:flex; gap:32px; align-items:flex-start; flex-wrap:wrap; margin-bottom:16px;">
 					<fieldset style="border:none; margin:0; padding:0;">
 						<legend style="font-size:12px; font-weight:600; color:#374151; margin-bottom:8px;"><?php esc_html_e( 'Content', 'wp-pugmill' ); ?></legend>
@@ -2856,35 +2856,37 @@ function wppugmill_render_settings_page() {
 							<?php esc_html_e( 'Skip posts that already have AEO data', 'wp-pugmill' ); ?>
 						</label>
 					</div>
+				</div>
+
+				<!-- Options — row 2: Priority + Request Delay + Batch Size -->
+				<div style="display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap; margin-bottom:16px; padding-top:12px; border-top:1px solid #f0f0f0;">
 					<fieldset style="border:none; margin:0; padding:0;">
-						<legend style="font-size:12px; font-weight:600; color:#374151; margin-bottom:8px;"><?php esc_html_e( 'Priority', 'wp-pugmill' ); ?></legend>
+						<legend style="font-size:12px; font-weight:600; color:#374151; margin-bottom:6px;"><?php esc_html_e( 'Priority', 'wp-pugmill' ); ?></legend>
 						<select id="wppugmill-bulk-sort" style="font-size:13px; height:28px;">
 							<option value="newest"   ><?php esc_html_e( 'Newest first',         'wp-pugmill' ); ?></option>
 							<option value="commented"><?php esc_html_e( 'Most commented first', 'wp-pugmill' ); ?></option>
 							<option value="oldest"   ><?php esc_html_e( 'Oldest first',         'wp-pugmill' ); ?></option>
 						</select>
-						<p style="font-size:11px; color:#9ca3af; margin:4px 0 0;"><?php esc_html_e( 'Recent posts are most likely still getting traffic.', 'wp-pugmill' ); ?></p>
 					</fieldset>
 					<fieldset style="border:none; margin:0; padding:0;">
-						<legend style="font-size:12px; font-weight:600; color:#374151; margin-bottom:8px;"><?php esc_html_e( 'Request Delay', 'wp-pugmill' ); ?></legend>
+						<legend style="font-size:12px; font-weight:600; color:#374151; margin-bottom:6px;"><?php esc_html_e( 'Request Delay', 'wp-pugmill' ); ?></legend>
 						<select id="wppugmill-bulk-speed" style="font-size:13px; height:28px;">
-							<option value="1500"><?php esc_html_e( 'Fast (1.5s between posts)', 'wp-pugmill' ); ?></option>
-							<option value="3000" selected><?php esc_html_e( 'Normal (3s between posts)', 'wp-pugmill' ); ?></option>
-							<option value="6000"><?php esc_html_e( 'Careful (6s between posts)', 'wp-pugmill' ); ?></option>
+							<option value="1500"><?php esc_html_e( 'Fast (1.5s)',   'wp-pugmill' ); ?></option>
+							<option value="3000" selected><?php esc_html_e( 'Normal (3s)', 'wp-pugmill' ); ?></option>
+							<option value="6000"><?php esc_html_e( 'Careful (6s)', 'wp-pugmill' ); ?></option>
 						</select>
-						<p style="font-size:11px; color:#9ca3af; margin:4px 0 0;"><?php esc_html_e( 'Longer delays reduce rate limit risk and AI spend rate.', 'wp-pugmill' ); ?></p>
 					</fieldset>
 					<fieldset style="border:none; margin:0; padding:0;">
-						<legend style="font-size:12px; font-weight:600; color:#374151; margin-bottom:8px;"><?php esc_html_e( 'Batch Size', 'wp-pugmill' ); ?></legend>
+						<legend style="font-size:12px; font-weight:600; color:#374151; margin-bottom:6px;"><?php esc_html_e( 'Batch Size', 'wp-pugmill' ); ?></legend>
 						<select id="wppugmill-bulk-batch" style="font-size:13px; height:28px;">
-							<option value="50"><?php esc_html_e( '50 posts', 'wp-pugmill' ); ?></option>
+							<option value="50"><?php esc_html_e( '50 posts',  'wp-pugmill' ); ?></option>
 							<option value="100" selected><?php esc_html_e( '100 posts', 'wp-pugmill' ); ?></option>
 							<option value="250"><?php esc_html_e( '250 posts', 'wp-pugmill' ); ?></option>
 							<option value="500"><?php esc_html_e( '500 posts', 'wp-pugmill' ); ?></option>
-							<option value="0"><?php esc_html_e( 'All', 'wp-pugmill' ); ?></option>
+							<option value="0"><?php esc_html_e( 'All',        'wp-pugmill' ); ?></option>
 						</select>
-						<p style="font-size:11px; color:#9ca3af; margin:4px 0 0;"><?php esc_html_e( 'Max posts per run. Run again to continue where you left off.', 'wp-pugmill' ); ?></p>
 					</fieldset>
+					<p style="font-size:11px; color:#9ca3af; margin:0; align-self:flex-end; padding-bottom:4px;"><?php esc_html_e( 'Run again after each batch to continue.', 'wp-pugmill' ); ?></p>
 				</div>
 
 				<!-- Stats -->
