@@ -2296,7 +2296,7 @@ function wppugmill_render_settings_page() {
 				<thead>
 					<!-- Group header row -->
 					<tr style="background:#f6f7f7;">
-						<th style="padding:8px 12px; text-align:left; font-weight:600; white-space:nowrap; width:160px;" rowspan="2">
+						<th style="padding:8px 12px; text-align:left; font-weight:600; white-space:nowrap; width:160px; border-bottom:1px solid #e5e7eb; border-right:2px solid #e5e7eb;" rowspan="2">
 							<?php esc_html_e( 'Bot', 'wp-pugmill' ); ?>
 						</th>
 						<th colspan="3" style="padding:6px 12px; text-align:center; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#7c3aed; border-bottom:1px solid #e5e7eb;">
@@ -2380,7 +2380,7 @@ function wppugmill_render_settings_page() {
 					}
 				?>
 				<tr style="background:<?php echo esc_attr( $ci_bg ); ?>;">
-					<td style="padding:8px 12px; white-space:nowrap;">
+					<td style="padding:8px 12px; white-space:nowrap; border-right:2px solid #e5e7eb;">
 						<span style="display:inline-flex; align-items:center; gap:6px; font-size:12px; color:#374151;">
 							<span style="width:8px; height:8px; border-radius:50%; background:<?php echo esc_attr( $bot_info['color'] ); ?>; flex-shrink:0;"></span>
 							<?php echo esc_html( $bot_info['label'] ); ?>
