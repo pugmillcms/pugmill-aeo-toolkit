@@ -3,7 +3,7 @@
  * Plugin Name: WP Pugmill
  * Plugin URI:  https://wppugmill.com
  * Description: A pugmill turns slop into usable clay. This one turns your existing SEO into structured, AI-ready content — llms.txt, AEO metadata, schema, and sitemaps for ChatGPT, Perplexity, and Gemini.
- * Version:     1.0.24
+ * Version:     1.0.25
  * Author:      Janzen Works
  * Author URI:  https://janzenworks.com
  * License:     GPL-2.0-or-later
@@ -17,6 +17,10 @@
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
+
+// Captured as early as possible so wppugmill_intel_shutdown() can measure
+// the full PHP generation time for bot requests.
+define( 'WPPUGMILL_REQUEST_START', microtime( true ) );
 
 define( 'WPPUGMILL_VERSION',         '1.0.24' );
 define( 'WPPUGMILL_PLUGIN_DIR',      plugin_dir_path( __FILE__ ) );
@@ -71,11 +75,21 @@ require_once WPPUGMILL_PLUGIN_DIR . 'includes/rest-api.php';
 require_once WPPUGMILL_PLUGIN_DIR . 'includes/ai.php';
 require_once WPPUGMILL_PLUGIN_DIR . 'includes/health.php';
 require_once WPPUGMILL_PLUGIN_DIR . 'includes/bot-analytics.php';
+require_once WPPUGMILL_PLUGIN_DIR . 'includes/bot-intelligence.php';
 require_once WPPUGMILL_PLUGIN_DIR . 'includes/bulk-aeo.php';
 
-// Note: Plugin Update Checker (PUC) removed before WordPress.org submission.
-// WordPress.org handles updates via its own SVN-based infrastructure.
-// Custom update checkers that ping external URLs are not permitted in the directory.
+// GitHub-based update checker (PUC v5).
+// Points at the GitHub releases page and uses the attached zip asset so sites
+// running the plugin see update notifications in WP Admin → Plugins.
+// Remove this block and the lib/plugin-update-checker directory before
+// submitting to WordPress.org — WP.org uses its own SVN infrastructure.
+require_once WPPUGMILL_PLUGIN_DIR . 'lib/plugin-update-checker/plugin-update-checker.php';
+$wppugmill_updater = YahnisElsts\PluginUpdateChecker\v5p5\PucFactory::buildUpdateChecker(
+	'https://github.com/michaelsjanzen/wppugmill/',
+	__FILE__,
+	'wp-pugmill'
+);
+$wppugmill_updater->getVcsApi()->enableReleaseAssets();
 
 // Load admin UI
 if ( is_admin() ) {
@@ -98,6 +112,8 @@ function wppugmill_activate() {
 	// Create bot analytics DB tables
 	wppugmill_bot_analytics_install();
 	wppugmill_bot_analytics_prune();
+	// Create signal capture table
+	wppugmill_signal_install();
 	// Schedule daily prune if not already scheduled
 	if ( ! wp_next_scheduled( 'wppugmill_daily_prune' ) ) {
 		wp_schedule_event( time(), 'daily', 'wppugmill_daily_prune' );
