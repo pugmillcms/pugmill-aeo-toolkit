@@ -84,7 +84,7 @@ function wppugmill_get_compatibility_data() {
 	$sitemap_plugins = array(
 		'jetpack/jetpack.php'                         => array(
 			'name'        => 'Jetpack',
-			'instruction' => __( 'Jetpack includes a sitemap module. Disable it in Jetpack → Settings → Traffic by turning off the Sitemap option.', 'wp-pugmill' ),
+			'instruction' => __( 'Jetpack\'s XML Sitemaps module conflicts with WP Pugmill\'s sitemap. Turn off XML Sitemaps in Jetpack → Settings → Traffic so WP Pugmill can serve /sitemap.xml.', 'wp-pugmill' ),
 			'module_check' => function() {
 				// Only flag Jetpack if its sitemap module is actually active.
 				return class_exists( 'Jetpack' ) && method_exists( 'Jetpack', 'is_module_active' )
@@ -137,7 +137,13 @@ function wppugmill_get_compatibility_data() {
 	$robots_plugins = array(
 		'jetpack/jetpack.php'                         => array(
 			'name'        => 'Jetpack',
-			'instruction' => __( 'Jetpack adds its own Sitemap: directive to robots.txt. If WP Pugmill additions are also enabled you will have duplicate Sitemap: entries. Disable the Jetpack sitemap module (Jetpack → Settings → Traffic) to resolve this.', 'wp-pugmill' ),
+			'instruction' => __( 'Jetpack\'s XML Sitemaps module adds a Sitemap: line to robots.txt, which duplicates WP Pugmill\'s addition. Turn off XML Sitemaps in Jetpack → Settings → Traffic to remove the duplicate.', 'wp-pugmill' ),
+			// Only warn when the sitemaps module is actually active — Jetpack itself does not add any robots.txt entries otherwise.
+			'module_check' => function() {
+				return class_exists( 'Jetpack' ) && method_exists( 'Jetpack', 'is_module_active' )
+					? Jetpack::is_module_active( 'sitemaps' )
+					: class_exists( 'Jetpack_Sitemap_Manager' );
+			},
 		),
 		'wordpress-seo/wp-seo.php'                    => array(
 			'name'        => 'Yoast SEO',
@@ -153,12 +159,17 @@ function wppugmill_get_compatibility_data() {
 		),
 	);
 	foreach ( $robots_plugins as $slug => $info ) {
-		if ( is_plugin_active( $slug ) ) {
-			$data['robots_conflicts'][] = array(
-				'name'        => $info['name'],
-				'instruction' => $info['instruction'],
-			);
+		if ( ! is_plugin_active( $slug ) ) {
+			continue;
 		}
+		// Some plugins (Jetpack) only add robots.txt directives when a specific module is on.
+		if ( isset( $info['module_check'] ) && ! call_user_func( $info['module_check'] ) ) {
+			continue;
+		}
+		$data['robots_conflicts'][] = array(
+			'name'        => $info['name'],
+			'instruction' => $info['instruction'],
+		);
 	}
 
 	// ── robots.txt analysis ───────────────────────────────────────────────
