@@ -1898,16 +1898,6 @@ function wppugmill_render_settings_page() {
 				'border'    => '#d4c8f0',
 				'empty_msg' => __( 'No AI crawler visits detected yet.', 'wp-pugmill' ),
 			),
-			'training' => array(
-				'label'     => __( 'Training Crawlers', 'wp-pugmill' ),
-				'desc'      => __( 'Bots collecting data to train foundation models. Not tied to live user queries — your content may end up in a future AI\'s knowledge base.', 'wp-pugmill' ),
-				'bots'      => $training_bots,
-				'total'     => $training_total_30,
-				'accent'    => '#0891b2',
-				'bg'        => '#f0fdff',
-				'border'    => '#a5f3fc',
-				'empty_msg' => __( 'No training crawler visits detected yet.', 'wp-pugmill' ),
-			),
 			'search'   => array(
 				'label'     => __( 'Search Engines', 'wp-pugmill' ),
 				'desc'      => __( 'Traditional search spiders indexing your content for results pages on Google, Bing, and others.', 'wp-pugmill' ),
@@ -1928,9 +1918,30 @@ function wppugmill_render_settings_page() {
 				'border'    => '#e5e7eb',
 				'empty_msg' => __( 'No SEO bot visits detected yet.', 'wp-pugmill' ),
 			),
+			'training' => array(
+				'label'     => __( 'Training Crawlers', 'wp-pugmill' ),
+				'desc'      => __( 'Bots collecting data to train foundation models. Not tied to live user queries — your content may end up in a future AI\'s knowledge base.', 'wp-pugmill' ),
+				'bots'      => $training_bots,
+				'total'     => $training_total_30,
+				'accent'    => '#0891b2',
+				'bg'        => '#f0fdff',
+				'border'    => '#a5f3fc',
+				'empty_msg' => __( 'No training crawler visits detected yet.', 'wp-pugmill' ),
+			),
 		);
 		?>
-		<div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:24px 0 4px;">
+		<style>
+		.wppugmill-quadrant-grid {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 16px;
+			margin: 24px 0 4px;
+		}
+		@media (max-width: 782px) {
+			.wppugmill-quadrant-grid { grid-template-columns: 1fr; }
+		}
+		</style>
+		<div class="wppugmill-quadrant-grid">
 		<?php foreach ( $quadrant_defs as $cat_key => $q ) :
 
 			// Sort bots by local visit count descending

@@ -3,7 +3,7 @@
  * Plugin Name: WP Pugmill
  * Plugin URI:  https://wppugmill.com
  * Description: A pugmill turns slop into usable clay. This one turns your existing SEO into structured, AI-ready content — llms.txt, AEO metadata, schema, and sitemaps for ChatGPT, Perplexity, and Gemini.
- * Version:     1.0.22
+ * Version:     1.0.23
  * Author:      Janzen Works
  * Author URI:  https://janzenworks.com
  * License:     GPL-2.0-or-later
@@ -18,13 +18,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WPPUGMILL_VERSION',         '1.0.22' );
+define( 'WPPUGMILL_VERSION',         '1.0.23' );
 define( 'WPPUGMILL_PLUGIN_DIR',      plugin_dir_path( __FILE__ ) );
 define( 'WPPUGMILL_PLUGIN_URL',      plugin_dir_url( __FILE__ ) );
 define( 'WPPUGMILL_PLUGIN_FILE',     __FILE__ );
 define( 'WPPUGMILL_ANTHROPIC_MODEL',  'claude-sonnet-4-6' );
 define( 'WPPUGMILL_MAX_AI_INPUT',     8000 ); // character cap — approximately 2K tokens for typical English prose
-// Shared secret for Pugmill Intelligence Network HMAC signing.
+// Protocol version string for Pugmill Intelligence Network HMAC signing.
+// This is intentionally a public, hard-coded protocol identifier — not a private
+// secret. Its purpose is to version-gate the HMAC scheme so both sides agree on
+// the algorithm, not to keep a value hidden. The actual per-site secret is the
+// network_token returned at registration and stored encrypted in the database.
 // This value must match PUGMILL_NETWORK_SECRET on the pugmill.dev server.
 define( 'WPPUGMILL_NETWORK_SECRET',   'pugmill-network-v1' );
 
@@ -69,21 +73,9 @@ require_once WPPUGMILL_PLUGIN_DIR . 'includes/health.php';
 require_once WPPUGMILL_PLUGIN_DIR . 'includes/bot-analytics.php';
 require_once WPPUGMILL_PLUGIN_DIR . 'includes/bulk-aeo.php';
 
-// Auto-updates via GitHub Releases (Plugin Update Checker)
-if ( is_admin() ) {
-	$puc_file = WPPUGMILL_PLUGIN_DIR . 'lib/plugin-update-checker/plugin-update-checker.php';
-	if ( file_exists( $puc_file ) ) {
-		require_once $puc_file;
-		$puc = YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChecker(
-			'https://github.com/michaelsjanzen/wppugmill/',
-			__FILE__,
-			'wp-pugmill'
-		);
-		// Use the attached release asset zip (correct folder structure) rather
-		// than GitHub's auto-generated zipball (which uses a commit-hash folder name).
-		$puc->getVcsApi()->enableReleaseAssets();
-	}
-}
+// Note: Plugin Update Checker (PUC) removed before WordPress.org submission.
+// WordPress.org handles updates via its own SVN-based infrastructure.
+// Custom update checkers that ping external URLs are not permitted in the directory.
 
 // Load admin UI
 if ( is_admin() ) {

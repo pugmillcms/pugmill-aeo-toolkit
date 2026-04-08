@@ -4,7 +4,7 @@ Tags: AEO, answer engine optimization, AI, llms.txt, schema, structured data, SE
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.0.22
+Stable tag: 1.0.23
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -62,6 +62,18 @@ All AEO metadata is exposed on WordPress REST API responses, making your content
 
 This plugin connects to the following external services:
 
+**Pugmill Intelligence Network** (anonymous bot traffic benchmarking)
+When you opt in to Bot Analytics (Settings → WP Pugmill → Bot Analytics), the plugin:
+- Registers your site with a one-way hashed site ID (SHA-256 of your home URL + a randomly generated instance ID). Your URL is never transmitted directly.
+- Submits anonymized daily bot traffic counts (bot name, resource type, visit count) to pugmill.dev once per day via a scheduled background task.
+- Fetches aggregated network averages from pugmill.dev to show how your bot traffic compares to other sites on the network.
+
+No visitor data, IP addresses, post content, or personally identifiable information is ever transmitted. You can opt out at any time from the Bot Analytics tab; opting out stops all submissions and removes your site from the network.
+- Service: [https://pugmill.dev](https://pugmill.dev)
+- Privacy Policy: [https://pugmill.dev/privacy](https://pugmill.dev/privacy)
+- Terms of Service: [https://pugmill.dev/terms](https://pugmill.dev/terms)
+- This connection only occurs after explicit opt-in. Free mode users who have not opted in make no connections to pugmill.dev.
+
 **Lemon Squeezy** (license validation)
 When a license key is entered in Settings → WP Pugmill, the plugin contacts the Lemon Squeezy API to validate and activate the license. This sends your license key and a unique site instance ID to Lemon Squeezy servers.
 - Service: [https://lemonsqueezy.com](https://lemonsqueezy.com)
@@ -85,7 +97,9 @@ No visitor data, user data, or personally identifiable information is ever trans
 
 = Privacy =
 
-- No visitor data is collected or transmitted by this plugin
+- No visitor data, IP addresses, or personally identifiable information is collected or transmitted by this plugin
+- Bot Analytics network participation requires explicit opt-in; no data is sent before consent is given
+- Bot traffic data submitted to the network is anonymized — your site URL is never transmitted; only a one-way hash is used
 - AI API keys are encrypted at rest using AES-256-CBC
 - License keys are encrypted at rest using AES-256-CBC
 - All external connections use HTTPS with SSL verification
@@ -139,6 +153,12 @@ Yes. WP Pugmill is focused on AEO (AI discoverability) and does not conflict wit
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.0.23 =
+* **Fix**: Reorder Bot Analytics quadrant grid — AI Crawlers (top-left), Search Engines (top-right), SEO Bots (bottom-left), Training Crawlers (bottom-right). Mobile view stacks in the same order.
+* **Fix**: Removed Plugin Update Checker (GitHub-based auto-update) in preparation for WordPress.org directory submission.
+* **Docs**: Added Pugmill Intelligence Network to External Services disclosure in readme.txt.
+* **Code**: Clarified that WPPUGMILL_NETWORK_SECRET is a public protocol version identifier, not a private secret.
 
 = 1.0.22 =
 * **UI**: Quadrant category description text now spans full block width.
