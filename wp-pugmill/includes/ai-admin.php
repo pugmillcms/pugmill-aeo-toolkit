@@ -4,6 +4,8 @@
  *
  * Settings-page actions that require manage_options (not per-post):
  *   - wppugmill_ajax_generate_site_summary() — /llms.txt + Organization schema summary
+ *   - wppugmill_ajax_improve_llms_score()    — llms.txt score improvement tips
+ *   - wppugmill_ajax_compat_tips()           — step-by-step conflict resolution tips
  *   - wppugmill_ajax_test_api_key()          — validate the stored API key
  *
  * Depends on: ai-client.php (wppugmill_call_ai, wppugmill_ai_request_args,
@@ -147,6 +149,56 @@ function wppugmill_ajax_improve_llms_score() {
 	}
 
 	wp_send_json_success( array( 'text' => sanitize_textarea_field( trim( $result ) ) ) );
+}
+
+// =========================================================================
+// Compatibility Tips — per-conflict step-by-step instructions
+//
+// 3rd-party AI service disclosure: sends only the plugin name and a short
+// task description (no post content, no visitor data) to the configured
+// AI provider. Disclosed in readme.txt "External Services" section.
+// =========================================================================
+
+add_action( 'wp_ajax_wppugmill_compat_tips', 'wppugmill_ajax_compat_tips' );
+
+/**
+ * AJAX handler — return step-by-step instructions for resolving a plugin conflict.
+ *
+ * Accepts plugin_name and instruction, returns numbered steps.
+ */
+function wppugmill_ajax_compat_tips() {
+	check_ajax_referer( 'wppugmill_compat_tips', 'nonce' );
+
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_send_json_error( array( 'message' => __( 'Insufficient permissions.', 'wp-pugmill' ) ), 403 );
+	}
+
+	$provider = get_option( 'wppugmill_ai_provider', 'anthropic' );
+	$api_key  = wppugmill_get_encrypted_option( 'wppugmill_ai_api_key', '' );
+	if ( empty( $api_key ) ) {
+		wp_send_json_error( array( 'message' => __( 'No API key configured.', 'wp-pugmill' ) ), 400 );
+	}
+
+	$plugin_name = sanitize_text_field( wp_unslash( $_POST['plugin_name'] ?? '' ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
+	$instruction = sanitize_text_field( wp_unslash( $_POST['instruction'] ?? '' ) );  // phpcs:ignore WordPress.Security.NonceVerification.Missing
+
+	if ( empty( $plugin_name ) || empty( $instruction ) ) {
+		wp_send_json_error( array( 'message' => __( 'Missing required parameters.', 'wp-pugmill' ) ), 400 );
+	}
+
+	$system = 'You are a WordPress expert helping a site owner resolve a plugin conflict with WP Pugmill — a WordPress plugin that generates AEO (Answer Engine Optimization) files: /sitemap.xml, /llms.txt, and /robots.txt additions, plus structured JSON-LD schema and on-page SEO meta tags. The site owner wants to disable a conflicting feature in another plugin so WP Pugmill\'s version can serve instead.'
+		. ' Give concise, numbered step-by-step instructions for the task described. Maximum 5 steps. Each step must be one plain-text sentence — no markdown, no bullet symbols, no headers.'
+		. ' IMPORTANT SAFETY RULES you must follow: (1) Never instruct the user to edit any code file directly — not functions.php, wp-config.php, or any other file. These edits can break the site and are not safe for non-developers. If a task would normally require a code edit, instead recommend a free plugin that handles it with a UI (for example, "Code Snippets" for adding PHP filters). (2) Never instruct the user to edit WordPress core files. (3) Prefer WordPress admin UI steps over any workaround that requires touching files.'
+		. ' Return only the numbered steps — nothing else.';
+	$user   = "Plugin: {$plugin_name}\nTask: {$instruction}";
+
+	$result = wppugmill_call_ai( $provider, $api_key, $system, $user, 300 );
+
+	if ( is_wp_error( $result ) ) {
+		wp_send_json_error( array( 'message' => $result->get_error_message() ), 500 );
+	}
+
+	wp_send_json_success( array( 'steps' => sanitize_textarea_field( trim( $result ) ) ) );
 }
 
 // =========================================================================

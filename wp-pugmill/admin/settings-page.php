@@ -28,8 +28,8 @@ function wppugmill_get_compatibility_data() {
 	$data = array(
 		'json_ld_conflicts'  => array(),
 		'llms_txt_conflicts' => array(),
-		'sitemap_conflicts'  => array(),
-		'robots_conflicts'   => array(),
+		'sitemap_conflicts'  => array(), // array of [ 'name' => string, 'instruction' => string ]
+		'robots_conflicts'   => array(), // array of [ 'name' => string, 'instruction' => string ]
 		'robots'             => array(
 			'discourage'   => false,
 			'has_file'     => false,
@@ -54,45 +54,110 @@ function wppugmill_get_compatibility_data() {
 
 	// ── llms.txt conflicts ────────────────────────────────────────────────
 	$llms_plugins = array(
-		'llms-txt/llms-txt.php'               => 'LLMs.txt',
-		'llmstxt/llmstxt.php'                 => 'LLMs.txt',
-		'ai-llms-txt/ai-llms-txt.php'         => 'AI LLMs.txt',
-		'llms-txt-for-wp/llms-txt-for-wp.php' => 'LLMs.txt for WP',
+		'llms-txt/llms-txt.php'               => array(
+			'name'        => 'LLMs.txt',
+			'instruction' => __( 'Deactivate the LLMs.txt plugin so WP Pugmill can serve /llms.txt with your full AEO metadata.', 'wp-pugmill' ),
+		),
+		'llmstxt/llmstxt.php'                 => array(
+			'name'        => 'LLMs.txt',
+			'instruction' => __( 'Deactivate the LLMs.txt plugin so WP Pugmill can serve /llms.txt with your full AEO metadata.', 'wp-pugmill' ),
+		),
+		'ai-llms-txt/ai-llms-txt.php'         => array(
+			'name'        => 'AI LLMs.txt',
+			'instruction' => __( 'Deactivate the AI LLMs.txt plugin so WP Pugmill can serve /llms.txt with your full AEO metadata.', 'wp-pugmill' ),
+		),
+		'llms-txt-for-wp/llms-txt-for-wp.php' => array(
+			'name'        => 'LLMs.txt for WP',
+			'instruction' => __( 'Deactivate the LLMs.txt for WP plugin so WP Pugmill can serve /llms.txt with your full AEO metadata.', 'wp-pugmill' ),
+		),
 	);
-	foreach ( $llms_plugins as $slug => $name ) {
+	foreach ( $llms_plugins as $slug => $info ) {
 		if ( is_plugin_active( $slug ) ) {
-			$data['llms_txt_conflicts'][] = $name;
+			$data['llms_txt_conflicts'][] = $info;
 		}
 	}
 
 	// ── Sitemap conflicts ─────────────────────────────────────────────────
+	// Note: WordPress core's built-in sitemap (since 5.5) serves /wp-sitemap.xml —
+	// a different URL from WP Pugmill's /sitemap.xml, so it is not a conflict.
+
 	$sitemap_plugins = array(
-		'jetpack/jetpack.php'                          => 'Jetpack',
-		'wordpress-seo/wp-seo.php'                     => 'Yoast SEO',
-		'seo-by-rank-math/rank-math.php'               => 'Rank Math SEO',
-		'all-in-one-seo-pack/all_in_one_seo_pack.php'  => 'All in One SEO',
-		'google-sitemap-generator/sitemap.php'         => 'Google XML Sitemaps',
-		'xml-sitemap-feed/xml-sitemap.php'             => 'XML Sitemap & Google News',
-		'wp-sitemap-page/wp-sitemap-page.php'          => 'WP Sitemap Page',
+		'jetpack/jetpack.php'                         => array(
+			'name'        => 'Jetpack',
+			'instruction' => __( 'Jetpack includes a sitemap module. Disable it in Jetpack → Settings → Traffic by turning off the Sitemap option.', 'wp-pugmill' ),
+			'module_check' => function() {
+				// Only flag Jetpack if its sitemap module is actually active.
+				return class_exists( 'Jetpack' ) && method_exists( 'Jetpack', 'is_module_active' )
+					? Jetpack::is_module_active( 'sitemaps' )
+					: class_exists( 'Jetpack_Sitemap_Manager' );
+			},
+		),
+		'wordpress-seo/wp-seo.php'                    => array(
+			'name'        => 'Yoast SEO',
+			'instruction' => __( 'Turn off XML Sitemaps in Yoast SEO → Features so WP Pugmill can serve /sitemap.xml.', 'wp-pugmill' ),
+		),
+		'seo-by-rank-math/rank-math.php'              => array(
+			'name'        => 'Rank Math SEO',
+			'instruction' => __( 'Disable the Sitemap module in Rank Math → Dashboard → Modules so WP Pugmill can serve /sitemap.xml.', 'wp-pugmill' ),
+		),
+		'all-in-one-seo-pack/all_in_one_seo_pack.php' => array(
+			'name'        => 'All in One SEO',
+			'instruction' => __( 'Turn off XML Sitemap in All in One SEO → Sitemaps so WP Pugmill can serve /sitemap.xml.', 'wp-pugmill' ),
+		),
+		'google-sitemap-generator/sitemap.php'        => array(
+			'name'        => 'Google XML Sitemaps',
+			'instruction' => __( 'Deactivate the Google XML Sitemaps plugin so WP Pugmill can serve /sitemap.xml.', 'wp-pugmill' ),
+		),
+		'xml-sitemap-feed/xml-sitemap.php'            => array(
+			'name'        => 'XML Sitemap & Google News',
+			'instruction' => __( 'Deactivate the XML Sitemap & Google News plugin so WP Pugmill can serve /sitemap.xml.', 'wp-pugmill' ),
+		),
+		'wp-sitemap-page/wp-sitemap-page.php'         => array(
+			'name'        => 'WP Sitemap Page',
+			'instruction' => __( 'Deactivate the WP Sitemap Page plugin so WP Pugmill can serve /sitemap.xml.', 'wp-pugmill' ),
+		),
 	);
-	foreach ( $sitemap_plugins as $slug => $name ) {
-		if ( is_plugin_active( $slug ) ) {
-			$data['sitemap_conflicts'][] = $name;
+	foreach ( $sitemap_plugins as $slug => $info ) {
+		if ( ! is_plugin_active( $slug ) ) {
+			continue;
 		}
+		// Some plugins (Jetpack) only conflict when a specific module is enabled.
+		if ( isset( $info['module_check'] ) && ! call_user_func( $info['module_check'] ) ) {
+			continue;
+		}
+		$data['sitemap_conflicts'][] = array(
+			'name'        => $info['name'],
+			'instruction' => $info['instruction'],
+		);
 	}
 
 	// ── Robots.txt filter conflicts ───────────────────────────────────────
-	// These plugins add their own robots_txt filter hooks, which can result in
-	// duplicate Sitemap: directives or conflicting Disallow/Allow rules.
+	// These plugins hook into robots_txt and add their own Sitemap: directives,
+	// resulting in duplicates when WP Pugmill additions are also enabled.
 	$robots_plugins = array(
-		'jetpack/jetpack.php'                         => 'Jetpack',
-		'wordpress-seo/wp-seo.php'                    => 'Yoast SEO',
-		'seo-by-rank-math/rank-math.php'              => 'Rank Math SEO',
-		'all-in-one-seo-pack/all_in_one_seo_pack.php' => 'All in One SEO',
+		'jetpack/jetpack.php'                         => array(
+			'name'        => 'Jetpack',
+			'instruction' => __( 'Jetpack adds its own Sitemap: directive to robots.txt. If WP Pugmill additions are also enabled you will have duplicate Sitemap: entries. Disable the Jetpack sitemap module (Jetpack → Settings → Traffic) to resolve this.', 'wp-pugmill' ),
+		),
+		'wordpress-seo/wp-seo.php'                    => array(
+			'name'        => 'Yoast SEO',
+			'instruction' => __( 'Yoast SEO adds its own Sitemap: directive to robots.txt. Disable WP Pugmill\'s robots.txt additions below to avoid duplicates, or turn off Yoast\'s sitemap feature.', 'wp-pugmill' ),
+		),
+		'seo-by-rank-math/rank-math.php'              => array(
+			'name'        => 'Rank Math SEO',
+			'instruction' => __( 'Rank Math adds its own Sitemap: directive to robots.txt. Disable WP Pugmill\'s robots.txt additions below to avoid duplicates, or turn off Rank Math\'s sitemap module.', 'wp-pugmill' ),
+		),
+		'all-in-one-seo-pack/all_in_one_seo_pack.php' => array(
+			'name'        => 'All in One SEO',
+			'instruction' => __( 'All in One SEO adds its own directives to robots.txt. Disable WP Pugmill\'s robots.txt additions below to avoid duplicates.', 'wp-pugmill' ),
+		),
 	);
-	foreach ( $robots_plugins as $slug => $name ) {
+	foreach ( $robots_plugins as $slug => $info ) {
 		if ( is_plugin_active( $slug ) ) {
-			$data['robots_conflicts'][] = $name;
+			$data['robots_conflicts'][] = array(
+				'name'        => $info['name'],
+				'instruction' => $info['instruction'],
+			);
 		}
 	}
 
@@ -1081,65 +1146,16 @@ function wppugmill_render_settings_page() {
 		     PLUGIN COMPATIBILITY TAB
 		     ════════════════════════════════════════════════════════════ -->
 		<?php
-		$compat = wppugmill_get_compatibility_data();
-		$has_issues = ! empty( $compat['json_ld_conflicts'] ) || ! empty( $compat['llms_txt_conflicts'] )
-			|| ! empty( $compat['sitemap_conflicts'] ) || ! empty( $compat['robots_conflicts'] )
-			|| $compat['robots']['discourage'] || $compat['robots']['blocks_all'] || ! empty( $compat['robots']['blocked_bots'] );
-
-		$disable_sitemap  = (int) get_option( 'wppugmill_disable_sitemap', 0 );
-		$disable_llms     = (int) get_option( 'wppugmill_disable_llms_txt', 0 );
+		$compat           = wppugmill_get_compatibility_data();
 		$disable_robots   = (int) get_option( 'wppugmill_disable_robots_append', 0 );
 		$disable_json_ld  = (int) get_option( 'wppugmill_disable_json_ld', 0 );
 		$disable_seo_meta = (int) get_option( 'wppugmill_disable_seo_meta', 0 );
 		?>
 		<p style="<?php echo esc_attr( $p_style ); ?> margin-top:24px;">
-			<?php esc_html_e( 'See what each of your plugins is generating for the three key files that AI crawlers and search engines rely on. When another plugin is already handling one of these files, WP Pugmill can step aside — your AEO metadata is always saved regardless of which plugin handles the output.', 'wp-pugmill' ); ?>
+			<?php esc_html_e( 'WP Pugmill generates three key files for AI crawlers and search engines. If another plugin is already handling one of these files, you\'ll need to disable that feature in the other plugin to let WP Pugmill\'s version serve. This page shows what WP Pugmill has ready and flags any conflicts it detects.', 'wp-pugmill' ); ?>
 		</p>
 
 		<style>
-		.wppugmill-file-grid {
-			display: grid;
-			grid-template-columns: 1fr 1fr;
-			gap: 14px;
-			margin-top: 12px;
-		}
-		@media (max-width: 900px) {
-			.wppugmill-file-grid { grid-template-columns: 1fr; }
-		}
-		.wppugmill-owner-col {
-			display: block;
-			border: 2px solid #ddd;
-			border-radius: 6px;
-			overflow: hidden;
-			cursor: pointer;
-			transition: border-color .15s;
-		}
-		.wppugmill-owner-col.is-active {
-			border-color: #7c3aed;
-		}
-		.wppugmill-col-header {
-			padding: 10px 14px;
-			background: #f6f7f7;
-			display: flex;
-			align-items: center;
-			gap: 8px;
-		}
-		.wppugmill-owner-col.is-active .wppugmill-col-header {
-			background: #f5f0ff;
-		}
-		.wppugmill-col-badge {
-			font-size: 11px;
-			background: #7c3aed;
-			color: #fff;
-			padding: 2px 8px;
-			border-radius: 9999px;
-			display: none;
-			margin-left: auto;
-			flex-shrink: 0;
-		}
-		.wppugmill-owner-col.is-active .wppugmill-col-badge {
-			display: inline-block;
-		}
 		.wppugmill-col-preview {
 			margin: 0;
 			padding: 10px 14px;
@@ -1162,24 +1178,61 @@ function wppugmill_render_settings_page() {
 			font-weight: 600;
 			margin: 0 0 4px;
 		}
-		.wppugmill-file-note {
-			font-size: 12px;
-			color: #666;
-			margin: 8px 0 0;
-			line-height: 1.5;
-		}
-		.wppugmill-single-col {
+		.wppugmill-preview-card {
 			border: 2px solid #46b450;
 			border-radius: 6px;
 			overflow: hidden;
 			margin-top: 12px;
 		}
-		.wppugmill-single-col-header {
+		.wppugmill-preview-card.has-conflict {
+			border-color: #ddd;
+		}
+		.wppugmill-preview-card-header {
 			padding: 10px 14px;
 			background: #f0faf0;
 			display: flex;
 			align-items: center;
 			gap: 8px;
+		}
+		.wppugmill-preview-card.has-conflict .wppugmill-preview-card-header {
+			background: #f6f7f7;
+		}
+		.wppugmill-conflict-block {
+			margin-top: 12px;
+			border: 1px solid #f5c542;
+			border-left: 4px solid #ffb900;
+			border-radius: 0 4px 4px 0;
+			background: #fff8e1;
+			padding: 12px 16px;
+		}
+		.wppugmill-conflict-block-title {
+			font-weight: 600;
+			font-size: 13px;
+			margin-bottom: 10px;
+		}
+		.wppugmill-conflict-item {
+			margin-bottom: 8px;
+			font-size: 13px;
+			line-height: 1.5;
+			color: #444;
+		}
+		.wppugmill-conflict-item:last-child { margin-bottom: 0; }
+		.wppugmill-conflict-item strong { color: #222; }
+		.wppugmill-no-conflict {
+			font-size: 12px;
+			color: #46b450;
+			margin-top: 8px;
+		}
+		.wppugmill-compat-tips-result {
+			margin-top: 8px;
+			font-size: 12px;
+			color: #333;
+			background: #f9f4ff;
+			border-left: 3px solid #7c3aed;
+			padding: 8px 12px;
+			border-radius: 0 4px 4px 0;
+			white-space: pre-line;
+			display: none;
 		}
 		</style>
 
@@ -1189,152 +1242,139 @@ function wppugmill_render_settings_page() {
 		<!-- ── OUTPUT FILES ─────────────────────────────────────────── -->
 		<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px 24px; margin-top:0;">
 		<h2 style="<?php echo esc_attr( $h2_style ); ?> margin-top:0;"><?php esc_html_e( 'Output Files', 'wp-pugmill' ); ?></h2>
-		<p style="<?php echo esc_attr( $p_style ); ?>"><?php esc_html_e( 'Click a column to choose which plugin handles each file. The active column (purple border) is what your visitors and AI crawlers will see.', 'wp-pugmill' ); ?></p>
 
 		<!-- ── sitemap.xml ─────────────────────────────────────────── -->
 		<div class="wppugmill-file-row">
 			<h3>/sitemap.xml</h3>
-			<p style="<?php echo esc_attr( $p_style ); ?>"><?php esc_html_e( 'Lists all your public posts and pages so search engines and AI crawlers can discover them. WP Pugmill\'s version adds an AI-readable link to each entry (xhtml:link alternate), pointing crawlers directly to the structured AEO version of each page.', 'wp-pugmill' ); ?></p>
+			<p style="<?php echo esc_attr( $p_style ); ?>"><?php esc_html_e( 'Lists all your public posts and pages so search engines and AI crawlers can discover them. WP Pugmill\'s version adds an xhtml:link alternate to each entry, pointing crawlers directly to the structured AEO version of each page.', 'wp-pugmill' ); ?></p>
 
-			<?php if ( ! empty( $compat['sitemap_conflicts'] ) ) : ?>
-			<?php $other_sitemap = implode( ' / ', $compat['sitemap_conflicts'] ); ?>
-			<div class="wppugmill-file-grid">
-
-				<!-- Other plugin column -->
-				<label class="wppugmill-owner-col <?php echo $disable_sitemap ? 'is-active' : ''; ?>"
-					data-col-group="sitemap" data-col-value="1">
-					<div class="wppugmill-col-header">
-						<input type="radio" name="wppugmill_disable_sitemap" value="1"
-							<?php checked( 1, $disable_sitemap ); ?> style="margin:0;">
-						<strong style="font-size:13px;"><?php echo esc_html( $other_sitemap ); ?></strong>
-						<span class="wppugmill-col-badge"><?php esc_html_e( 'Active', 'wp-pugmill' ); ?></span>
-					</div>
-					<pre class="wppugmill-col-preview" id="wppugmill-live-sitemap"><?php esc_html_e( 'Loading live output…', 'wp-pugmill' ); ?></pre>
-				</label>
-
-				<!-- WP Pugmill column -->
-				<label class="wppugmill-owner-col <?php echo ! $disable_sitemap ? 'is-active' : ''; ?>"
-					data-col-group="sitemap" data-col-value="0">
-					<div class="wppugmill-col-header">
-						<input type="radio" name="wppugmill_disable_sitemap" value="0"
-							<?php checked( 0, $disable_sitemap ); ?> style="margin:0;">
-						<strong style="font-size:13px;">WP Pugmill</strong>
-						<span class="wppugmill-col-badge"><?php esc_html_e( 'Active', 'wp-pugmill' ); ?></span>
-					</div>
-					<pre class="wppugmill-col-preview"><?php echo esc_html( wppugmill_preview_sitemap_xml() ); ?></pre>
-				</label>
-
-			</div>
-			<p class="wppugmill-file-note">
-				<?php printf(
-					esc_html__( 'Both %s and WP Pugmill are trying to serve /sitemap.xml. WP Pugmill\'s rewrite rule takes priority — choose which plugin should be responsible.', 'wp-pugmill' ),
-					esc_html( $other_sitemap )
-				); ?>
-			</p>
-
-			<?php else : ?>
-			<div class="wppugmill-single-col">
-				<div class="wppugmill-single-col-header">
-					<span style="color:#46b450; font-weight:600; font-size:13px;">&#10003; WP Pugmill — Active</span>
-					<span style="font-size:12px; color:#666; margin-left:8px;"><?php esc_html_e( 'No sitemap conflicts detected', 'wp-pugmill' ); ?></span>
+			<div class="wppugmill-preview-card <?php echo ! empty( $compat['sitemap_conflicts'] ) ? 'has-conflict' : ''; ?>">
+				<div class="wppugmill-preview-card-header">
+					<?php if ( empty( $compat['sitemap_conflicts'] ) ) : ?>
+					<span style="color:#46b450; font-weight:600; font-size:13px;">&#10003; WP Pugmill</span>
+					<span style="font-size:12px; color:#666;"><?php esc_html_e( 'No conflicts detected', 'wp-pugmill' ); ?></span>
+					<?php else : ?>
+					<span style="font-weight:600; font-size:13px; color:#333;">WP Pugmill</span>
+					<span style="font-size:12px; color:#888;"><?php esc_html_e( 'Preview', 'wp-pugmill' ); ?></span>
+					<?php endif; ?>
 				</div>
 				<pre class="wppugmill-col-preview"><?php echo esc_html( wppugmill_preview_sitemap_xml() ); ?></pre>
 			</div>
+
+			<?php if ( ! empty( $compat['sitemap_conflicts'] ) ) : ?>
+			<div class="wppugmill-conflict-block">
+				<div class="wppugmill-conflict-block-title">
+					&#9888; <?php printf(
+						esc_html( _n( '%d conflict detected', '%d conflicts detected', count( $compat['sitemap_conflicts'] ), 'wp-pugmill' ) ),
+						count( $compat['sitemap_conflicts'] )
+					); ?> &mdash; <?php esc_html_e( 'another plugin is also generating /sitemap.xml', 'wp-pugmill' ); ?>
+				</div>
+				<?php foreach ( $compat['sitemap_conflicts'] as $conflict ) : ?>
+				<div class="wppugmill-conflict-item">
+					<strong><?php echo esc_html( $conflict['name'] ); ?>:</strong> <?php echo esc_html( $conflict['instruction'] ); ?>
+					<?php if ( 'ai' === $mode && ! empty( $api_key ) ) : ?>
+					<br><button type="button"
+						class="wppugmill-compat-tips-btn"
+						data-plugin="<?php echo esc_attr( $conflict['name'] ); ?>"
+						data-instruction="<?php echo esc_attr( $conflict['instruction'] ); ?>"
+						style="display:inline-flex; align-items:center; gap:6px; padding:7px 16px; font-size:12px; font-weight:600; background:#7c3aed; color:#fff; border:none; border-radius:4px; cursor:pointer; white-space:nowrap; margin-top:6px;"
+					>&#10024; <?php esc_html_e( 'Get steps', 'wp-pugmill' ); ?></button>
+					<div class="wppugmill-compat-tips-result"></div>
+					<?php endif; ?>
+				</div>
+				<?php endforeach; ?>
+			</div>
+			<?php else : ?>
+			<p class="wppugmill-no-conflict">&#10003; <?php esc_html_e( 'WP Pugmill is the only sitemap generator active.', 'wp-pugmill' ); ?></p>
 			<?php endif; ?>
 		</div><!-- /sitemap row -->
 
 		<!-- ── llms.txt ────────────────────────────────────────────── -->
 		<div class="wppugmill-file-row">
 			<h3>/llms.txt</h3>
-			<p style="<?php echo esc_attr( $p_style ); ?>"><?php esc_html_e( 'An index file specifically for AI language models — listing your posts with titles, summaries, and direct links. WP Pugmill\'s version includes per-post AEO data (summaries, Q&A, entities) that generic llms.txt plugins don\'t generate.', 'wp-pugmill' ); ?></p>
+			<p style="<?php echo esc_attr( $p_style ); ?>"><?php esc_html_e( 'An index file for AI language models — listing your posts with titles, summaries, and direct links. WP Pugmill\'s version includes per-post AEO data (summaries, Q&A, entities) that generic llms.txt plugins don\'t generate.', 'wp-pugmill' ); ?></p>
 
-			<?php if ( ! empty( $compat['llms_txt_conflicts'] ) ) : ?>
-			<?php $other_llms = implode( ' / ', $compat['llms_txt_conflicts'] ); ?>
-			<div class="wppugmill-file-grid">
-
-				<!-- Other plugin column -->
-				<label class="wppugmill-owner-col <?php echo $disable_llms ? 'is-active' : ''; ?>"
-					data-col-group="llms" data-col-value="1">
-					<div class="wppugmill-col-header">
-						<input type="radio" name="wppugmill_disable_llms_txt" value="1"
-							<?php checked( 1, $disable_llms ); ?> style="margin:0;">
-						<strong style="font-size:13px;"><?php echo esc_html( $other_llms ); ?></strong>
-						<span class="wppugmill-col-badge"><?php esc_html_e( 'Active', 'wp-pugmill' ); ?></span>
-					</div>
-					<pre class="wppugmill-col-preview" id="wppugmill-live-llms"><?php esc_html_e( 'Loading live output…', 'wp-pugmill' ); ?></pre>
-				</label>
-
-				<!-- WP Pugmill column -->
-				<label class="wppugmill-owner-col <?php echo ! $disable_llms ? 'is-active' : ''; ?>"
-					data-col-group="llms" data-col-value="0">
-					<div class="wppugmill-col-header">
-						<input type="radio" name="wppugmill_disable_llms_txt" value="0"
-							<?php checked( 0, $disable_llms ); ?> style="margin:0;">
-						<strong style="font-size:13px;">WP Pugmill</strong>
-						<span class="wppugmill-col-badge"><?php esc_html_e( 'Active', 'wp-pugmill' ); ?></span>
-					</div>
-					<pre class="wppugmill-col-preview"><?php echo esc_html( wppugmill_preview_llms_txt_snippet() ); ?></pre>
-				</label>
-
-			</div>
-			<p class="wppugmill-file-note">
-				<?php printf(
-					esc_html__( 'Both %s and WP Pugmill are trying to serve /llms.txt. Two plugins serving the same URL will give AI crawlers inconsistent results — choose one.', 'wp-pugmill' ),
-					esc_html( $other_llms )
-				); ?>
-			</p>
-
-			<?php else : ?>
-			<div class="wppugmill-single-col">
-				<div class="wppugmill-single-col-header">
-					<span style="color:#46b450; font-weight:600; font-size:13px;">&#10003; WP Pugmill — Active</span>
-					<span style="font-size:12px; color:#666; margin-left:8px;"><?php esc_html_e( 'No llms.txt conflicts detected', 'wp-pugmill' ); ?></span>
+			<div class="wppugmill-preview-card <?php echo ! empty( $compat['llms_txt_conflicts'] ) ? 'has-conflict' : ''; ?>">
+				<div class="wppugmill-preview-card-header">
+					<?php if ( empty( $compat['llms_txt_conflicts'] ) ) : ?>
+					<span style="color:#46b450; font-weight:600; font-size:13px;">&#10003; WP Pugmill</span>
+					<span style="font-size:12px; color:#666;"><?php esc_html_e( 'No conflicts detected', 'wp-pugmill' ); ?></span>
+					<?php else : ?>
+					<span style="font-weight:600; font-size:13px; color:#333;">WP Pugmill</span>
+					<span style="font-size:12px; color:#888;"><?php esc_html_e( 'Preview', 'wp-pugmill' ); ?></span>
+					<?php endif; ?>
 				</div>
 				<pre class="wppugmill-col-preview"><?php echo esc_html( wppugmill_preview_llms_txt_snippet() ); ?></pre>
 			</div>
+
+			<?php if ( ! empty( $compat['llms_txt_conflicts'] ) ) : ?>
+			<div class="wppugmill-conflict-block">
+				<div class="wppugmill-conflict-block-title">
+					&#9888; <?php printf(
+						esc_html( _n( '%d conflict detected', '%d conflicts detected', count( $compat['llms_txt_conflicts'] ), 'wp-pugmill' ) ),
+						count( $compat['llms_txt_conflicts'] )
+					); ?> &mdash; <?php esc_html_e( 'another plugin is also generating /llms.txt', 'wp-pugmill' ); ?>
+				</div>
+				<?php foreach ( $compat['llms_txt_conflicts'] as $conflict ) : ?>
+				<div class="wppugmill-conflict-item">
+					<strong><?php echo esc_html( $conflict['name'] ); ?>:</strong> <?php echo esc_html( $conflict['instruction'] ); ?>
+					<?php if ( 'ai' === $mode && ! empty( $api_key ) ) : ?>
+					<br><button type="button"
+						class="wppugmill-compat-tips-btn"
+						data-plugin="<?php echo esc_attr( $conflict['name'] ); ?>"
+						data-instruction="<?php echo esc_attr( $conflict['instruction'] ); ?>"
+						style="display:inline-flex; align-items:center; gap:6px; padding:7px 16px; font-size:12px; font-weight:600; background:#7c3aed; color:#fff; border:none; border-radius:4px; cursor:pointer; white-space:nowrap; margin-top:6px;"
+					>&#10024; <?php esc_html_e( 'Get steps', 'wp-pugmill' ); ?></button>
+					<div class="wppugmill-compat-tips-result"></div>
+					<?php endif; ?>
+				</div>
+				<?php endforeach; ?>
+			</div>
+			<?php else : ?>
+			<p class="wppugmill-no-conflict">&#10003; <?php esc_html_e( 'No other llms.txt plugins detected.', 'wp-pugmill' ); ?></p>
 			<?php endif; ?>
 		</div><!-- /llms.txt row -->
 
 		<!-- ── robots.txt ──────────────────────────────────────────── -->
 		<div class="wppugmill-file-row" style="margin-bottom:0;">
 			<h3>/robots.txt</h3>
-			<p style="<?php echo esc_attr( $p_style ); ?>"><?php esc_html_e( 'WP Pugmill appends two lines to your existing robots.txt: a Sitemap: directive pointing to /sitemap.xml, and an LLMs-Txt: directive pointing to /llms.txt. This is additive — it does not replace what\'s already there. If another plugin also adds a Sitemap: directive, you may end up with duplicates.', 'wp-pugmill' ); ?></p>
+			<p style="<?php echo esc_attr( $p_style ); ?>"><?php esc_html_e( 'WP Pugmill appends two lines to your existing robots.txt: a Sitemap: directive pointing to /sitemap.xml, and an LLMs-Txt: directive pointing to /llms.txt. This is additive — it does not replace what\'s already there.', 'wp-pugmill' ); ?></p>
 
-			<div class="wppugmill-file-grid">
-
-				<!-- Without WP Pugmill column -->
-				<label class="wppugmill-owner-col <?php echo $disable_robots ? 'is-active' : ''; ?>"
-					data-col-group="robots" data-col-value="1">
-					<div class="wppugmill-col-header">
-						<input type="radio" name="wppugmill_disable_robots_append" value="1"
-							<?php checked( 1, $disable_robots ); ?> style="margin:0;">
-						<strong style="font-size:13px;"><?php esc_html_e( 'Without WP Pugmill', 'wp-pugmill' ); ?></strong>
-						<span class="wppugmill-col-badge"><?php esc_html_e( 'Active', 'wp-pugmill' ); ?></span>
-					</div>
-					<pre class="wppugmill-col-preview" id="wppugmill-live-robots"><?php esc_html_e( 'Loading live output…', 'wp-pugmill' ); ?></pre>
-				</label>
-
-				<!-- With WP Pugmill column -->
-				<label class="wppugmill-owner-col <?php echo ! $disable_robots ? 'is-active' : ''; ?>"
-					data-col-group="robots" data-col-value="0">
-					<div class="wppugmill-col-header">
-						<input type="radio" name="wppugmill_disable_robots_append" value="0"
-							<?php checked( 0, $disable_robots ); ?> style="margin:0;">
-						<strong style="font-size:13px;"><?php esc_html_e( 'With WP Pugmill additions', 'wp-pugmill' ); ?></strong>
-						<span class="wppugmill-col-badge"><?php esc_html_e( 'Active', 'wp-pugmill' ); ?></span>
-					</div>
-					<pre class="wppugmill-col-preview"><?php echo esc_html( '(your current robots.txt)' . "\n" . wppugmill_preview_robots_additions() ); ?></pre>
-				</label>
-
+			<div class="wppugmill-preview-card <?php echo ! empty( $compat['robots_conflicts'] ) ? 'has-conflict' : ''; ?>" style="margin-top:12px;">
+				<div class="wppugmill-preview-card-header">
+					<span style="font-weight:600; font-size:13px; color:#333;"><?php esc_html_e( 'WP Pugmill additions', 'wp-pugmill' ); ?></span>
+				</div>
+				<pre class="wppugmill-col-preview" id="wppugmill-live-robots"><?php esc_html_e( 'Loading live robots.txt…', 'wp-pugmill' ); ?></pre>
 			</div>
+
 			<?php if ( ! empty( $compat['robots_conflicts'] ) ) : ?>
-			<p class="wppugmill-file-note">
-				<?php printf(
-					esc_html__( 'Note: %s may also be adding Sitemap: directives to your robots.txt, which could result in duplicates. Review the live output carefully.', 'wp-pugmill' ),
-					esc_html( implode( ', ', $compat['robots_conflicts'] ) )
-				); ?>
-			</p>
+			<div class="wppugmill-conflict-block">
+				<div class="wppugmill-conflict-block-title">
+					&#9888; <?php esc_html_e( 'Potential duplicate directives in robots.txt', 'wp-pugmill' ); ?>
+				</div>
+				<?php foreach ( $compat['robots_conflicts'] as $conflict ) : ?>
+				<div class="wppugmill-conflict-item">
+					<strong><?php echo esc_html( $conflict['name'] ); ?>:</strong> <?php echo esc_html( $conflict['instruction'] ); ?>
+					<?php if ( 'ai' === $mode && ! empty( $api_key ) ) : ?>
+					<br><button type="button"
+						class="wppugmill-compat-tips-btn"
+						data-plugin="<?php echo esc_attr( $conflict['name'] ); ?>"
+						data-instruction="<?php echo esc_attr( $conflict['instruction'] ); ?>"
+						style="display:inline-flex; align-items:center; gap:6px; padding:7px 16px; font-size:12px; font-weight:600; background:#7c3aed; color:#fff; border:none; border-radius:4px; cursor:pointer; white-space:nowrap; margin-top:6px;"
+					>&#10024; <?php esc_html_e( 'Get steps', 'wp-pugmill' ); ?></button>
+					<div class="wppugmill-compat-tips-result"></div>
+					<?php endif; ?>
+				</div>
+				<?php endforeach; ?>
+			</div>
 			<?php endif; ?>
+
+			<label style="display:block; margin-top:12px; font-size:13px;">
+				<input type="hidden" name="wppugmill_disable_robots_append" value="0">
+				<input type="checkbox" name="wppugmill_disable_robots_append" value="1" <?php checked( 1, $disable_robots ); ?>>
+				<?php esc_html_e( 'Disable WP Pugmill robots.txt additions', 'wp-pugmill' ); ?>
+			</label>
+			<p style="<?php echo esc_attr( $p_style ); ?> margin:4px 0 0 20px; font-size:12px;"><?php esc_html_e( 'Check this if another plugin is already adding Sitemap: directives and you want to avoid duplicates.', 'wp-pugmill' ); ?></p>
 		</div><!-- /robots.txt row -->
 
 		</div><!-- /output files card -->
@@ -1427,63 +1467,62 @@ function wppugmill_render_settings_page() {
 
 		<script>
 		(function () {
-			// ── Live URL fetches ──────────────────────────────────────────
-			var fetches = [
-				{ id: 'wppugmill-live-sitemap', url: <?php echo wp_json_encode( home_url( '/sitemap.xml' ) ); ?> },
-				{ id: 'wppugmill-live-llms',    url: <?php echo wp_json_encode( home_url( '/llms.txt' ) ); ?>    },
-				{ id: 'wppugmill-live-robots',  url: <?php echo wp_json_encode( home_url( '/robots.txt' ) ); ?>  },
-			];
-			fetches.forEach( function ( item ) {
-				var el = document.getElementById( item.id );
-				if ( ! el ) { return; }
-				fetch( item.url, { credentials: 'omit', cache: 'no-store' } )
+			// Load live robots.txt into the preview panel.
+			var el = document.getElementById( 'wppugmill-live-robots' );
+			if ( el ) {
+				fetch( <?php echo wp_json_encode( home_url( '/robots.txt' ) ); ?>, { credentials: 'omit', cache: 'no-store' } )
 					.then( function ( r ) { return r.text(); } )
 					.then( function ( text ) {
-						// Trim to first 60 lines to keep the preview readable.
 						var lines = text.split( '\n' ).slice( 0, 60 );
-						if ( text.split( '\n' ).length > 60 ) {
-							lines.push( '… (truncated)' );
-						}
+						if ( text.split( '\n' ).length > 60 ) { lines.push( '… (truncated)' ); }
 						el.textContent = lines.join( '\n' );
 					} )
 					.catch( function () {
-						el.textContent = '(Could not load — check browser console)';
+						el.textContent = '(Could not load)';
 					} );
-			} );
-
-			// ── Column toggle on radio click ──────────────────────────────
-			function updateColHighlight( group ) {
-				var cols = document.querySelectorAll( '[data-col-group="' + group + '"]' );
-				cols.forEach( function ( col ) {
-					var radio = col.querySelector( 'input[type="radio"]' );
-					if ( radio && radio.checked ) {
-						col.classList.add( 'is-active' );
-					} else {
-						col.classList.remove( 'is-active' );
-					}
-				} );
 			}
+		}());
 
-			document.querySelectorAll( '.wppugmill-owner-col input[type="radio"]' ).forEach( function ( radio ) {
-				radio.addEventListener( 'change', function () {
-					var group = radio.closest( '[data-col-group]' ).getAttribute( 'data-col-group' );
-					updateColHighlight( group );
-				} );
-			} );
-
-			// Also allow clicking the whole column label to select its radio.
-			document.querySelectorAll( '.wppugmill-owner-col' ).forEach( function ( col ) {
-				col.addEventListener( 'click', function ( e ) {
-					// Don't interfere if the click is directly on the radio itself.
-					if ( e.target.type === 'radio' ) { return; }
-					var radio = col.querySelector( 'input[type="radio"]' );
-					if ( radio && ! radio.checked ) {
-						radio.checked = true;
-						radio.dispatchEvent( new Event( 'change' ) );
-					}
+		<?php if ( 'ai' === $mode && ! empty( $api_key ) ) : ?>
+		// ── Compat tips buttons ──────────────────────────────────────
+		(function () {
+			var nonce = <?php echo wp_json_encode( wp_create_nonce( 'wppugmill_compat_tips' ) ); ?>;
+			document.querySelectorAll( '.wppugmill-compat-tips-btn' ).forEach( function ( btn ) {
+				btn.addEventListener( 'click', function () {
+					var resultEl = btn.nextElementSibling;
+					var originalHTML = btn.innerHTML;
+					btn.disabled = true;
+					btn.classList.add( 'wppugmill-loading' );
+					btn.innerHTML = '<?php echo esc_js( __( 'Getting steps…', 'wp-pugmill' ) ); ?>';
+					resultEl.style.display = 'none';
+					var body = new FormData();
+					body.append( 'action', 'wppugmill_compat_tips' );
+					body.append( 'nonce', nonce );
+					body.append( 'plugin_name', btn.dataset.plugin );
+					body.append( 'instruction', btn.dataset.instruction );
+					fetch( ajaxurl, { method: 'POST', credentials: 'same-origin', body: body } )
+						.then( function ( r ) { return r.json(); } )
+						.then( function ( data ) {
+							if ( data.success ) {
+								resultEl.textContent = data.data.steps;
+							} else {
+								resultEl.textContent = ( data.data && data.data.message ) ? data.data.message : 'An error occurred.';
+							}
+							resultEl.style.display = 'block';
+						} )
+						.catch( function () {
+							resultEl.textContent = 'Request failed.';
+							resultEl.style.display = 'block';
+						} )
+						.finally( function () {
+							btn.classList.remove( 'wppugmill-loading' );
+							btn.disabled = false;
+							btn.innerHTML = originalHTML;
+						} );
 				} );
 			} );
 		}());
+		<?php endif; ?>
 		</script>
 
 		<!-- ── Import from Another SEO Plugin ───────────────────────── -->
