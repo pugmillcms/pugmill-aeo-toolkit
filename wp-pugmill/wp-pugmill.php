@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 // the full PHP generation time for bot requests.
 define( 'WPPUGMILL_REQUEST_START', microtime( true ) );
 
-define( 'WPPUGMILL_VERSION',         '1.0.24' );
+define( 'WPPUGMILL_VERSION',         '1.0.25' );
 define( 'WPPUGMILL_PLUGIN_DIR',      plugin_dir_path( __FILE__ ) );
 define( 'WPPUGMILL_PLUGIN_URL',      plugin_dir_url( __FILE__ ) );
 define( 'WPPUGMILL_PLUGIN_FILE',     __FILE__ );
