@@ -4,7 +4,7 @@ Tags: AEO, answer engine optimization, AI, llms.txt, schema, structured data, SE
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.0.41
+Stable tag: 1.0.42
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -12,7 +12,7 @@ Transform your WordPress content from SEO slop into AI-ready clay — structured
 
 == Description ==
 
-**WP Pugmill** is the first WordPress plugin built specifically for the age of answer engines. While traditional SEO optimizes for Google's blue links, AEO (Answer Engine Optimization) optimizes for AI systems that synthesize and cite content directly.
+**WP Pugmill** is a WordPress plugin built for the age of answer engines. While traditional SEO optimizes for Google's blue links, AEO (Answer Engine Optimization) optimizes for AI systems that synthesize and cite content directly.
 
 When someone asks ChatGPT, Perplexity, or Gemini a question your content answers — WP Pugmill helps make sure they find and cite you.
 
@@ -153,6 +153,9 @@ Yes. WP Pugmill is focused on AEO (AI discoverability) and does not conflict wit
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.0.42 =
+* **Fix**: Fatal error on activation caused by duplicate `wppugmill_mode()` function definition — removed redundant declaration from `license.php` (canonical version with dev-mode bypass lives in `wp-pugmill.php`).
 
 = 1.0.41 =
 * **Change**: License validation migrated from Lemon Squeezy to self-hosted Stripe-backed system at pugmillaeo.com. Domain registration now happens passively on first validation — no separate activation call required. Supports up to 3 sites per license key.

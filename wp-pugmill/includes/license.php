@@ -63,18 +63,6 @@ function wppugmill_license_status() {
 }
 
 /**
- * Determine the plugin's operating mode.
- *
- * @return string  'free' | 'ai' | 'pro'
- */
-function wppugmill_mode() {
-	if ( wppugmill_is_licensed() ) {
-		return 'ai';
-	}
-	return 'free';
-}
-
-/**
  * Validate the stored license key against the pugmillaeo.com API.
  * Sends the site's domain so it is registered on first call.
  *
