@@ -4,7 +4,7 @@ Tags: AEO, answer engine optimization, AI, llms.txt, schema, structured data, SE
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.0.40
+Stable tag: 1.0.41
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -153,6 +153,10 @@ Yes. WP Pugmill is focused on AEO (AI discoverability) and does not conflict wit
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.0.41 =
+* **Change**: License validation migrated from Lemon Squeezy to self-hosted Stripe-backed system at pugmillaeo.com. Domain registration now happens passively on first validation — no separate activation call required. Supports up to 3 sites per license key.
+
 
 = 1.0.40 =
 * **Fix**: Jetpack robots.txt conflict warning now correctly gates on the XML Sitemaps module being active (same guard used by the sitemap conflict check). Previously it fired for any active Jetpack install regardless of whether sitemaps were on.

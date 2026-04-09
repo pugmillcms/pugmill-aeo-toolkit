@@ -1,16 +1,16 @@
 <?php
 /**
- * License validation via Lemon Squeezy.
+ * License validation via pugmillaeo.com (self-hosted, Stripe-backed).
  *
  * Modes:
  *   free  — no license key entered
- *   ai    — valid Lemon Squeezy license key (unlocks BYOK AI features)
+ *   ai    — valid active license key (unlocks BYOK AI features)
  *   pro   — future tier (reserved)
  *
  * - Keys are stored encrypted via includes/encryption.php
  * - Validation cached for 6 hours (not 24 — revoked licenses invalidate sooner)
  * - Cache busted when key changes
- * - Each site tracked as a unique instance (prevents key sharing)
+ * - Domain registered automatically on first validate call (up to 3 sites)
  * - All external calls use explicit sslverify: true
  *
  * @package WPPugmill
@@ -20,26 +20,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WPPUGMILL_LICENSE_CACHE_TTL',   6 * HOUR_IN_SECONDS );
-define( 'WPPUGMILL_LS_VALIDATE_URL',  'https://api.lemonsqueezy.com/v1/licenses/validate' );
-define( 'WPPUGMILL_LS_ACTIVATE_URL',  'https://api.lemonsqueezy.com/v1/licenses/activate' );
-define( 'WPPUGMILL_LS_DEACTIVATE_URL','https://api.lemonsqueezy.com/v1/licenses/deactivate' );
+define( 'WPPUGMILL_LICENSE_CACHE_TTL',  6 * HOUR_IN_SECONDS );
+define( 'WPPUGMILL_VALIDATE_URL', 'https://pugmillaeo.com/api/validate-license' );
 
 // Hardcoded test key — enter this in the License Key field on any install to
-// activate AI mode without a real Lemon Squeezy key. For testing only.
+// activate AI mode without a real license key. For testing / development only.
 define( 'WPPUGMILL_HARDCODED_TEST_KEY', 'WPPUGMILL-TEST-AI-KEY' );
-
-/**
- * Common request args for all Lemon Squeezy calls.
- */
-function wppugmill_ls_request_args( array $body ) {
-	return array(
-		'timeout'   => 15,
-		'sslverify' => true,
-		'headers'   => array( 'Accept' => 'application/json' ),
-		'body'      => $body,
-	);
-}
 
 /**
  * Get a stable instance ID for this WordPress installation.
@@ -77,7 +63,20 @@ function wppugmill_license_status() {
 }
 
 /**
- * Validate the stored license key against Lemon Squeezy.
+ * Determine the plugin's operating mode.
+ *
+ * @return string  'free' | 'ai' | 'pro'
+ */
+function wppugmill_mode() {
+	if ( wppugmill_is_licensed() ) {
+		return 'ai';
+	}
+	return 'free';
+}
+
+/**
+ * Validate the stored license key against the pugmillaeo.com API.
+ * Sends the site's domain so it is registered on first call.
  *
  * @return array
  */
@@ -91,31 +90,39 @@ function wppugmill_validate_license_remote() {
 		'expires_at'     => '',
 	);
 
-	if ( empty( $key ) || strlen( $key ) < 20 ) {
+	if ( empty( $key ) || strlen( $key ) < 10 ) {
 		return $empty;
 	}
 
-	// Test keys — return synthetic active status without hitting the LS API.
+	// Test keys — return synthetic active status without hitting the API.
 	if ( ( defined( 'WPPUGMILL_TEST_KEY' ) && WPPUGMILL_TEST_KEY === $key )
 		|| WPPUGMILL_HARDCODED_TEST_KEY === $key ) {
-		return array(
+		$result = array(
 			'status'         => 'active',
 			'error'          => '',
 			'customer_email' => 'test@wppugmill.local',
 			'expires_at'     => '',
 		);
+		set_transient( 'wppugmill_license_status', $result, WPPUGMILL_LICENSE_CACHE_TTL );
+		set_transient( 'wppugmill_license_status_last_good', $result, WEEK_IN_SECONDS );
+		return $result;
 	}
 
 	$response = wp_remote_post(
-		WPPUGMILL_LS_VALIDATE_URL,
-		wppugmill_ls_request_args( array(
-			'license_key' => $key,
-			'instance_id' => wppugmill_instance_id(),
-		) )
+		WPPUGMILL_VALIDATE_URL,
+		array(
+			'timeout'     => 15,
+			'sslverify'   => true,
+			'headers'     => array( 'Content-Type' => 'application/json' ),
+			'body'        => wp_json_encode( array(
+				'license_key' => strtoupper( trim( $key ) ),
+				'domain'      => home_url(),
+			) ),
+		)
 	);
 
 	if ( is_wp_error( $response ) ) {
-		// Network error — preserve last known good status if available
+		// Network error — preserve last known good status if available.
 		$last = get_transient( 'wppugmill_license_status_last_good' );
 		return $last ?: array_merge( $empty, array( 'error' => __( 'Could not reach license server.', 'wp-pugmill' ) ) );
 	}
@@ -127,14 +134,27 @@ function wppugmill_validate_license_remote() {
 		$result = array(
 			'status'         => 'active',
 			'error'          => '',
-			'customer_email' => sanitize_email( $body['license_key']['customer_email'] ?? '' ),
-			'expires_at'     => sanitize_text_field( $body['license_key']['expires_at'] ?? '' ),
+			'customer_email' => sanitize_email( $body['email'] ?? '' ),
+			'expires_at'     => sanitize_text_field( $body['expiration_date'] ?? '' ),
 		);
-		// Store last known good for network-failure fallback
+		// Store last known good for network-failure fallback (1 week).
 		set_transient( 'wppugmill_license_status_last_good', $result, WEEK_IN_SECONDS );
 	} else {
+		$status_code = sanitize_key( $body['status'] ?? 'invalid' );
+
+		$error_messages = array(
+			'not_found'    => __( 'License key not found.', 'wp-pugmill' ),
+			'cancelled'    => __( 'License has been cancelled.', 'wp-pugmill' ),
+			'expired'      => __( 'License has expired. Please renew to continue.', 'wp-pugmill' ),
+			'domain_limit' => sprintf(
+				/* translators: %d: number of allowed sites */
+				__( 'Domain limit reached. This license covers %d sites.', 'wp-pugmill' ),
+				intval( $body['sites_allowed'] ?? 3 )
+			),
+		);
+
 		$result = array_merge( $empty, array(
-			'error' => sanitize_text_field( $body['error'] ?? 'Invalid license key.' ),
+			'error' => $error_messages[ $status_code ] ?? __( 'Invalid license key.', 'wp-pugmill' ),
 		) );
 	}
 
@@ -143,109 +163,28 @@ function wppugmill_validate_license_remote() {
 }
 
 /**
- * Activate the license key with Lemon Squeezy.
+ * When the license key option is updated, bust the cache so the next
+ * page load re-validates against the API with the new key + domain.
  *
- * @param  string $key  Plaintext license key.
- * @return array{success: bool, error?: string}
- */
-function wppugmill_activate_license( $key ) {
-	if ( empty( $key ) || strlen( $key ) < 20 ) {
-		return array( 'success' => false, 'error' => __( 'Invalid license key format.', 'wp-pugmill' ) );
-	}
-
-	// Test keys — skip LS API call and return synthetic success.
-	if ( ( defined( 'WPPUGMILL_TEST_KEY' ) && WPPUGMILL_TEST_KEY === $key )
-		|| WPPUGMILL_HARDCODED_TEST_KEY === $key ) {
-		$result = array(
-			'status'         => 'active',
-			'error'          => '',
-			'customer_email' => 'test@wppugmill.local',
-			'expires_at'     => '',
-		);
-		set_transient( 'wppugmill_license_status', $result, WPPUGMILL_LICENSE_CACHE_TTL );
-		set_transient( 'wppugmill_license_status_last_good', $result, WEEK_IN_SECONDS );
-		return array( 'success' => true );
-	}
-
-	$response = wp_remote_post(
-		WPPUGMILL_LS_ACTIVATE_URL,
-		wppugmill_ls_request_args( array(
-			'license_key'   => $key,
-			'instance_id'   => wppugmill_instance_id(),
-			'instance_name' => parse_url( home_url(), PHP_URL_HOST ),
-		) )
-	);
-
-	if ( is_wp_error( $response ) ) {
-		return array( 'success' => false, 'error' => __( 'Could not reach license server.', 'wp-pugmill' ) );
-	}
-
-	$body = json_decode( wp_remote_retrieve_body( $response ), true );
-	$code = wp_remote_retrieve_response_code( $response );
-
-	if ( 200 === $code && ! empty( $body['activated'] ) ) {
-		$result = array(
-			'status'         => 'active',
-			'error'          => '',
-			'customer_email' => sanitize_email( $body['license_key']['customer_email'] ?? '' ),
-			'expires_at'     => sanitize_text_field( $body['license_key']['expires_at'] ?? '' ),
-		);
-		set_transient( 'wppugmill_license_status', $result, WPPUGMILL_LICENSE_CACHE_TTL );
-		set_transient( 'wppugmill_license_status_last_good', $result, WEEK_IN_SECONDS );
-		return array( 'success' => true );
-	}
-
-	return array( 'success' => false, 'error' => sanitize_text_field( $body['error'] ?? __( 'Activation failed.', 'wp-pugmill' ) ) );
-}
-
-/**
- * Deactivate the license key (call when key is removed or changed).
- *
- * @param string $key  Plaintext license key.
- */
-function wppugmill_deactivate_license( $key ) {
-	if ( empty( $key ) ) {
-		return;
-	}
-	wp_remote_post(
-		WPPUGMILL_LS_DEACTIVATE_URL,
-		wppugmill_ls_request_args( array(
-			'license_key' => $key,
-			'instance_id' => wppugmill_instance_id(),
-		) )
-	);
-	delete_transient( 'wppugmill_license_status' );
-	delete_transient( 'wppugmill_license_status_last_good' );
-}
-
-/**
- * When the license key option is updated, activate/deactivate accordingly.
- * Note: values are already encrypted by the sanitize_callback in settings.php.
- * We decrypt both old and new before calling the LS API.
+ * Domain registration now happens passively inside wppugmill_validate_license_remote()
+ * (the API registers the domain on first successful validate call), so no
+ * separate activate/deactivate HTTP calls are needed.
  */
 function wppugmill_on_license_key_update( $old_encrypted, $new_encrypted ) {
 	delete_transient( 'wppugmill_license_status' );
+	delete_transient( 'wppugmill_license_status_last_good' );
 
-	$old_key = wppugmill_decrypt( $old_encrypted );
+	// Trigger immediate re-validation so the settings page reflects the new status.
 	$new_key = wppugmill_decrypt( $new_encrypted );
-
-	// Deactivate old key only if it's a real LS key (not a test key).
-	$is_wp_config_test_key = defined( 'WPPUGMILL_TEST_KEY' ) && WPPUGMILL_TEST_KEY === $old_key;
-	$is_hardcoded_test_key = WPPUGMILL_HARDCODED_TEST_KEY === $old_key;
-	if ( ! empty( $old_key ) && $old_key !== $new_key ) {
-		if ( ! $is_wp_config_test_key && ! $is_hardcoded_test_key ) {
-			wppugmill_deactivate_license( $old_key );
-		}
-	}
-
 	if ( ! empty( $new_key ) ) {
-		wppugmill_activate_license( $new_key );
+		wppugmill_validate_license_remote();
 	}
 }
 add_action( 'update_option_wppugmill_license_key', 'wppugmill_on_license_key_update', 10, 2 );
 add_action( 'add_option_wppugmill_license_key', function( $option, $encrypted ) {
+	delete_transient( 'wppugmill_license_status' );
 	$key = wppugmill_decrypt( $encrypted );
 	if ( ! empty( $key ) ) {
-		wppugmill_activate_license( $key );
+		wppugmill_validate_license_remote();
 	}
 }, 10, 2 );
