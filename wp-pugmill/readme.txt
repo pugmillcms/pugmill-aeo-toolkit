@@ -4,7 +4,7 @@ Tags: AEO, answer engine optimization, AI, llms.txt, schema, structured data, SE
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.0.42
+Stable tag: 1.0.43
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -153,6 +153,10 @@ Yes. WP Pugmill is focused on AEO (AI discoverability) and does not conflict wit
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.0.43 =
+* **Change**: Removed hardcoded test license key — all license validation now goes through the pugmillaeo.com API.
+* **Change**: Added "Manage subscription" link to the License tab next to the renewal date, pointing to the Stripe Customer Portal.
 
 = 1.0.42 =
 * **Fix**: Fatal error on activation caused by duplicate `wppugmill_mode()` function definition — removed redundant declaration from `license.php` (canonical version with dev-mode bypass lives in `wp-pugmill.php`).

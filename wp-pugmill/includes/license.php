@@ -23,10 +23,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 define( 'WPPUGMILL_LICENSE_CACHE_TTL',  6 * HOUR_IN_SECONDS );
 define( 'WPPUGMILL_VALIDATE_URL', 'https://pugmillaeo.com/api/validate-license' );
 
-// Hardcoded test key — enter this in the License Key field on any install to
-// activate AI mode without a real license key. For testing / development only.
-define( 'WPPUGMILL_HARDCODED_TEST_KEY', 'WPPUGMILL-TEST-AI-KEY' );
-
 /**
  * Get a stable instance ID for this WordPress installation.
  */
@@ -80,20 +76,6 @@ function wppugmill_validate_license_remote() {
 
 	if ( empty( $key ) || strlen( $key ) < 10 ) {
 		return $empty;
-	}
-
-	// Test keys — return synthetic active status without hitting the API.
-	if ( ( defined( 'WPPUGMILL_TEST_KEY' ) && WPPUGMILL_TEST_KEY === $key )
-		|| WPPUGMILL_HARDCODED_TEST_KEY === $key ) {
-		$result = array(
-			'status'         => 'active',
-			'error'          => '',
-			'customer_email' => 'test@wppugmill.local',
-			'expires_at'     => '',
-		);
-		set_transient( 'wppugmill_license_status', $result, WPPUGMILL_LICENSE_CACHE_TTL );
-		set_transient( 'wppugmill_license_status_last_good', $result, WEEK_IN_SECONDS );
-		return $result;
 	}
 
 	$response = wp_remote_post(

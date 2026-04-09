@@ -397,6 +397,7 @@ function wppugmill_render_settings_page() {
 							esc_html__( 'Renews %s.', 'wp-pugmill' ),
 							esc_html( date( 'F j, Y', $expires_ts ) ) // phpcs:ignore WordPress.DateTime.RestrictedFunctions.date_date
 						); ?>
+						<a href="https://billing.stripe.com/p/login/cNi00j2uOabA5QZ8BUfUQ00" target="_blank" rel="noopener noreferrer" style="margin-left:6px;font-size:12px;opacity:0.75;"><?php esc_html_e( 'Manage subscription', 'wp-pugmill' ); ?></a>
 					<?php endif; ?>
 				</p>
 			</div>
