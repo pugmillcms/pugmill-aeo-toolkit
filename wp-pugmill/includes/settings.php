@@ -182,6 +182,20 @@ function wppugmill_register_settings() {
 		},
 		'default' => 0,
 	) );
+	// Breadcrumb JSON-LD — suppress independently of the full JSON-LD kill switch.
+	// Major SEO plugins (Yoast, RankMath) output their own BreadcrumbList.
+	// Checking this prevents duplicate breadcrumb schema without suppressing
+	// Pugmill's AEO-exclusive additions (FAQPage, mentions, citations).
+	register_setting( 'wppugmill_settings', 'wppugmill_disable_breadcrumbs', array(
+		'sanitize_callback' => function( $value ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing
+			if ( ! isset( $_POST['wppugmill_disable_breadcrumbs'] ) ) {
+				return get_option( 'wppugmill_disable_breadcrumbs', 0 );
+			}
+			return ! empty( $value ) ? 1 : 0;
+		},
+		'default' => 0,
+	) );
 	register_setting( 'wppugmill_settings', 'wppugmill_disable_robots_append', array(
 		'sanitize_callback' => function( $value ) {
 			// phpcs:ignore WordPress.Security.NonceVerification.Missing

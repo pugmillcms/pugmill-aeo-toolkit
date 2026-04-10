@@ -8,8 +8,12 @@
 # (c) Emanuil Rusev
 # http://erusev.com
 #
-# For the full license information, view the LICENSE file that was distributed
-# with this source code.
+# Licensed under the MIT License.
+# https://github.com/erusev/parsedown/blob/master/LICENSE.txt
+#
+# (The LICENSE file referenced above is not bundled here but is available
+# at the URL above. This copy is included as a dependency of
+# yahnis-elsts/plugin-update-checker, which is also MIT licensed.)
 #
 #
 

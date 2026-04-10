@@ -1,9 +1,9 @@
 <?php
 /**
  * Plugin Name: WP Pugmill
- * Plugin URI:  https://wppugmill.com
- * Description: A pugmill turns slop into usable clay. This one turns your existing SEO into structured, AI-ready content — llms.txt, AEO metadata, schema, and sitemaps for ChatGPT, Perplexity, and Gemini.
- * Version:     1.0.43
+ * Plugin URI:  https://pugmillaeo.com
+ * Description: The AEO plugin for WordPress. Structures your content for AI answer engines — FAQPage schema, entity graph, citations, bot analytics, and llms.txt. Works alongside Yoast, RankMath, and AIOSEO.
+ * Version:     1.1.1
  * Author:      Janzen Works
  * Author URI:  https://janzenworks.com
  * License:     GPL-2.0-or-later
@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 // the full PHP generation time for bot requests.
 define( 'WPPUGMILL_REQUEST_START', microtime( true ) );
 
-define( 'WPPUGMILL_VERSION',         '1.0.42' );
+define( 'WPPUGMILL_VERSION',         '1.1.1' );
 define( 'WPPUGMILL_PLUGIN_DIR',      plugin_dir_path( __FILE__ ) );
 define( 'WPPUGMILL_PLUGIN_URL',      plugin_dir_url( __FILE__ ) );
 define( 'WPPUGMILL_PLUGIN_FILE',     __FILE__ );
@@ -40,14 +40,15 @@ define( 'WPPUGMILL_NETWORK_SECRET',   'pugmill-network-v1' );
  * Detect which mode the plugin is running in.
  *
  * - 'free' : no license key, or key present but invalid
- * - 'ai'   : valid Lemon Squeezy license — unlocks BYOK AI generation
+ * - 'ai'   : valid license — unlocks BYOK AI generation
  * - 'pro'  : future tier — reserved for token infrastructure
  *
- * A valid license key is always required to access AI features.
+ * @return string 'free' | 'ai' | 'pro'
  */
 function wppugmill_mode() {
-	// Dev bypass — define WPPUGMILL_DEV_MODE true in wp-config.php (local only)
-	// to force AI mode without a license key. Never set this on a production site.
+	// Developer mode: define( 'WPPUGMILL_DEV_MODE', true ) in wp-config.php
+	// to bypass license validation and force AI mode on local/staging installs.
+	// Inert unless explicitly defined. Never enable on a production site.
 	if ( defined( 'WPPUGMILL_DEV_MODE' ) && WPPUGMILL_DEV_MODE ) {
 		return 'ai';
 	}
@@ -65,6 +66,7 @@ function wppugmill_mode() {
 require_once WPPUGMILL_PLUGIN_DIR . 'includes/encryption.php';
 require_once WPPUGMILL_PLUGIN_DIR . 'includes/rate-limit.php';
 require_once WPPUGMILL_PLUGIN_DIR . 'includes/license.php';
+require_once WPPUGMILL_PLUGIN_DIR . 'includes/compat.php';
 require_once WPPUGMILL_PLUGIN_DIR . 'includes/aeo-meta.php';
 require_once WPPUGMILL_PLUGIN_DIR . 'includes/on-page-seo.php';
 require_once WPPUGMILL_PLUGIN_DIR . 'includes/json-ld.php';
@@ -77,19 +79,6 @@ require_once WPPUGMILL_PLUGIN_DIR . 'includes/health.php';
 require_once WPPUGMILL_PLUGIN_DIR . 'includes/bot-analytics.php';
 require_once WPPUGMILL_PLUGIN_DIR . 'includes/bot-intelligence.php';
 require_once WPPUGMILL_PLUGIN_DIR . 'includes/bulk-aeo.php';
-
-// GitHub-based update checker (PUC v5).
-// Points at the GitHub releases page and uses the attached zip asset so sites
-// running the plugin see update notifications in WP Admin → Plugins.
-// Remove this block and the lib/plugin-update-checker directory before
-// submitting to WordPress.org — WP.org uses its own SVN infrastructure.
-require_once WPPUGMILL_PLUGIN_DIR . 'lib/plugin-update-checker/plugin-update-checker.php';
-$wppugmill_updater = YahnisElsts\PluginUpdateChecker\v5p5\PucFactory::buildUpdateChecker(
-	'https://github.com/michaelsjanzen/wppugmill/',
-	__FILE__,
-	'wp-pugmill'
-);
-$wppugmill_updater->getVcsApi()->enableReleaseAssets();
 
 // Load admin UI
 if ( is_admin() ) {

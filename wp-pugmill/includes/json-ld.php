@@ -29,17 +29,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /**
  * Output JSON-LD structured data on singular and home/front-page views.
+ *
+ * Note: wppugmill_disable_json_ld suppresses the Article/BlogPosting and
+ * BreadcrumbList nodes (defer to the active SEO plugin), but it intentionally
+ * does NOT suppress AEO-exclusive nodes: FAQPage, associatedMedia, and any
+ * extended schema type the user has configured. Those outputs are unique to
+ * Pugmill and not provided by any major SEO plugin.
  */
 function wppugmill_output_json_ld() {
-	if ( get_option( 'wppugmill_disable_json_ld' ) ) {
-		return;
-	}
-
 	if ( is_singular() ) {
 		wppugmill_output_singular_json_ld();
 	}
 
-	if ( is_home() || is_front_page() ) {
+	// Home/front-page: suppress entire block when deferring JSON-LD to SEO plugin.
+	if ( ( is_home() || is_front_page() ) && ! get_option( 'wppugmill_disable_json_ld' ) ) {
 		wppugmill_output_home_json_ld();
 	}
 }
@@ -48,9 +51,17 @@ add_action( 'wp_head', 'wppugmill_output_json_ld' );
 /**
  * Single @graph block for singular post/page views.
  *
- * Assembles the graph from composable builders and outputs the script tag.
- * Nodes: Article/WebPage, FAQPage (conditional), extended schema (conditional),
- *        BreadcrumbList.
+ * Respects two disable options:
+ *
+ *   wppugmill_disable_json_ld   — suppress Article/BlogPosting node, extended schema,
+ *                                  and BreadcrumbList (defer to active SEO plugin).
+ *                                  FAQPage is still output — it is AEO-exclusive.
+ *
+ *   wppugmill_disable_breadcrumbs — suppress only BreadcrumbList (independent control).
+ *                                    Implied when wppugmill_disable_json_ld is also set.
+ *
+ * Nodes: Article/WebPage (conditional), FAQPage (always if Q&A exists),
+ *        extended schema (conditional), BreadcrumbList (conditional).
  */
 function wppugmill_output_singular_json_ld() {
 	$post_id = get_the_ID();
@@ -58,21 +69,58 @@ function wppugmill_output_singular_json_ld() {
 	$aeo     = wppugmill_get_aeo( $post_id );
 	$seo     = wppugmill_get_seo( $post_id );
 
-	$graph = array( wppugmill_build_article_node( $post_id, $post, $aeo, $seo ) );
+	$defer_to_seo_plugin = (bool) get_option( 'wppugmill_disable_json_ld', 0 );
+	$suppress_breadcrumbs = $defer_to_seo_plugin || (bool) get_option( 'wppugmill_disable_breadcrumbs', 0 );
 
+	$graph = array();
+
+	// ── Article/BlogPosting node ──────────────────────────────────────────
+	// Suppressed when deferring to an SEO plugin (Yoast, RankMath, etc.)
+	// which outputs its own Article/BlogPosting with comparable fields.
+	if ( ! $defer_to_seo_plugin ) {
+		$graph[] = wppugmill_build_article_node( $post_id, $post, $aeo, $seo );
+	}
+
+	// ── FAQPage — AEO-exclusive, always output when Q&A data exists ───────
+	// No major SEO plugin generates FAQPage from AI-extracted Q&A pairs.
+	// This remains active even when deferring all other JSON-LD to Yoast.
 	$faq = wppugmill_build_faq_node( get_permalink( $post_id ), $aeo['questions'] );
 	if ( $faq ) {
+		// Attach the post's AEO markdown endpoint directly to the FAQPage node.
+		// FAQPage is a subtype of WebPage, so associatedMedia is semantically valid here.
+		// This ensures AI crawlers can discover the markdown asset even when the Article
+		// node is deferred to Yoast (which doesn't know about this endpoint).
+		if ( ! empty( $aeo['summary'] ) ) {
+			$faq['associatedMedia'] = array(
+				'@type'          => 'MediaObject',
+				'encodingFormat' => 'text/markdown',
+				'contentUrl'     => add_query_arg( 'wppugmill_llm', '1', get_permalink( $post_id ) ),
+				'name'           => get_the_title( $post_id ) . ' — AEO Markdown',
+			);
+		}
 		$graph[] = $faq;
 	}
 
-	$extended = wppugmill_build_extended_schema_node( $post_id, $post );
-	if ( $extended ) {
-		$graph[] = $extended;
+	// ── Extended schema types (HowTo, Product, Event, etc.) ──────────────
+	if ( ! $defer_to_seo_plugin ) {
+		$extended = wppugmill_build_extended_schema_node( $post_id, $post );
+		if ( $extended ) {
+			$graph[] = $extended;
+		}
 	}
 
-	$breadcrumbs = wppugmill_build_breadcrumb_schema( $post_id );
-	if ( ! empty( $breadcrumbs['itemListElement'] ) ) {
-		$graph[] = $breadcrumbs;
+	// ── BreadcrumbList ────────────────────────────────────────────────────
+	// Yoast and RankMath output their own BreadcrumbList — suppressed by
+	// either the breadcrumbs-specific toggle or the full JSON-LD defer.
+	if ( ! $suppress_breadcrumbs ) {
+		$breadcrumbs = wppugmill_build_breadcrumb_schema( $post_id );
+		if ( ! empty( $breadcrumbs['itemListElement'] ) ) {
+			$graph[] = $breadcrumbs;
+		}
+	}
+
+	if ( empty( $graph ) ) {
+		return;
 	}
 
 	echo '<script type="application/ld+json">' . wp_json_encode(
@@ -196,6 +244,10 @@ function wppugmill_build_article_node( $post_id, $post, $aeo, $seo ) {
 	if ( ! empty( $aeo['keywords'] ) ) {
 		$article['keywords'] = implode( ', ', $aeo['keywords'] );
 	}
+
+	// Note: associatedMedia (markdown endpoint link) is attached to the FAQPage
+	// node in wppugmill_output_singular_json_ld() so it survives Yoast coexistence
+	// mode where this Article node may be suppressed.
 
 	// Citations — auto-extract external links from post content.
 	if ( ! $is_page && ! empty( $post->post_content ) ) {
@@ -383,8 +435,16 @@ function wppugmill_build_breadcrumb_schema( $post_id ) {
 
 /**
  * Output meta description, Open Graph, and Twitter Card tags.
+ *
+ * Suppressed entirely when wppugmill_disable_seo_meta is set — this defers
+ * all meta-tag output to the active SEO plugin (Yoast, RankMath, etc.).
+ * AEO data stored per-post is unaffected; only the <head> output is skipped.
  */
 function wppugmill_output_meta_tags() {
+	if ( get_option( 'wppugmill_disable_seo_meta' ) ) {
+		return;
+	}
+
 	if ( is_singular() ) {
 		wppugmill_output_singular_meta_tags();
 		return;

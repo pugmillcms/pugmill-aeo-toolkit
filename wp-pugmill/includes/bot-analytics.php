@@ -91,13 +91,14 @@ function wppugmill_bot_name( $id ) {
 /**
  * TINYINT resource ID → human label.
  *
- * 0 — Regular HTML page crawl
+ * 0 — Regular HTML page crawl (no AEO data)
  * 1 — /llms.txt                (AI discovery index)
  * 2 — /llms-full.txt           (paginated AEO content)
  * 3 — /{post}/?wppugmill_llm=1 (per-post markdown)
  * 4 — /?wppugmill_llm=1        (site summary markdown)
  * 5 — /sitemap.xml             (crawl discovery)
  * 6 — /robots.txt              (crawl policy)
+ * 7 — AEO Post HTML            (singular post with AEO metadata — FAQPage, entities, etc.)
  *
  * @return array<int, string>
  */
@@ -110,6 +111,7 @@ function wppugmill_resource_type_labels() {
 		4 => 'Site Summary',
 		5 => 'Sitemap',
 		6 => 'Robots.txt',
+		7 => 'AEO Post',
 	);
 }
 
@@ -127,6 +129,7 @@ function wppugmill_resource_type_categories() {
 		4 => 'aeo',
 		5 => 'discovery',
 		6 => 'discovery',
+		7 => 'aeo',
 	);
 }
 
@@ -519,7 +522,14 @@ function wppugmill_log_bot_visit( $bot, $url, $resource_type = 0, $unknown_name 
 }
 
 /**
- * Hook: detect and log AI bot visits on every public request.
+ * Phase 1 (init): detect the bot UA and resource type.
+ *
+ * For non-HTML resources (llms.txt, sitemap, markdown endpoints, etc.) we have
+ * everything we need at init — log immediately.
+ *
+ * For HTML page requests (resource type 0) we defer to template_redirect (phase 2)
+ * so we can check whether the page has AEO content and log type 7 instead of type 0.
+ * The detected bot identity is stashed in a static so phase 2 can retrieve it.
  */
 function wppugmill_maybe_log_bot_visit() {
 	if ( is_admin() ) {
@@ -534,23 +544,74 @@ function wppugmill_maybe_log_bot_visit() {
 
 	$ua  = isset( $_SERVER['HTTP_USER_AGENT'] ) ? wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) : ''; // phpcs:ignore
 	$bot = wppugmill_detect_ai_bot( $ua );
+	$url = isset( $_SERVER['REQUEST_URI'] ) ? wp_unslash( $_SERVER['REQUEST_URI'] ) : ''; // phpcs:ignore
 
 	$resource_type = wppugmill_detect_resource_type();
-	$url           = isset( $_SERVER['REQUEST_URI'] ) ? wp_unslash( $_SERVER['REQUEST_URI'] ) : ''; // phpcs:ignore
 
+	// HTML requests: defer to template_redirect so we can detect AEO context.
+	if ( $resource_type === 0 ) {
+		$unknown_name = $bot ? '' : wppugmill_detect_unknown_bot( $ua );
+		if ( $bot || $unknown_name ) {
+			// Stash bot identity for phase 2.
+			wppugmill_pending_bot_visit( $bot, $unknown_name, $url );
+		}
+		return;
+	}
+
+	// Non-HTML AEO / discovery endpoints: log immediately.
 	if ( $bot ) {
 		wppugmill_log_bot_visit( $bot, $url, $resource_type );
 		return;
 	}
 
-	// Unknown-bot fallback: log anything that walks and quacks like a bot
-	// but wasn't in the known fingerprint list.
 	$unknown_name = wppugmill_detect_unknown_bot( $ua );
 	if ( $unknown_name ) {
 		wppugmill_log_bot_visit( '', $url, $resource_type, $unknown_name );
 	}
 }
 add_action( 'init', 'wppugmill_maybe_log_bot_visit', 99 );
+
+/**
+ * Static store for the pending HTML bot visit detected at init.
+ * Passing null retrieves the stashed value without overwriting it.
+ *
+ * @param  string|null $bot          Known bot name, or '' for unknown bots.
+ * @param  string|null $unknown_name Parsed UA name for unknown bots.
+ * @param  string|null $url          Request URI.
+ * @return array|null  Stashed visit data, or null if nothing pending.
+ */
+function wppugmill_pending_bot_visit( $bot = null, $unknown_name = null, $url = null ) {
+	static $pending = null;
+	if ( null !== $bot ) {
+		$pending = array( 'bot' => $bot, 'unknown_name' => $unknown_name, 'url' => $url );
+	}
+	return $pending;
+}
+
+/**
+ * Phase 2 (template_redirect): finalise the HTML bot visit log.
+ *
+ * Now that WordPress has resolved the queried object we can tell whether
+ * this is a singular post with AEO data (type 7) or a plain HTML crawl (type 0).
+ */
+function wppugmill_log_html_bot_visit() {
+	$pending = wppugmill_pending_bot_visit();
+	if ( ! $pending ) {
+		return;
+	}
+
+	// Determine whether this HTML page has AEO content.
+	$resource_type = 0; // default: plain HTML crawl
+	if ( is_singular() ) {
+		$aeo = get_post_meta( get_the_ID(), '_wppugmill_aeo', true );
+		if ( ! empty( $aeo['summary'] ) || ! empty( $aeo['questions'] ) ) {
+			$resource_type = 7; // AEO Post: has FAQPage, entities, or summary
+		}
+	}
+
+	wppugmill_log_bot_visit( $pending['bot'], $pending['url'], $resource_type, $pending['unknown_name'] );
+}
+add_action( 'template_redirect', 'wppugmill_log_html_bot_visit', 1 );
 
 // ── Pruning ───────────────────────────────────────────────────────────────────
 
@@ -1231,6 +1292,7 @@ function wppugmill_intelligence_resource_slugs() {
 		4 => 'site_summary',
 		5 => 'sitemap',
 		6 => 'robots_txt',
+		7 => 'aeo_post',
 	);
 }
 
@@ -1331,13 +1393,48 @@ function wppugmill_intelligence_send() {
 		}
 	}
 
+	// ── Schema v3 enrichment fields ───────────────────────────────────────
+	// All optional / backward-compatible. Server ignores unknown keys from
+	// older clients; older servers ignore new keys from newer clients.
+
+	// Detected SEO plugin (slug or null).
+	$seo_plugins     = function_exists( 'wppugmill_detected_seo_plugins' ) ? wppugmill_detected_seo_plugins() : array();
+	$seo_plugin_slug = ! empty( $seo_plugins ) ? array_key_first( $seo_plugins ) : null;
+
+	// Posts with full AEO data vs total published posts.
+	$posts_with_aeo = $aeo_count; // already computed above
+	$posts_total    = (int) wp_count_posts()->publish;
+
+	// Bot visits to markdown endpoints yesterday (resource_type 3).
+	$markdown_assets_served = 0;
+	foreach ( $rows as $row ) {
+		if ( (int) $row['resource_type'] === 3 ) {
+			$markdown_assets_served += (int) $row['count'];
+		}
+	}
+
+	// Which AEO output types are currently active (informational).
+	$pugmill_outputs_active = array();
+	if ( function_exists( 'wppugmill_should_output' ) ) {
+		$aeo_outputs = array( 'faqpage', 'mentions', 'citations', 'keywords', 'llms_txt', 'markdown' );
+		foreach ( $aeo_outputs as $key ) {
+			$pugmill_outputs_active[] = $key; // AEO outputs are always active
+		}
+	}
+
 	$payload = array(
-		'site_id'        => $site_id,
-		'date'           => $date,
-		'plugin_version' => WPPUGMILL_VERSION,
-		'aeo_tier'       => $aeo_tier,
-		'bots'           => $bots,
-		'network_token'  => $network_token,
+		'schema_ver'             => 3,
+		'site_id'                => $site_id,
+		'date'                   => $date,
+		'plugin_version'         => WPPUGMILL_VERSION,
+		'aeo_tier'               => $aeo_tier,
+		'seo_plugin'             => $seo_plugin_slug,
+		'posts_with_aeo'         => $posts_with_aeo,
+		'posts_total'            => $posts_total,
+		'markdown_assets_served' => $markdown_assets_served,
+		'pugmill_outputs_active' => $pugmill_outputs_active,
+		'bots'                   => $bots,
+		'network_token'          => $network_token,
 	);
 
 	if ( ! empty( $signals ) ) {
@@ -1459,13 +1556,29 @@ function wppugmill_ajax_manual_send() {
 		}
 	}
 
+	// Schema v3 enrichment (mirrors wppugmill_intelligence_send()).
+	$seo_plugins_ajax     = function_exists( 'wppugmill_detected_seo_plugins' ) ? wppugmill_detected_seo_plugins() : array();
+	$seo_plugin_slug_ajax = ! empty( $seo_plugins_ajax ) ? array_key_first( $seo_plugins_ajax ) : null;
+	$posts_total_ajax     = (int) wp_count_posts()->publish;
+	$markdown_ajax        = 0;
+	foreach ( $rows as $row ) {
+		if ( (int) $row['resource_type'] === 3 ) {
+			$markdown_ajax += (int) $row['count'];
+		}
+	}
+
 	$payload = array(
-		'site_id'        => $site_id,
-		'date'           => $date,
-		'plugin_version' => WPPUGMILL_VERSION,
-		'aeo_tier'       => $aeo_tier,
-		'bots'           => $bots,
-		'network_token'  => $network_token,
+		'schema_ver'             => 3,
+		'site_id'                => $site_id,
+		'date'                   => $date,
+		'plugin_version'         => WPPUGMILL_VERSION,
+		'aeo_tier'               => $aeo_tier,
+		'seo_plugin'             => $seo_plugin_slug_ajax,
+		'posts_with_aeo'         => $aeo_count,
+		'posts_total'            => $posts_total_ajax,
+		'markdown_assets_served' => $markdown_ajax,
+		'bots'                   => $bots,
+		'network_token'          => $network_token,
 	);
 
 	if ( ! empty( $signals ) ) {

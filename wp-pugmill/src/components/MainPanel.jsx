@@ -568,7 +568,7 @@ export function MainPanel() {
 	return (
 		<PluginDocumentSettingPanel
 			name="wppugmill-panel"
-			title="SEO+AEO — WP Pugmill"
+			title="WP Pugmill AEO"
 			className="wppugmill-panel"
 		>
 			{ /* Header */ }

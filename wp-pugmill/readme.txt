@@ -1,18 +1,20 @@
 === WP Pugmill ===
 Contributors: janzenworks
-Tags: AEO, answer engine optimization, AI, llms.txt, schema, structured data, SEO
+Tags: aeo, answer engine optimization, ai, structured data, bot analytics, llms-txt, schema, json-ld, yoast, rankmath
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.0.43
+Stable tag: 1.1.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Transform your WordPress content from SEO slop into AI-ready clay — structured, de-aired, and built for answer engines like ChatGPT, Perplexity, and Gemini.
+The AEO plugin for WordPress. Structures your content for AI answer engines — works alongside Yoast, RankMath, and AIOSEO.
 
 == Description ==
 
-**WP Pugmill** is a WordPress plugin built for the age of answer engines. While traditional SEO optimizes for Google's blue links, AEO (Answer Engine Optimization) optimizes for AI systems that synthesize and cite content directly.
+**WP Pugmill** is the Answer Engine Optimization (AEO) plugin for WordPress. It focuses exclusively on what major SEO plugins don't cover — helping AI answer engines like ChatGPT, Perplexity, and Gemini understand, retrieve, and cite your content.
+
+**Works alongside your existing SEO plugin.** WP Pugmill detects Yoast SEO, RankMath, and AIOSEO and avoids duplicate output. It handles the AEO layer; your SEO plugin handles traditional SEO. Zero conflicts.
 
 When someone asks ChatGPT, Perplexity, or Gemini a question your content answers — WP Pugmill helps make sure they find and cite you.
 
@@ -42,7 +44,7 @@ A dedicated editor on every post and page lets you add:
 - Keywords (5-15 search-focused terms)
 
 **JSON-LD Structured Data**
-Automatically injects Article and FAQPage schema on every post and page based on your AEO metadata — no configuration required.
+Automatically injects FAQPage schema on every post and page based on your AEO metadata — no configuration required. Article/BlogPosting schema is also output when no other SEO plugin is present; when Yoast, RankMath, or AIOSEO is active, Pugmill defers that node to them and focuses exclusively on the AEO-unique schema types.
 
 **AEO Health Score**
 A sidebar score (0-100) on every post shows exactly what AEO fields are complete and what's missing, with actionable tips for each gap.
@@ -65,20 +67,20 @@ This plugin connects to the following external services:
 **Pugmill AEO Intelligence Network** (anonymous bot traffic benchmarking)
 When you opt in to Bot Analytics (Settings → WP Pugmill → Bot Analytics), the plugin:
 - Registers your site with a one-way hashed site ID (SHA-256 of your home URL + a randomly generated instance ID). Your URL is never transmitted directly.
-- Submits anonymized daily bot traffic counts (bot name, resource type, visit count) to pugmill.dev once per day via a scheduled background task.
-- Fetches aggregated network averages from pugmill.dev to show how your bot traffic compares to other sites on the network.
+- Submits anonymized daily bot traffic counts (bot name, resource type, visit count) to pugmillaeo.com once per day via a scheduled background task.
+- Fetches aggregated network averages from pugmillaeo.com to show how your bot traffic compares to other sites on the network.
 
 No visitor data, IP addresses, post content, or personally identifiable information is ever transmitted. You can opt out at any time from the Bot Analytics tab; opting out stops all submissions and removes your site from the network.
-- Service: [https://pugmill.dev](https://pugmill.dev)
-- Privacy Policy: [https://pugmill.dev/privacy](https://pugmill.dev/privacy)
-- Terms of Service: [https://pugmill.dev/terms](https://pugmill.dev/terms)
-- This connection only occurs after explicit opt-in. Free mode users who have not opted in make no connections to pugmill.dev.
+- Service: [https://pugmillaeo.com](https://pugmillaeo.com)
+- Privacy Policy: [https://pugmillaeo.com/privacy](https://pugmillaeo.com/privacy)
+- Terms of Service: [https://pugmillaeo.com/terms](https://pugmillaeo.com/terms)
+- This connection only occurs after explicit opt-in. Free mode users who have not opted in make no connections to pugmillaeo.com.
 
-**Lemon Squeezy** (license validation)
-When a license key is entered in Settings → WP Pugmill, the plugin contacts the Lemon Squeezy API to validate and activate the license. This sends your license key and a unique site instance ID to Lemon Squeezy servers.
-- Service: [https://lemonsqueezy.com](https://lemonsqueezy.com)
-- Privacy Policy: [https://lemonsqueezy.com/privacy](https://lemonsqueezy.com/privacy)
-- Terms of Service: [https://lemonsqueezy.com/terms](https://lemonsqueezy.com/terms)
+**Pugmill License Server** (license validation)
+When a license key is entered in Settings → WP Pugmill, the plugin contacts the pugmillaeo.com API to validate the license. This sends your license key and your site's domain to the license server.
+- Service: [https://pugmillaeo.com](https://pugmillaeo.com)
+- Privacy Policy: [https://pugmillaeo.com/privacy](https://pugmillaeo.com/privacy)
+- Terms of Service: [https://pugmillaeo.com/terms](https://pugmillaeo.com/terms)
 - This connection only occurs when a license key is entered. Free mode users make no external connections.
 
 **AI Providers** (AI Connector mode only)
@@ -143,7 +145,16 @@ Yes. API keys and license keys are encrypted at rest using AES-256-CBC encryptio
 No. WP Pugmill adds zero frontend JavaScript. JSON-LD is generated server-side. The llms.txt endpoints are cached (1 hour TTL) and only hit by AI crawlers, not human visitors.
 
 = Does this work with my existing SEO plugin? =
-Yes. WP Pugmill is focused on AEO (AI discoverability) and does not conflict with SEO plugins like Yoast or RankMath. They complement each other.
+Yes — that's the point. WP Pugmill detects Yoast SEO, RankMath, AIOSEO, and The SEO Framework. When one of these is active, the Compatibility tab shows you exactly which outputs overlap and lets you suppress Pugmill's duplicates with a single checkbox. Your SEO plugin owns SEO; Pugmill owns AEO. They do different jobs.
+
+= What does WP Pugmill add that my SEO plugin doesn't? =
+Three things no major SEO plugin generates automatically:
+
+1. **FAQPage JSON-LD** — AI-extracted Q&A pairs structured for rich results and AI answer engines
+2. **Entity graph with sameAs links** — typed mentions (Person, Organization, Product, etc.) linking to Wikidata/Wikipedia for AI understanding
+3. **Citation extraction** — external links from post content structured as schema.org citations, signalling credibility to AI systems
+
+Plus: llms.txt, per-post AEO markdown endpoints, and a bot analytics dashboard showing exactly which AI crawlers are visiting your content.
 
 == Screenshots ==
 
@@ -153,6 +164,31 @@ Yes. WP Pugmill is focused on AEO (AI discoverability) and does not conflict wit
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.1.1 =
+* **Fix**: `associatedMedia` (markdown endpoint link) moved from Article/BlogPosting node to FAQPage node. The Article node is suppressed in Yoast coexistence mode, which was silently hiding the markdown link from AI crawlers. FAQPage always outputs, so the link is now reliably discoverable.
+* **New**: Resource type 7 “AEO Post” — bot visits to singular posts with AEO data (FAQPage, entities, or summary) are now tracked separately from generic HTML crawls. Adds a second phase at `template_redirect` to check post meta after WordPress resolves the queried object.
+* **New**: Network ingest payload upgraded to schema v3 — now includes `seo_plugin`, `posts_with_aeo`, `posts_total`, `markdown_assets_served`, and `pugmill_outputs_active` for richer network intelligence.
+* **Fix**: AI Provider dropdown now shows “— Select provider —” when no API key is stored, rather than preselecting the previously saved provider after a key is removed.
+* **Remove**: “Get steps” AI buttons removed from Compatibility tab conflict items. The default informational message remains.
+* **Copy**: AEO-Exclusive Outputs description in the Compatibility tab rephrased to focus on value rather than competitive claims.
+* **Housekeeping**: Parsedown MIT license attribution added to bundled vendor file.
+
+= 1.1.0 =
+* **Repositioning**: WP Pugmill is now positioned as an AEO plugin, not an SEO plugin. Works alongside Yoast, RankMath, AIOSEO, and The SEO Framework — not against them.
+* **New**: Compatibility tab redesigned with three sections: SEO Plugin Status (live detection), AEO-Exclusive Outputs (always-on read-only list), and Overlapping SEO Outputs (per-output toggles).
+* **New**: Detects active SEO plugins via runtime constants (Yoast, RankMath, AIOSEO, The SEO Framework, SEOPress).
+* **New**: Per-output disable toggles — suppress meta description, Open Graph, Twitter Cards, Article JSON-LD, and Breadcrumb Schema independently.
+* **Fix**: `wppugmill_disable_seo_meta` option is now actually applied to meta tag output (was registered but not checked in previous releases).
+* **Change**: Disabling JSON-LD no longer suppresses FAQPage schema — FAQPage is AEO-exclusive and always output.
+* **New**: Breadcrumb schema has its own independent disable toggle (`wppugmill_disable_breadcrumbs`).
+* **New**: `associatedMedia` property added to Article/BlogPosting JSON-LD when AEO content exists — links to the per-post `?wppugmill_llm=1` markdown endpoint. (Note: moved to FAQPage node in 1.1.1 for Yoast coexistence compatibility.)
+* **Change**: Plugin description updated for AEO identity.
+
+= 1.0.46 =
+* **New**: Bot Analytics tab now shows three donut charts — Bot Categories, AEO Adoption, and Top Crawlers — above the 30-day trend graph.
+* **Change**: Merged Sitemap & Robots tab into Sitemap & Compatibility tab.
+* **Fix**: "Send to Network" button now only appears when the user has opted into the Pugmill AEO Intelligence Network.
 
 = 1.0.43 =
 * **Change**: Removed hardcoded test license key — all license validation now goes through the pugmillaeo.com API.
@@ -446,6 +482,12 @@ Yes. WP Pugmill is focused on AEO (AI discoverability) and does not conflict wit
 * Rate limiting on AI generation (20 requests/hour/user)
 
 == Upgrade Notice ==
+
+= 1.1.1 =
+Fixes markdown endpoint discoverability in Yoast coexistence mode. Adds AEO Post bot tracking and schema v3 network payload. Safe to upgrade — no database changes.
+
+= 1.1.0 =
+Major repositioning as an AEO plugin. Adds SEO plugin compatibility detection and UI. Safe to upgrade — no database changes.
 
 = 0.4.6 =
 UI polish and build improvements. Safe to upgrade — no database changes.

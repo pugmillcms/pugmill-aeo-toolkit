@@ -137,6 +137,15 @@ function wppugmill_llms_invalidate_cache( $post_id ) {
 add_action( 'save_post', 'wppugmill_llms_invalidate_cache' );
 add_action( 'before_delete_post', 'wppugmill_llms_invalidate_cache' );
 
+/**
+ * Clear the llms.txt conflict-check transient whenever plugin settings are saved,
+ * so the Compatibility tab re-fetches /llms.txt and reflects any changes the user made.
+ */
+function wppugmill_clear_llms_conflict_transient() {
+	delete_transient( 'wppugmill_llms_txt_conflict_check' );
+}
+add_action( 'update_option_wppugmill_disable_llms_txt', 'wppugmill_clear_llms_conflict_transient' );
+
 // -------------------------------------------------------------------------
 // /llms.txt
 // -------------------------------------------------------------------------
