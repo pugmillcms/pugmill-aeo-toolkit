@@ -78,3 +78,53 @@ function wppugmill_has_active_seo_plugin() {
 function wppugmill_seo_plugin_names() {
 	return implode( ', ', wppugmill_detected_seo_plugins() );
 }
+
+/**
+ * Return a list of Pugmill output keys that are currently active.
+ *
+ * AEO-exclusive outputs (FAQPage, mentions, citations, keywords, llms.txt,
+ * post markdown, site summary, robots.txt) are always listed — they cannot
+ * be suppressed by any setting.
+ *
+ * SEO-overlap outputs (article JSON-LD, breadcrumbs, meta description,
+ * open graph) are listed only when Pugmill is currently handling them,
+ * i.e. the corresponding disable toggle is NOT set.
+ *
+ * This list is used in the network intelligence payload so pugmillaeo.com
+ * knows which outputs each contributing site is running.
+ *
+ * @return string[]
+ */
+function wppugmill_active_outputs() {
+	// AEO-exclusive: always active, no SEO plugin can own these.
+	$active = array(
+		'faqpage',
+		'mentions',
+		'citations',
+		'keywords',
+		'llms_txt',
+		'llms_full',
+		'post_markdown',
+		'site_summary',
+		'robots_txt',
+	);
+
+	// SEO-overlap outputs: active unless suppressed via Compatibility settings.
+	$disable_json_ld    = (bool) get_option( 'wppugmill_disable_json_ld', 0 );
+	$disable_breadcrumb = (bool) get_option( 'wppugmill_disable_breadcrumbs', 0 );
+	$disable_meta       = (bool) get_option( 'wppugmill_disable_seo_meta', 0 );
+
+	if ( ! $disable_json_ld ) {
+		$active[] = 'article_json_ld';
+	}
+	// Breadcrumbs are suppressed when either json_ld or breadcrumbs toggle is set.
+	if ( ! $disable_json_ld && ! $disable_breadcrumb ) {
+		$active[] = 'breadcrumbs';
+	}
+	if ( ! $disable_meta ) {
+		$active[] = 'meta_description';
+		$active[] = 'open_graph';
+	}
+
+	return $active;
+}

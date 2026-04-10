@@ -1006,12 +1006,43 @@ function wppugmill_bot_analytics_insights_context() {
 		}
 	}
 
+	// ── AEO field coverage ──────────────────────────────────────────────────
+	// How many published posts have each AEO field populated.
+	$aeo_field_rows_ctx = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		"SELECT meta_value FROM {$wpdb->postmeta}
+		 WHERE meta_key = '_wppugmill_aeo'
+		 AND LENGTH(meta_value) > 10",
+		ARRAY_A
+	);
+	$ctx_field_summary   = 0;
+	$ctx_field_questions = 0;
+	$ctx_field_entities  = 0;
+	$ctx_field_keywords  = 0;
+	foreach ( (array) $aeo_field_rows_ctx as $ctx_aeo_row ) {
+		$ctx_aeo = json_decode( $ctx_aeo_row['meta_value'], true );
+		if ( ! is_array( $ctx_aeo ) ) { continue; }
+		if ( ! empty( $ctx_aeo['summary'] ) )   { $ctx_field_summary++; }
+		if ( ! empty( $ctx_aeo['questions'] ) ) { $ctx_field_questions++; }
+		if ( ! empty( $ctx_aeo['entities'] ) )  { $ctx_field_entities++; }
+		if ( ! empty( $ctx_aeo['keywords'] ) )  { $ctx_field_keywords++; }
+	}
+	$ctx_aeo_count  = max( $ctx_field_summary, $ctx_field_questions, $ctx_field_entities, $ctx_field_keywords );
+	$ctx_posts_total = (int) wp_count_posts()->publish;
+
 	$context = array(
 		'site'               => get_bloginfo( 'name' ),
 		'url'                => home_url(),
 		'period_days'        => $days,
 		'total_all_time'     => $total,
 		'total_30_days'      => $total_30,
+		'posts_total'        => $ctx_posts_total,
+		'posts_with_aeo'     => $ctx_aeo_count,
+		'aeo_field_coverage' => array(
+			'ai_summary'   => $ctx_field_summary,
+			'qa_pairs'     => $ctx_field_questions,
+			'named_entities' => $ctx_field_entities,
+			'keywords'     => $ctx_field_keywords,
+		),
 		'visits_by_bot'      => $summary,
 		'aeo_conversion_pct' => $aeo_conversion_pct,
 		'content_reach'      => $reach,
@@ -1090,7 +1121,7 @@ If network_benchmark data is present: for each bot, state whether this site is w
 Which pages or post types are crawled most, which resource types are hit most, and any patterns worth noting (ignored sections, repeat visits on specific posts, etc.).
 
 ## Recommendations
-Give 3–5 specific, prioritized actions. For any bot that is below average or a zero-visit gap, give a targeted fix. Where crawl_signals reveal a pattern, turn it into a recommendation (e.g., if bots are mostly reading short posts, recommend expanding key posts to 1500+ words; if freshness skews stale, recommend updating top posts). Use this bot-specific guidance: ChatGPT — enrich llms.txt with Q&A pairs and AEO summaries, ChatGPT reads it directly; Perplexity — prioritize AEO summaries on high-traffic posts, Perplexity cites in real-time so freshness matters; ClaudeBot — keep sitemap current and add AEO markup to all posts; Gemini — Schema.org JSON-LD is key; Bingbot — clean sitemaps and solid meta descriptions; if AEO conversion rate is under 10%, recommend running Generate All AEO on top posts first. Only mention bots present in the data or identified as network gaps.
+Give 3–5 specific, prioritized actions. Use aeo_field_coverage to identify gaps: if posts_with_aeo is much less than posts_total, recommend running Bulk AEO Generation; if qa_pairs is low relative to ai_summary, recommend adding Q&A pairs to existing posts; if named_entities or keywords lag behind ai_summary, call that out specifically. For any bot that is below average or a zero-visit gap, give a targeted fix. Where crawl_signals reveal a pattern, turn it into a recommendation (e.g., if bots are mostly reading short posts, recommend expanding key posts to 1500+ words; if freshness skews stale, recommend updating top posts). Use this bot-specific guidance: ChatGPT — enrich llms.txt with Q&A pairs and AEO summaries, ChatGPT reads it directly; Perplexity — prioritize AEO summaries on high-traffic posts, Perplexity cites in real-time so freshness matters; ClaudeBot — keep sitemap current and add AEO markup to all posts; Gemini — Schema.org JSON-LD is key; Bingbot — clean sitemaps and solid meta descriptions; if AEO conversion rate is under 10%, recommend running Bulk AEO Generation on top posts first. Only mention bots present in the data or identified as network gaps.
 
 Rules: blank line between each heading and its paragraph. No bullet lists. 2–4 sentences per section. Total response under 550 words.";
 
@@ -1433,14 +1464,8 @@ function wppugmill_intelligence_send() {
 		}
 	}
 
-	// Which AEO output types are currently active (informational).
-	$pugmill_outputs_active = array();
-	if ( function_exists( 'wppugmill_should_output' ) ) {
-		$aeo_outputs = array( 'faqpage', 'mentions', 'citations', 'keywords', 'llms_txt', 'markdown' );
-		foreach ( $aeo_outputs as $key ) {
-			$pugmill_outputs_active[] = $key; // AEO outputs are always active
-		}
-	}
+	// Which Pugmill output types are currently active (informational).
+	$pugmill_outputs_active = function_exists( 'wppugmill_active_outputs' ) ? wppugmill_active_outputs() : array();
 
 	$payload = array(
 		'schema_ver'             => 3,
@@ -1612,6 +1637,7 @@ function wppugmill_ajax_manual_send() {
 			$markdown_ajax += (int) $row['count'];
 		}
 	}
+	$pugmill_outputs_ajax = function_exists( 'wppugmill_active_outputs' ) ? wppugmill_active_outputs() : array();
 
 	$payload = array(
 		'schema_ver'             => 3,
@@ -1623,6 +1649,7 @@ function wppugmill_ajax_manual_send() {
 		'posts_with_aeo'         => $aeo_count,
 		'posts_total'            => $posts_total_ajax,
 		'markdown_assets_served' => $markdown_ajax,
+		'pugmill_outputs_active' => $pugmill_outputs_ajax,
 		'field_coverage'         => array(
 			'summary'   => $field_summary,
 			'questions' => $field_questions,
