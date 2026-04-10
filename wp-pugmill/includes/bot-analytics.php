@@ -1356,6 +1356,26 @@ function wppugmill_intelligence_send() {
 		$aeo_tier = 1;
 	}
 
+	// Per-field coverage counts for network intelligence.
+	$aeo_field_rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		"SELECT meta_value FROM {$wpdb->postmeta}
+		 WHERE meta_key = '_wppugmill_aeo'
+		 AND LENGTH(meta_value) > 10",
+		ARRAY_A
+	);
+	$field_summary   = 0;
+	$field_questions = 0;
+	$field_entities  = 0;
+	$field_keywords  = 0;
+	foreach ( (array) $aeo_field_rows as $aeo_field_row ) {
+		$aeo_data = json_decode( $aeo_field_row['meta_value'], true );
+		if ( ! is_array( $aeo_data ) ) { continue; }
+		if ( ! empty( $aeo_data['summary'] ) )   { $field_summary++; }
+		if ( ! empty( $aeo_data['questions'] ) ) { $field_questions++; }
+		if ( ! empty( $aeo_data['entities'] ) )  { $field_entities++; }
+		if ( ! empty( $aeo_data['keywords'] ) )  { $field_keywords++; }
+	}
+
 	// Hash is salted with the site's private instance ID (stored only in their DB,
 	// never transmitted). This prevents rainbow table attacks — even a full list of
 	// known domains cannot reverse the hash without each site's unique UUID.
@@ -1433,6 +1453,12 @@ function wppugmill_intelligence_send() {
 		'posts_total'            => $posts_total,
 		'markdown_assets_served' => $markdown_assets_served,
 		'pugmill_outputs_active' => $pugmill_outputs_active,
+		'field_coverage'         => array(
+			'summary'   => $field_summary,
+			'questions' => $field_questions,
+			'entities'  => $field_entities,
+			'keywords'  => $field_keywords,
+		),
 		'bots'                   => $bots,
 		'network_token'          => $network_token,
 	);
@@ -1526,6 +1552,26 @@ function wppugmill_ajax_manual_send() {
 		$aeo_tier = 1;
 	}
 
+	// Per-field coverage counts for network intelligence.
+	$aeo_field_rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		"SELECT meta_value FROM {$wpdb->postmeta}
+		 WHERE meta_key = '_wppugmill_aeo'
+		 AND LENGTH(meta_value) > 10",
+		ARRAY_A
+	);
+	$field_summary   = 0;
+	$field_questions = 0;
+	$field_entities  = 0;
+	$field_keywords  = 0;
+	foreach ( (array) $aeo_field_rows as $aeo_field_row ) {
+		$aeo_data = json_decode( $aeo_field_row['meta_value'], true );
+		if ( ! is_array( $aeo_data ) ) { continue; }
+		if ( ! empty( $aeo_data['summary'] ) )   { $field_summary++; }
+		if ( ! empty( $aeo_data['questions'] ) ) { $field_questions++; }
+		if ( ! empty( $aeo_data['entities'] ) )  { $field_entities++; }
+		if ( ! empty( $aeo_data['keywords'] ) )  { $field_keywords++; }
+	}
+
 	$site_id       = hash( 'sha256', home_url() . wppugmill_instance_id() );
 	$date          = gmdate( 'Y-m-d', $yesterday * DAY_IN_SECONDS );
 	$network_token = wppugmill_get_encrypted_option( 'wppugmill_network_token', '' );
@@ -1577,6 +1623,12 @@ function wppugmill_ajax_manual_send() {
 		'posts_with_aeo'         => $aeo_count,
 		'posts_total'            => $posts_total_ajax,
 		'markdown_assets_served' => $markdown_ajax,
+		'field_coverage'         => array(
+			'summary'   => $field_summary,
+			'questions' => $field_questions,
+			'entities'  => $field_entities,
+			'keywords'  => $field_keywords,
+		),
 		'bots'                   => $bots,
 		'network_token'          => $network_token,
 	);
