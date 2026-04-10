@@ -2083,6 +2083,66 @@ function wppugmill_render_settings_page() {
 
 		<?php if ( $total > 0 ) : ?>
 		<?php
+		// ── Two-ring donut: categories (inner) + individual bots (outer) ────────
+		$cat_colors = array(
+			'ai'       => '#7c3aed',
+			'training' => '#0891b2',
+			'search'   => '#0369a1',
+			'seo'      => '#d97706',
+		);
+		$cat_light = array(
+			'ai'       => '#c4b5fd',
+			'training' => '#a5f3fc',
+			'search'   => '#bae6fd',
+			'seo'      => '#fde68a',
+		);
+		$inner_ring = array();
+		$outer_ring = array();
+		$total_visits = $ai_total_30 + $training_total_30 + $search_total_30 + $seo_total_30;
+		foreach ( array( 'ai' => $ai_bots, 'training' => $training_bots, 'search' => $search_bots, 'seo' => $seo_bots ) as $cat => $cat_bots ) {
+			$cat_total = array_sum( array_map( function( $k ) use ( $summary ) { return $summary[ $k ] ?? 0; }, array_keys( $cat_bots ) ) );
+			if ( $cat_total > 0 ) {
+				$inner_ring[] = array( 'label' => $cat, 'value' => $cat_total, 'color' => $cat_colors[ $cat ] );
+				foreach ( $cat_bots as $bot_key => $_ ) {
+					$bv = $summary[ $bot_key ] ?? 0;
+					if ( $bv > 0 ) {
+						$outer_ring[] = array( 'label' => $bot_key, 'value' => $bv, 'cat' => $cat, 'color' => $cat_light[ $cat ] );
+					}
+				}
+			}
+		}
+
+		// ── Semi-gauge: AEO infrastructure completeness ──────────────────────────
+		$seo_plugins_g    = wppugmill_detected_seo_plugins();
+		$seo_name_g       = ! empty( $seo_plugins_g ) ? reset( $seo_plugins_g ) : '';
+		$defer_json_ld_g  = (bool) get_option( 'wppugmill_disable_json_ld', 0 );
+		$defer_bc_g       = $defer_json_ld_g || (bool) get_option( 'wppugmill_disable_breadcrumbs', 0 );
+		$defer_meta_g     = (bool) get_option( 'wppugmill_disable_seo_meta', 0 );
+		$llms_off_g       = (bool) get_option( 'wppugmill_disable_llms_txt', 0 );
+		$robots_off_g     = (bool) get_option( 'wppugmill_disable_robots_append', 0 );
+
+		// Count features by owner
+		$gauge_pugmill  = 0; // Pugmill exclusive, active
+		$gauge_seo      = 0; // Handled by SEO plugin
+		$gauge_disabled = 0; // Pugmill feature disabled
+		$gauge_coop     = 0; // Pugmill handling cooperative
+
+		// Pugmill exclusive
+		if ( ! $llms_off_g )   { $gauge_pugmill++; } else { $gauge_disabled++; } // llms.txt
+		if ( ! $llms_off_g )   { $gauge_pugmill++; } else { $gauge_disabled++; } // llms-full.txt
+		$gauge_pugmill += 4; // per-post markdown, site summary, bot analytics, FAQPage schema
+		if ( ! $robots_off_g ) { $gauge_pugmill++; } else { $gauge_disabled++; } // robots.txt
+		$gauge_pugmill += 2; // citations, entity graph
+
+		// Cooperative
+		if ( $defer_json_ld_g && $seo_name_g ) { $gauge_seo++; } else { $gauge_coop++; }  // Article schema
+		if ( $defer_bc_g      && $seo_name_g ) { $gauge_seo++; } else { $gauge_coop++; }  // Breadcrumbs
+		if ( $defer_meta_g    && $seo_name_g ) { $gauge_seo += 2; } else { $gauge_coop += 2; } // Meta + OG
+
+		$gauge_total   = $gauge_pugmill + $gauge_seo + $gauge_disabled + $gauge_coop;
+		$gauge_active  = $gauge_pugmill + $gauge_seo + $gauge_coop;
+		$gauge_pct     = $gauge_total > 0 ? (int) round( $gauge_active / $gauge_total * 100 ) : 0;
+
 		// ── Donut 1: Bot category mix ──────────────────────────────────────────
 		$donut_cats = array_values( array_filter( array(
 			array( 'label' => __( 'AI Crawlers',       'wp-pugmill' ), 'value' => $ai_total_30,       'color' => '#7c3aed' ),
@@ -2121,351 +2181,360 @@ function wppugmill_render_settings_page() {
 		$donut_top_short = ! empty( $donut_topbots ) ? preg_replace( '/\s*\/.*$/', '', $donut_topbots[0]['label'] ) : '';
 		?>
 
-		<!-- ── Summary Donuts ──────────────────────────────────────────────── -->
+		<!-- ── 2+1 Summary Row: Radar + Two-ring donut + Semi-gauge ─────────── -->
 		<style>
-		.wppugmill-donut-grid {
+		.pugmill-summary-row {
 			display: grid;
-			grid-template-columns: 1fr 1fr 1fr;
+			grid-template-columns: 2fr 1fr;
+			grid-template-rows: auto auto;
 			gap: 16px;
-			margin-top: 24px;
-			margin-bottom: 24px;
+			margin: 24px 0;
+		}
+		.pugmill-summary-row .radar-card {
+			grid-column: 1;
+			grid-row: 1 / 3;
 		}
 		@media (max-width: 900px) {
-			.wppugmill-donut-grid { grid-template-columns: 1fr; }
+			.pugmill-summary-row { grid-template-columns: 1fr; }
+			.pugmill-summary-row .radar-card { grid-row: auto; }
 		}
-		.wppugmill-donut-legend { display:flex; flex-direction:column; justify-content:center; gap:6px; flex:1; min-width:0; }
-		.wppugmill-donut-legend span { display:flex; align-items:center; gap:6px; font-size:11px; color:#374151; }
-		.wppugmill-donut-legend span em { font-style:normal; color:#9ca3af; margin-left:auto; padding-left:8px; white-space:nowrap; }
+		.pugmill-card {
+			background: #fff;
+			border: 1px solid #ddd;
+			border-radius: 8px;
+			padding: 20px 24px;
+		}
+		.pugmill-card h3 {
+			margin: 0 0 4px;
+			font-size: 14px;
+			font-weight: 600;
+		}
+		.pugmill-card .card-sub {
+			margin: 0 0 14px;
+			font-size: 11px;
+			color: #6b7280;
+		}
 		</style>
-		<div class="wppugmill-donut-grid">
 
-			<!-- Donut 1: Bot Category Mix -->
-			<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px 24px;">
-				<h3 style="margin:0 0 14px; font-size:14px; font-weight:600;">
-					<?php esc_html_e( 'Bot Categories', 'wp-pugmill' ); ?>
-				</h3>
-				<div style="display:flex; align-items:center; gap:16px;">
-					<canvas id="wppugmill-donut-cats" width="120" height="120" style="width:120px; height:120px; flex-shrink:0;"></canvas>
-					<div class="wppugmill-donut-legend">
-						<?php foreach ( $donut_cats as $seg ) : ?>
-						<span>
-							<span style="width:8px; height:8px; border-radius:50%; background:<?php echo esc_attr( $seg['color'] ); ?>; flex-shrink:0;"></span>
-							<?php echo esc_html( $seg['label'] ); ?>
-							<em><?php echo esc_html( number_format_i18n( $seg['value'] ) ); ?></em>
-						</span>
+		<div class="pugmill-summary-row">
+
+			<!-- Left 2/3: Radar — Content Coverage ──────────────────────────── -->
+			<div class="pugmill-card radar-card">
+				<h3><?php esc_html_e( 'AEO Content Coverage', 'wp-pugmill' ); ?></h3>
+				<p class="card-sub"><?php esc_html_e( 'How thoroughly you\'ve enriched your posts with AEO content fields. The closer the polygon fills the grid, the more content AI engines have to work with.', 'wp-pugmill' ); ?></p>
+				<div style="display:flex; align-items:center; justify-content:center; gap:32px; flex-wrap:wrap;">
+					<canvas id="pugmill-radar" style="display:block; max-width:260px; max-height:260px; width:100%; height:auto;"></canvas>
+					<div style="display:flex; flex-direction:column; gap:10px; min-width:140px;">
+						<?php
+						$radar_fields = array(
+							array( 'label' => __( 'AI Summary',     'wp-pugmill' ), 'count' => $cov_field_summary,   'pct' => $f_pct( $cov_field_summary ) ),
+							array( 'label' => __( 'Q&A Pairs',      'wp-pugmill' ), 'count' => $cov_field_questions, 'pct' => $f_pct( $cov_field_questions ) ),
+							array( 'label' => __( 'Named Entities', 'wp-pugmill' ), 'count' => $cov_field_entities,  'pct' => $f_pct( $cov_field_entities ) ),
+							array( 'label' => __( 'Keywords',       'wp-pugmill' ), 'count' => $cov_field_keywords,  'pct' => $f_pct( $cov_field_keywords ) ),
+						);
+						foreach ( $radar_fields as $rf ) :
+							$rc = $rf['pct'] >= 75 ? '#16a34a' : ( $rf['pct'] >= 40 ? '#d97706' : '#e11d48' );
+						?>
+						<div>
+							<div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:3px;">
+								<span style="color:#374151; font-weight:600;"><?php echo esc_html( $rf['label'] ); ?></span>
+								<span style="color:<?php echo esc_attr( $rc ); ?>; font-weight:700;"><?php echo (int) $rf['pct']; ?>%</span>
+							</div>
+							<div style="height:4px; background:#f0f0f0; border-radius:2px; overflow:hidden;">
+								<div style="height:100%; width:<?php echo (int) $rf['pct']; ?>%; background:<?php echo esc_attr( $rc ); ?>; border-radius:2px;"></div>
+							</div>
+						</div>
 						<?php endforeach; ?>
+						<div style="margin-top:6px; padding-top:8px; border-top:1px solid #f0f0f0; font-size:10px; color:#9ca3af;">
+							<?php echo esc_html( number_format_i18n( $cov_total ) . ' ' . _n( 'post/page total', 'posts/pages total', $cov_total, 'wp-pugmill' ) ); ?>
+						</div>
 					</div>
 				</div>
-				<p style="margin:12px 0 0; font-size:11px; color:#6b7280; line-height:1.5;">
-					<?php esc_html_e( 'How AI, training, search, and SEO bots break down across your 30-day traffic. A balanced spread signals broad visibility across both AI and traditional crawlers.', 'wp-pugmill' ); ?>
-					<?php if ( 0 === $training_total_30 ) : ?>
-					<br><span style="color:#9ca3af;"><?php esc_html_e( 'No training crawlers detected this period — these harvest content for model training and their absence is not unusual on AEO-optimized sites.', 'wp-pugmill' ); ?></span>
-					<?php endif; ?>
-				</p>
 			</div>
 
-			<!-- AEO Feature Coverage Bar Chart -->
-			<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px 24px; grid-column: span 2;">
-				<h3 style="margin:0 0 4px; font-size:14px; font-weight:600;">
-					<?php esc_html_e( 'AEO Feature Coverage', 'wp-pugmill' ); ?>
-				</h3>
-				<p style="margin:0 0 16px; font-size:11px; color:#6b7280;">
-					<?php esc_html_e( 'Everything this plugin does to make your content readable by AI answer engines — automatic outputs, cooperative outputs (shared with your SEO plugin), and the content fields you can enrich per post.', 'wp-pugmill' ); ?>
-				</p>
-				<?php
-				$seo_plugins      = wppugmill_detected_seo_plugins();
-				$seo_name         = ! empty( $seo_plugins ) ? reset( $seo_plugins ) : '';
-				$defer_json_ld    = (bool) get_option( 'wppugmill_disable_json_ld', 0 );
-				$defer_breadcrumb = $defer_json_ld || (bool) get_option( 'wppugmill_disable_breadcrumbs', 0 );
-				$defer_seo_meta   = (bool) get_option( 'wppugmill_disable_seo_meta', 0 );
-				$llms_disabled    = (bool) get_option( 'wppugmill_disable_llms_txt', 0 );
-				$robots_disabled  = (bool) get_option( 'wppugmill_disable_robots_append', 0 );
-
-				// Helper: render one feature row
-				// $type: 'auto' | 'shared' | 'content'
-				// $label, $desc, $status, $status_color, $bar_pct (0-100, content rows only)
-				function wppugmill_feature_row( $label, $desc, $status, $status_color, $bar_pct = -1 ) {
-					$bar_html = '';
-					if ( $bar_pct >= 0 ) {
-						$bar_bg    = $bar_pct >= 75 ? '#16a34a' : ( $bar_pct >= 40 ? '#d97706' : '#e11d48' );
-						$bar_html  = '<div style="margin-top:5px; height:5px; background:#f0f0f0; border-radius:3px; overflow:hidden;">';
-						$bar_html .= '<div style="height:100%; width:' . (int) $bar_pct . '%; background:' . $bar_bg . '; border-radius:3px;"></div>';
-						$bar_html .= '</div>';
-					}
-					?>
-					<div style="display:grid; grid-template-columns:1fr auto; align-items:start; gap:8px; padding:8px 0; border-bottom:1px solid #f3f4f6;">
-						<div>
-							<div style="font-size:12px; font-weight:600; color:#1d2327;"><?php echo esc_html( $label ); ?></div>
-							<div style="font-size:11px; color:#6b7280; margin-top:1px;"><?php echo esc_html( $desc ); ?></div>
-							<?php echo $bar_html; // already escaped above ?>
+			<!-- Right top 1/3: Two-ring donut — Bot Activity ────────────────── -->
+			<div class="pugmill-card">
+				<h3><?php esc_html_e( 'Bot Activity', 'wp-pugmill' ); ?></h3>
+				<p class="card-sub"><?php esc_html_e( 'Inner ring: crawler categories. Outer ring: individual bots.', 'wp-pugmill' ); ?></p>
+				<div style="display:flex; align-items:center; gap:14px;">
+					<canvas id="pugmill-tworingdonut" width="140" height="140" style="width:140px; height:140px; flex-shrink:0;"></canvas>
+					<div style="display:flex; flex-direction:column; gap:5px; min-width:0; flex:1;">
+						<?php
+						$cat_labels = array(
+							'ai'       => __( 'AI Crawlers',       'wp-pugmill' ),
+							'training' => __( 'Training Crawlers', 'wp-pugmill' ),
+							'search'   => __( 'Search Engines',    'wp-pugmill' ),
+							'seo'      => __( 'SEO Tools',         'wp-pugmill' ),
+						);
+						foreach ( $inner_ring as $seg ) :
+						?>
+						<div style="display:flex; align-items:center; gap:6px; font-size:11px;">
+							<span style="width:8px; height:8px; border-radius:50%; background:<?php echo esc_attr( $seg['color'] ); ?>; flex-shrink:0;"></span>
+							<span style="color:#374151; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><?php echo esc_html( $cat_labels[ $seg['label'] ] ?? $seg['label'] ); ?></span>
+							<span style="color:#9ca3af; white-space:nowrap;"><?php echo esc_html( number_format_i18n( $seg['value'] ) ); ?></span>
 						</div>
-						<div style="white-space:nowrap;">
-							<span style="display:inline-block; font-size:10px; font-weight:600; padding:2px 8px; border-radius:10px; background:<?php echo esc_attr( $status_color['bg'] ); ?>; color:<?php echo esc_attr( $status_color['text'] ); ?>;">
-								<?php echo esc_html( $status ); ?>
-							</span>
+						<?php endforeach; ?>
+						<div style="margin-top:4px; padding-top:6px; border-top:1px solid #f0f0f0; font-size:10px; color:#9ca3af;">
+							<?php echo esc_html( number_format_i18n( $total_visits ) . ' ' . __( 'total visits', 'wp-pugmill' ) ); ?>
 						</div>
 					</div>
-					<?php
+				</div>
+			</div>
+
+			<!-- Right bottom 1/3: Semi-gauge — AEO Infrastructure ───────────── -->
+			<div class="pugmill-card">
+				<h3><?php esc_html_e( 'AEO Infrastructure', 'wp-pugmill' ); ?></h3>
+				<p class="card-sub"><?php esc_html_e( 'Active AEO outputs across endpoints, schema, and meta.', 'wp-pugmill' ); ?></p>
+				<div style="display:flex; align-items:center; gap:14px;">
+					<canvas id="pugmill-gauge" style="width:120px; height:68px; flex-shrink:0;"></canvas>
+					<div style="display:flex; flex-direction:column; gap:6px; flex:1; min-width:0;">
+						<div style="display:flex; align-items:center; gap:6px; font-size:11px;">
+							<span style="width:8px; height:8px; border-radius:50%; background:#16a34a; flex-shrink:0;"></span>
+							<span style="color:#374151; flex:1;"><?php esc_html_e( 'Pugmill', 'wp-pugmill' ); ?></span>
+							<span style="color:#9ca3af;"><?php echo (int) ( $gauge_pugmill + $gauge_coop ); ?></span>
+						</div>
+						<?php if ( $gauge_seo > 0 ) : ?>
+						<div style="display:flex; align-items:center; gap:6px; font-size:11px;">
+							<span style="width:8px; height:8px; border-radius:50%; background:#3b82f6; flex-shrink:0;"></span>
+							<span style="color:#374151; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><?php echo esc_html( preg_replace( '/\s+\d.*$/', '', $seo_name_g ) ); ?></span>
+							<span style="color:#9ca3af;"><?php echo (int) $gauge_seo; ?></span>
+						</div>
+						<?php endif; ?>
+						<?php if ( $gauge_disabled > 0 ) : ?>
+						<div style="display:flex; align-items:center; gap:6px; font-size:11px;">
+							<span style="width:8px; height:8px; border-radius:50%; background:#d1d5db; flex-shrink:0;"></span>
+							<span style="color:#9ca3af; flex:1;"><?php esc_html_e( 'Disabled', 'wp-pugmill' ); ?></span>
+							<span style="color:#9ca3af;"><?php echo (int) $gauge_disabled; ?></span>
+						</div>
+						<?php endif; ?>
+						<div style="margin-top:4px; padding-top:6px; border-top:1px solid #f0f0f0; font-size:10px; color:#9ca3af;">
+							<?php echo esc_html( $gauge_active . ' of ' . $gauge_total . ' ' . __( 'outputs active', 'wp-pugmill' ) ); ?>
+						</div>
+					</div>
+				</div>
+			</div>
+
+		</div><!-- /.pugmill-summary-row -->
+
+		<script>
+		(function () {
+
+			// ── Shared helpers ────────────────────────────────────────────────
+			function dpr() { return window.devicePixelRatio || 1; }
+			function setupCanvas( id, w, h ) {
+				var c = document.getElementById( id );
+				if ( !c ) return null;
+				var d = dpr();
+				c.width  = w * d;
+				c.height = h * d;
+				c.style.width  = w + 'px';
+				c.style.height = h + 'px';
+				var ctx = c.getContext( '2d' );
+				ctx.scale( d, d );
+				return ctx;
+			}
+
+			// ── 1. Radar chart ────────────────────────────────────────────────
+			(function () {
+				var SIZE   = 260;
+				var ctx    = setupCanvas( 'pugmill-radar', SIZE, SIZE );
+				if ( !ctx ) return;
+
+				var fields = <?php echo wp_json_encode( array_map( function( $f ) {
+					return array( 'label' => $f['label'], 'pct' => $f['pct'] );
+				}, $radar_fields ) ); ?>;
+
+				var n      = fields.length;   // 4
+				var cx     = SIZE / 2;
+				var cy     = SIZE / 2;
+				var maxR   = 88;              // max polygon radius
+				var levels = 4;
+				var PI2    = Math.PI * 2;
+				var start  = -Math.PI / 2;   // top
+
+				function angleOf( i ) { return start + ( PI2 / n ) * i; }
+				function point( r, i ) {
+					var a = angleOf( i );
+					return [ cx + r * Math.cos( a ), cy + r * Math.sin( a ) ];
 				}
 
-				$green  = array( 'bg' => '#dcfce7', 'text' => '#15803d' );
-				$blue   = array( 'bg' => '#dbeafe', 'text' => '#1d4ed8' );
-				$amber  = array( 'bg' => '#fef3c7', 'text' => '#92400e' );
-				$gray   = array( 'bg' => '#f3f4f6', 'text' => '#6b7280' );
+				// Grid rings
+				for ( var l = 1; l <= levels; l++ ) {
+					var gr = maxR * ( l / levels );
+					ctx.beginPath();
+					for ( var i = 0; i < n; i++ ) {
+						var p = point( gr, i );
+						i === 0 ? ctx.moveTo( p[0], p[1] ) : ctx.lineTo( p[0], p[1] );
+					}
+					ctx.closePath();
+					ctx.strokeStyle = l === levels ? '#d1d5db' : '#f0f0f0';
+					ctx.lineWidth   = l === levels ? 1.5 : 1;
+					ctx.stroke();
+				}
 
-				$f_pct = function( $count ) use ( $cov_total ) {
-					return $cov_total > 0 ? (int) round( $count / $cov_total * 100 ) : 0;
-				};
-				?>
+				// Axis spokes
+				for ( var i = 0; i < n; i++ ) {
+					var tip = point( maxR, i );
+					ctx.beginPath();
+					ctx.moveTo( cx, cy );
+					ctx.lineTo( tip[0], tip[1] );
+					ctx.strokeStyle = '#e5e7eb';
+					ctx.lineWidth   = 1;
+					ctx.stroke();
+				}
 
-				<!-- Group: AEO Endpoints -->
-				<div style="margin-bottom:20px;">
-					<div style="font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#9ca3af; margin-bottom:2px;">
-						<?php esc_html_e( 'AEO Endpoints', 'wp-pugmill' ); ?>
-						<span style="font-weight:400; text-transform:none; letter-spacing:0;">&mdash; <?php esc_html_e( 'Pugmill exclusive', 'wp-pugmill' ); ?></span>
-					</div>
-					<?php
-					wppugmill_feature_row(
-						__( 'llms.txt', 'wp-pugmill' ),
-						__( 'AI discovery index listing your content for language models.', 'wp-pugmill' ),
-						$llms_disabled ? __( 'Disabled', 'wp-pugmill' ) : __( 'Active', 'wp-pugmill' ),
-						$llms_disabled ? $gray : $green
-					);
-					wppugmill_feature_row(
-						__( 'llms-full.txt', 'wp-pugmill' ),
-						__( 'Paginated full AEO content endpoint for deep AI indexing.', 'wp-pugmill' ),
-						$llms_disabled ? __( 'Disabled', 'wp-pugmill' ) : __( 'Active', 'wp-pugmill' ),
-						$llms_disabled ? $gray : $green
-					);
-					wppugmill_feature_row(
-						__( 'Per-post Markdown', 'wp-pugmill' ),
-						__( 'Structured AEO content per post at ?wppugmill_llm=1.', 'wp-pugmill' ),
-						__( 'Active', 'wp-pugmill' ),
-						$green
-					);
-					wppugmill_feature_row(
-						__( 'Site Summary', 'wp-pugmill' ),
-						__( 'Site-level markdown overview for AI crawlers.', 'wp-pugmill' ),
-						__( 'Active', 'wp-pugmill' ),
-						$green
-					);
-					wppugmill_feature_row(
-						__( 'robots.txt Rules', 'wp-pugmill' ),
-						__( 'Controls which bots can access AEO endpoints and sitemaps.', 'wp-pugmill' ),
-						$robots_disabled ? __( 'Disabled', 'wp-pugmill' ) : __( 'Active', 'wp-pugmill' ),
-						$robots_disabled ? $gray : $green
-					);
-					wppugmill_feature_row(
-						__( 'Bot Analytics', 'wp-pugmill' ),
-						__( 'Tracks AI, training, and search crawlers visiting your site.', 'wp-pugmill' ),
-						__( 'Active', 'wp-pugmill' ),
-						$green
-					);
-					?>
-				</div>
+				// Data polygon
+				ctx.beginPath();
+				for ( var i = 0; i < n; i++ ) {
+					var r = maxR * ( fields[i].pct / 100 );
+					var p = point( r, i );
+					i === 0 ? ctx.moveTo( p[0], p[1] ) : ctx.lineTo( p[0], p[1] );
+				}
+				ctx.closePath();
+				ctx.fillStyle   = 'rgba(124,58,237,0.15)';
+				ctx.fill();
+				ctx.strokeStyle = '#7c3aed';
+				ctx.lineWidth   = 2;
+				ctx.stroke();
 
-				<!-- Group: Structured Data -->
-				<div style="margin-bottom:20px;">
-					<div style="font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#9ca3af; margin-bottom:2px;">
-						<?php esc_html_e( 'Structured Data', 'wp-pugmill' ); ?>
-						<span style="font-weight:400; text-transform:none; letter-spacing:0;">&mdash; <?php esc_html_e( 'JSON-LD schema output', 'wp-pugmill' ); ?></span>
-					</div>
-					<?php
-					wppugmill_feature_row(
-						__( 'FAQPage Schema', 'wp-pugmill' ),
-						__( 'Q&A pairs as FAQPage JSON-LD. No SEO plugin generates this.', 'wp-pugmill' ),
-						__( 'Pugmill', 'wp-pugmill' ),
-						$green
-					);
-					wppugmill_feature_row(
-						__( 'Entity Graph (mentions)', 'wp-pugmill' ),
-						__( 'Typed entity mentions with sameAs links for AI understanding.', 'wp-pugmill' ),
-						__( 'Pugmill', 'wp-pugmill' ),
-						$green
-					);
-					wppugmill_feature_row(
-						__( 'Citation Extraction', 'wp-pugmill' ),
-						__( 'Auto-pulled from external links in post content.', 'wp-pugmill' ),
-						__( 'Pugmill', 'wp-pugmill' ),
-						$green
-					);
-					wppugmill_feature_row(
-						__( 'Article Schema', 'wp-pugmill' ),
-						__( 'BlogPosting/Article with datePublished, author, wordCount.', 'wp-pugmill' ),
-						$defer_json_ld && $seo_name ? $seo_name : __( 'Pugmill', 'wp-pugmill' ),
-						$defer_json_ld && $seo_name ? $blue : $green
-					);
-					wppugmill_feature_row(
-						__( 'Breadcrumb Schema', 'wp-pugmill' ),
-						__( 'Helps AI engines understand your site hierarchy.', 'wp-pugmill' ),
-						$defer_breadcrumb && $seo_name ? $seo_name : __( 'Pugmill', 'wp-pugmill' ),
-						$defer_breadcrumb && $seo_name ? $blue : $green
-					);
-					?>
-				</div>
+				// Dots on polygon vertices
+				for ( var i = 0; i < n; i++ ) {
+					var r = maxR * ( fields[i].pct / 100 );
+					var p = point( r, i );
+					ctx.beginPath();
+					ctx.arc( p[0], p[1], 4, 0, PI2 );
+					ctx.fillStyle = '#7c3aed';
+					ctx.fill();
+				}
 
-				<!-- Group: On-Page Meta -->
-				<div style="margin-bottom:20px;">
-					<div style="font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#9ca3af; margin-bottom:2px;">
-						<?php esc_html_e( 'On-Page Meta', 'wp-pugmill' ); ?>
-						<span style="font-weight:400; text-transform:none; letter-spacing:0;">&mdash; <?php esc_html_e( 'cooperative with SEO plugin', 'wp-pugmill' ); ?></span>
-					</div>
-					<?php
-					wppugmill_feature_row(
-						__( 'Meta Description', 'wp-pugmill' ),
-						__( 'Falls back to AEO summary when no SEO plugin is active.', 'wp-pugmill' ),
-						$defer_seo_meta && $seo_name ? $seo_name : __( 'Pugmill', 'wp-pugmill' ),
-						$defer_seo_meta && $seo_name ? $blue : $green
-					);
-					wppugmill_feature_row(
-						__( 'Open Graph / Twitter Tags', 'wp-pugmill' ),
-						__( 'Social sharing metadata for link previews.', 'wp-pugmill' ),
-						$defer_seo_meta && $seo_name ? $seo_name : __( 'Pugmill', 'wp-pugmill' ),
-						$defer_seo_meta && $seo_name ? $blue : $green
-					);
-					?>
-				</div>
+				// Axis labels — positioned just outside the outer ring
+				var labelR = maxR + 24;
+				ctx.fillStyle  = '#374151';
+				ctx.font       = 'bold 10px sans-serif';
+				ctx.textBaseline = 'middle';
+				for ( var i = 0; i < n; i++ ) {
+					var a   = angleOf( i );
+					var lp  = point( labelR, i );
+					// Align based on quadrant
+					if ( Math.cos( a ) > 0.1 )       ctx.textAlign = 'left';
+					else if ( Math.cos( a ) < -0.1 )  ctx.textAlign = 'right';
+					else                              ctx.textAlign = 'center';
+					ctx.fillText( fields[i].label, lp[0], lp[1] );
+				}
+			}());
 
-				<!-- Group: Content You've Added -->
-				<div>
-					<div style="font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#9ca3af; margin-bottom:2px;">
-						<?php esc_html_e( 'Content You\'ve Added', 'wp-pugmill' ); ?>
-						<span style="font-weight:400; text-transform:none; letter-spacing:0;">&mdash; <?php echo esc_html( number_format_i18n( $cov_total ) . ' ' . _n( 'post/page', 'posts/pages', $cov_total, 'wp-pugmill' ) ); ?></span>
-					</div>
-					<?php
-					$summary_pct   = $f_pct( $cov_field_summary );
-					$questions_pct = $f_pct( $cov_field_questions );
-					$entities_pct  = $f_pct( $cov_field_entities );
-					$keywords_pct  = $f_pct( $cov_field_keywords );
+			// ── 2. Two-ring donut ─────────────────────────────────────────────
+			(function () {
+				var SIZE = 140;
+				var ctx  = setupCanvas( 'pugmill-tworingdonut', SIZE, SIZE );
+				if ( !ctx ) return;
 
-					wppugmill_feature_row(
-						__( 'AI Summary', 'wp-pugmill' ),
-						sprintf( __( '%1$s of %2$s posts (%3$d%%)', 'wp-pugmill' ), number_format_i18n( $cov_field_summary ), number_format_i18n( $cov_total ), $summary_pct ),
-						$summary_pct . '%',
-						$summary_pct >= 75 ? $green : ( $summary_pct >= 40 ? $amber : array( 'bg' => '#fee2e2', 'text' => '#b91c1c' ) ),
-						$summary_pct
-					);
-					wppugmill_feature_row(
-						__( 'Q&A Pairs', 'wp-pugmill' ),
-						sprintf( __( '%1$s of %2$s posts (%3$d%%)', 'wp-pugmill' ), number_format_i18n( $cov_field_questions ), number_format_i18n( $cov_total ), $questions_pct ),
-						$questions_pct . '%',
-						$questions_pct >= 75 ? $green : ( $questions_pct >= 40 ? $amber : array( 'bg' => '#fee2e2', 'text' => '#b91c1c' ) ),
-						$questions_pct
-					);
-					wppugmill_feature_row(
-						__( 'Named Entities', 'wp-pugmill' ),
-						sprintf( __( '%1$s of %2$s posts (%3$d%%)', 'wp-pugmill' ), number_format_i18n( $cov_field_entities ), number_format_i18n( $cov_total ), $entities_pct ),
-						$entities_pct . '%',
-						$entities_pct >= 75 ? $green : ( $entities_pct >= 40 ? $amber : array( 'bg' => '#fee2e2', 'text' => '#b91c1c' ) ),
-						$entities_pct
-					);
-					wppugmill_feature_row(
-						__( 'Keywords', 'wp-pugmill' ),
-						sprintf( __( '%1$s of %2$s posts (%3$d%%)', 'wp-pugmill' ), number_format_i18n( $cov_field_keywords ), number_format_i18n( $cov_total ), $keywords_pct ),
-						$keywords_pct . '%',
-						$keywords_pct >= 75 ? $green : ( $keywords_pct >= 40 ? $amber : array( 'bg' => '#fee2e2', 'text' => '#b91c1c' ) ),
-						$keywords_pct
-					);
-					?>
-				</div>
-			</div>
+				var inner = <?php echo wp_json_encode( $inner_ring ); ?>;
+				var outer = <?php echo wp_json_encode( $outer_ring ); ?>;
+				var total = <?php echo (int) $total_visits; ?>;
 
-			<!-- Donut 3: Top Crawlers -->
-			<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px 24px;">
-				<h3 style="margin:0 0 14px; font-size:14px; font-weight:600;">
-					<?php esc_html_e( 'Top Crawlers', 'wp-pugmill' ); ?>
-				</h3>
-				<div style="display:flex; align-items:center; gap:16px;">
-					<canvas id="wppugmill-donut-topbots" width="120" height="120" style="width:120px; height:120px; flex-shrink:0;"></canvas>
-					<div class="wppugmill-donut-legend">
-						<?php foreach ( $donut_topbots as $seg ) : ?>
-						<span>
-							<span style="width:8px; height:8px; border-radius:50%; background:<?php echo esc_attr( $seg['color'] ); ?>; flex-shrink:0;"></span>
-							<?php echo esc_html( $seg['label'] ); ?>
-							<em><?php echo esc_html( number_format_i18n( $seg['value'] ) ); ?></em>
-						</span>
-						<?php endforeach; ?>
-					</div>
-				</div>
-				<p style="margin:12px 0 0; font-size:11px; color:#6b7280; line-height:1.5;">
-					<?php esc_html_e( 'Your most active bots by visit volume over 30 days. Shows which AI engines and search crawlers are paying the most attention to your site.', 'wp-pugmill' ); ?>
-				</p>
-			</div>
-
-		</div>
-		<script>
-		(function() {
-			function drawDonut( canvasId, segments, line1, line2 ) {
-				var canvas = document.getElementById( canvasId );
-				if ( ! canvas || ! canvas.getContext ) { return; }
-				var ctx   = canvas.getContext( '2d' );
-				var dpr   = window.devicePixelRatio || 1;
-				var size  = 120;
-
-				canvas.width        = size * dpr;
-				canvas.height       = size * dpr;
-				canvas.style.width  = size + 'px';
-				canvas.style.height = size + 'px';
-				ctx.scale( dpr, dpr );
-
-				var cx    = size / 2;
-				var cy    = size / 2;
-				var outer = size * 0.46;
-				var inner = size * 0.27;
-				var total = segments.reduce( function( acc, sg ) { return acc + sg.value; }, 0 );
-				var gap   = segments.length > 1 ? 0.05 : 0;
-				var avail = Math.PI * 2 - segments.length * gap;
-				var start = -Math.PI / 2;
-
-				// Empty-state ring
 				if ( total === 0 ) {
 					ctx.beginPath();
-					ctx.arc( cx, cy, outer, 0, Math.PI * 2 );
-					ctx.arc( cx, cy, inner, 0, Math.PI * 2, true );
+					ctx.arc( 70, 70, 60, 0, Math.PI * 2 );
+					ctx.arc( 70, 70, 22, 0, Math.PI * 2, true );
 					ctx.fillStyle = '#e5e7eb';
 					ctx.fill();
 					return;
 				}
 
-				// Filled segments
-				segments.forEach( function( sg ) {
-					var sweep = ( sg.value / total ) * avail;
-					ctx.beginPath();
-					ctx.arc( cx, cy, outer, start, start + sweep );
-					ctx.arc( cx, cy, inner, start + sweep, start, true );
-					ctx.closePath();
-					ctx.fillStyle = sg.color;
-					ctx.fill();
-					start += sweep + gap;
-				} );
+				var cx = SIZE / 2, cy = SIZE / 2;
+				var PI2 = Math.PI * 2;
+				var GAP = 0.04;
 
-				// Center labels
+				function drawRing( segs, outerR, innerR ) {
+					var sum   = segs.reduce( function(s,g){ return s + g.value; }, 0 );
+					var avail = PI2 - segs.length * GAP;
+					var start = -Math.PI / 2;
+					segs.forEach( function( sg ) {
+						var sweep = ( sg.value / sum ) * avail;
+						ctx.beginPath();
+						ctx.arc( cx, cy, outerR, start, start + sweep );
+						ctx.arc( cx, cy, innerR, start + sweep, start, true );
+						ctx.closePath();
+						ctx.fillStyle = sg.color;
+						ctx.fill();
+						start += sweep + GAP;
+					});
+				}
+
+				drawRing( inner, 46, 28 ); // inner ring: categories
+				drawRing( outer, 62, 49 ); // outer ring: individual bots
+
+				// Center label
 				ctx.textAlign    = 'center';
 				ctx.textBaseline = 'middle';
 				ctx.fillStyle    = '#1d2327';
-				ctx.font         = 'bold 15px sans-serif';
-				ctx.fillText( line1, cx, cy - 7 );
+				ctx.font         = 'bold 12px sans-serif';
+				ctx.fillText( <?php echo wp_json_encode( number_format_i18n( $total_visits ) ); ?>, cx, cy - 6 );
 				ctx.fillStyle = '#9ca3af';
-				ctx.font      = '10px sans-serif';
-				ctx.fillText( line2, cx, cy + 9 );
-			}
+				ctx.font      = '9px sans-serif';
+				ctx.fillText( <?php echo wp_json_encode( __( 'visits', 'wp-pugmill' ) ); ?>, cx, cy + 7 );
+			}());
 
-			drawDonut(
-				'wppugmill-donut-cats',
-				<?php echo wp_json_encode( $donut_cats ); ?>,
-				<?php echo wp_json_encode( number_format_i18n( $ai_total_30 + $training_total_30 + $search_total_30 + $seo_total_30 ) ); ?>,
-				<?php echo wp_json_encode( __( 'bot visits', 'wp-pugmill' ) ); ?>
-			);
+			// ── 3. Semi-circular gauge ────────────────────────────────────────
+			(function () {
+				var W = 120, H = 68;
+				var ctx = setupCanvas( 'pugmill-gauge', W, H );
+				if ( !ctx ) return;
 
-			drawDonut(
-				'wppugmill-donut-topbots',
-				<?php echo wp_json_encode( $donut_topbots ); ?>,
-				<?php echo wp_json_encode( $donut_top_pct . '%' ); ?>,
-				<?php echo wp_json_encode( $donut_top_short ); ?>
-			);
-		}() );
+				var cx    = W / 2;
+				var cy    = H - 8;
+				var R     = 52;
+				var thick = 13;
+				var pct   = <?php echo (int) $gauge_pct; ?> / 100;
+				var pugPct = <?php echo $gauge_total > 0 ? round( ( $gauge_pugmill + $gauge_coop ) / $gauge_total, 4 ) : 0; ?>;
+				var seoPct = <?php echo $gauge_total > 0 ? round( $gauge_seo / $gauge_total, 4 ) : 0; ?>;
+				var disPct = <?php echo $gauge_total > 0 ? round( $gauge_disabled / $gauge_total, 4 ) : 0; ?>;
+
+				var PI = Math.PI;
+				var startA = PI;        // left (180°)
+				var endA   = 0;         // right (0°)
+				var arcLen = PI;        // total sweep
+
+				function drawArc( fromPct, toPct, color ) {
+					var a1 = startA + fromPct * arcLen;
+					var a2 = startA + toPct   * arcLen;
+					ctx.beginPath();
+					ctx.arc( cx, cy, R, a1, a2 );
+					ctx.lineWidth   = thick;
+					ctx.strokeStyle = color;
+					ctx.stroke();
+				}
+
+				// Track (background)
+				drawArc( 0, 1, '#f0f0f0' );
+
+				// Pugmill segment (green)
+				var p1 = 0, p2 = pugPct;
+				if ( p2 > p1 ) drawArc( p1, p2, '#16a34a' );
+
+				// SEO plugin segment (blue)
+				var p3 = p2, p4 = p2 + seoPct;
+				if ( p4 > p3 ) drawArc( p3, p4, '#3b82f6' );
+
+				// Disabled segment (light gray, already background)
+
+				// Center text
+				ctx.textAlign    = 'center';
+				ctx.textBaseline = 'middle';
+				ctx.fillStyle    = '#1d2327';
+				ctx.font         = 'bold 16px sans-serif';
+				ctx.fillText( <?php echo wp_json_encode( $gauge_pct . '%' ); ?>, cx, cy - 14 );
+				ctx.fillStyle = '#9ca3af';
+				ctx.font      = '9px sans-serif';
+				ctx.fillText( <?php echo wp_json_encode( __( 'active', 'wp-pugmill' ) ); ?>, cx, cy - 2 );
+			}());
+
+		}());
 		</script>
 		<?php endif; ?>
+
+		<!-- ── 2×2 Bot Quadrants ──────────────────────────────────────────── -->
 
 		<!-- ── 2×2 Bot Quadrants ──────────────────────────────────────────── -->
 		<?php
