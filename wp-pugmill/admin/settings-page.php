@@ -1898,13 +1898,23 @@ function wppugmill_render_settings_page() {
 				 AND p.post_type IN ('post','page')
 				 AND LENGTH(pm.meta_value) > 10"
 			);
+			$cov_field_summary   = 0;
+			$cov_field_questions = 0;
+			$cov_field_entities  = 0;
+			$cov_field_keywords  = 0;
 			foreach ( (array) $cov_rows as $cov_row ) {
 				$aeo = json_decode( $cov_row->meta_value, true );
 				if ( ! is_array( $aeo ) ) { continue; }
-				$fields_set = (int) ! empty( $aeo['summary'] )
-					+ (int) ! empty( $aeo['questions'] )
-					+ (int) ! empty( $aeo['entities'] );
-				if ( 3 === $fields_set ) {
+				$has_summary   = ! empty( $aeo['summary'] );
+				$has_questions = ! empty( $aeo['questions'] );
+				$has_entities  = ! empty( $aeo['entities'] );
+				$has_keywords  = ! empty( $aeo['keywords'] );
+				if ( $has_summary )   { $cov_field_summary++; }
+				if ( $has_questions ) { $cov_field_questions++; }
+				if ( $has_entities )  { $cov_field_entities++; }
+				if ( $has_keywords )  { $cov_field_keywords++; }
+				$fields_set = (int) $has_summary + (int) $has_questions + (int) $has_entities + (int) $has_keywords;
+				if ( 4 === $fields_set ) {
 					$cov_full++;
 				} elseif ( $fields_set > 0 ) {
 					$cov_partial++;
@@ -2083,7 +2093,7 @@ function wppugmill_render_settings_page() {
 
 		// ── Donut 2: AEO content coverage ────────────────────────────────────────
 		$donut_aeo_data = array_values( array_filter( array(
-			array( 'label' => __( 'Complete (all 3 fields)', 'wp-pugmill' ), 'value' => $cov_full,    'pct' => $cov_full_pct,    'color' => '#16a34a' ),
+			array( 'label' => __( 'Complete (all 4 fields)', 'wp-pugmill' ), 'value' => $cov_full,    'pct' => $cov_full_pct,    'color' => '#16a34a' ),
 			array( 'label' => __( 'Partial (1–2 fields)',   'wp-pugmill' ), 'value' => $cov_partial, 'pct' => $cov_partial_pct, 'color' => '#d97706' ),
 			array( 'label' => __( 'None',                    'wp-pugmill' ), 'value' => $cov_none,    'pct' => $cov_none_pct,    'color' => '#e5e7eb' ),
 		), function( $s ) { return $s['value'] > 0; } ) );
@@ -2154,34 +2164,210 @@ function wppugmill_render_settings_page() {
 				</p>
 			</div>
 
-			<!-- Donut 2: AEO Content Coverage -->
-			<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px 24px;">
-				<h3 style="margin:0 0 14px; font-size:14px; font-weight:600;">
-					<?php esc_html_e( 'Content Coverage', 'wp-pugmill' ); ?>
+			<!-- AEO Feature Coverage Bar Chart -->
+			<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px 24px; grid-column: span 2;">
+				<h3 style="margin:0 0 4px; font-size:14px; font-weight:600;">
+					<?php esc_html_e( 'AEO Feature Coverage', 'wp-pugmill' ); ?>
 				</h3>
-				<div style="display:flex; align-items:center; gap:16px;">
-					<canvas id="wppugmill-donut-aeo" width="120" height="120" style="width:120px; height:120px; flex-shrink:0;"></canvas>
-					<div class="wppugmill-donut-legend">
-						<?php foreach ( $donut_aeo_data as $seg ) : ?>
-						<span>
-							<span style="width:8px; height:8px; border-radius:50%; background:<?php echo esc_attr( $seg['color'] ); ?>; flex-shrink:0;"></span>
-							<?php echo esc_html( $seg['label'] ); ?>
-							<em><?php echo esc_html( number_format_i18n( $seg['value'] ) . ' (' . $seg['pct'] . '%)' ); ?></em>
-						</span>
-						<?php endforeach; ?>
-						<?php if ( $cov_total > 0 ) : ?>
-						<span style="margin-top:4px; padding-top:6px; border-top:1px solid #f0f0f0;">
-							<span style="width:8px; flex-shrink:0;"></span>
-							<span style="color:#9ca3af; font-size:10px;">
-								<?php echo esc_html( number_format_i18n( $cov_total ) . ' ' . _n( 'post/page', 'posts/pages', $cov_total, 'wp-pugmill' ) ); ?>
-							</span>
-						</span>
-						<?php endif; ?>
-					</div>
-				</div>
-				<p style="margin:12px 0 0; font-size:11px; color:#6b7280; line-height:1.5;">
-					<?php esc_html_e( 'AEO coverage across all published posts and pages. Complete = all 3 fields (summary, Q&amp;A pairs, entities). Partial = 1–2 fields. The percentage in the chart centre shows posts with any AEO data.', 'wp-pugmill' ); ?>
+				<p style="margin:0 0 16px; font-size:11px; color:#6b7280;">
+					<?php esc_html_e( 'Everything this plugin does to make your content readable by AI answer engines — automatic outputs, cooperative outputs (shared with your SEO plugin), and the content fields you can enrich per post.', 'wp-pugmill' ); ?>
 				</p>
+				<?php
+				$seo_plugins      = wppugmill_detected_seo_plugins();
+				$seo_name         = ! empty( $seo_plugins ) ? reset( $seo_plugins ) : '';
+				$defer_json_ld    = (bool) get_option( 'wppugmill_disable_json_ld', 0 );
+				$defer_breadcrumb = $defer_json_ld || (bool) get_option( 'wppugmill_disable_breadcrumbs', 0 );
+				$defer_seo_meta   = (bool) get_option( 'wppugmill_disable_seo_meta', 0 );
+				$llms_disabled    = (bool) get_option( 'wppugmill_disable_llms_txt', 0 );
+				$robots_disabled  = (bool) get_option( 'wppugmill_disable_robots_append', 0 );
+
+				// Helper: render one feature row
+				// $type: 'auto' | 'shared' | 'content'
+				// $label, $desc, $status, $status_color, $bar_pct (0-100, content rows only)
+				function wppugmill_feature_row( $label, $desc, $status, $status_color, $bar_pct = -1 ) {
+					$bar_html = '';
+					if ( $bar_pct >= 0 ) {
+						$bar_bg    = $bar_pct >= 75 ? '#16a34a' : ( $bar_pct >= 40 ? '#d97706' : '#e11d48' );
+						$bar_html  = '<div style="margin-top:5px; height:5px; background:#f0f0f0; border-radius:3px; overflow:hidden;">';
+						$bar_html .= '<div style="height:100%; width:' . (int) $bar_pct . '%; background:' . $bar_bg . '; border-radius:3px;"></div>';
+						$bar_html .= '</div>';
+					}
+					?>
+					<div style="display:grid; grid-template-columns:1fr auto; align-items:start; gap:8px; padding:8px 0; border-bottom:1px solid #f3f4f6;">
+						<div>
+							<div style="font-size:12px; font-weight:600; color:#1d2327;"><?php echo esc_html( $label ); ?></div>
+							<div style="font-size:11px; color:#6b7280; margin-top:1px;"><?php echo esc_html( $desc ); ?></div>
+							<?php echo $bar_html; // already escaped above ?>
+						</div>
+						<div style="white-space:nowrap;">
+							<span style="display:inline-block; font-size:10px; font-weight:600; padding:2px 8px; border-radius:10px; background:<?php echo esc_attr( $status_color['bg'] ); ?>; color:<?php echo esc_attr( $status_color['text'] ); ?>;">
+								<?php echo esc_html( $status ); ?>
+							</span>
+						</div>
+					</div>
+					<?php
+				}
+
+				$green  = array( 'bg' => '#dcfce7', 'text' => '#15803d' );
+				$blue   = array( 'bg' => '#dbeafe', 'text' => '#1d4ed8' );
+				$amber  = array( 'bg' => '#fef3c7', 'text' => '#92400e' );
+				$gray   = array( 'bg' => '#f3f4f6', 'text' => '#6b7280' );
+
+				$f_pct = function( $count ) use ( $cov_total ) {
+					return $cov_total > 0 ? (int) round( $count / $cov_total * 100 ) : 0;
+				};
+				?>
+
+				<!-- Group: AEO Endpoints -->
+				<div style="margin-bottom:20px;">
+					<div style="font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#9ca3af; margin-bottom:2px;">
+						<?php esc_html_e( 'AEO Endpoints', 'wp-pugmill' ); ?>
+						<span style="font-weight:400; text-transform:none; letter-spacing:0;">&mdash; <?php esc_html_e( 'Pugmill exclusive', 'wp-pugmill' ); ?></span>
+					</div>
+					<?php
+					wppugmill_feature_row(
+						__( 'llms.txt', 'wp-pugmill' ),
+						__( 'AI discovery index listing your content for language models.', 'wp-pugmill' ),
+						$llms_disabled ? __( 'Disabled', 'wp-pugmill' ) : __( 'Active', 'wp-pugmill' ),
+						$llms_disabled ? $gray : $green
+					);
+					wppugmill_feature_row(
+						__( 'llms-full.txt', 'wp-pugmill' ),
+						__( 'Paginated full AEO content endpoint for deep AI indexing.', 'wp-pugmill' ),
+						$llms_disabled ? __( 'Disabled', 'wp-pugmill' ) : __( 'Active', 'wp-pugmill' ),
+						$llms_disabled ? $gray : $green
+					);
+					wppugmill_feature_row(
+						__( 'Per-post Markdown', 'wp-pugmill' ),
+						__( 'Structured AEO content per post at ?wppugmill_llm=1.', 'wp-pugmill' ),
+						__( 'Active', 'wp-pugmill' ),
+						$green
+					);
+					wppugmill_feature_row(
+						__( 'Site Summary', 'wp-pugmill' ),
+						__( 'Site-level markdown overview for AI crawlers.', 'wp-pugmill' ),
+						__( 'Active', 'wp-pugmill' ),
+						$green
+					);
+					wppugmill_feature_row(
+						__( 'robots.txt Rules', 'wp-pugmill' ),
+						__( 'Controls which bots can access AEO endpoints and sitemaps.', 'wp-pugmill' ),
+						$robots_disabled ? __( 'Disabled', 'wp-pugmill' ) : __( 'Active', 'wp-pugmill' ),
+						$robots_disabled ? $gray : $green
+					);
+					wppugmill_feature_row(
+						__( 'Bot Analytics', 'wp-pugmill' ),
+						__( 'Tracks AI, training, and search crawlers visiting your site.', 'wp-pugmill' ),
+						__( 'Active', 'wp-pugmill' ),
+						$green
+					);
+					?>
+				</div>
+
+				<!-- Group: Structured Data -->
+				<div style="margin-bottom:20px;">
+					<div style="font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#9ca3af; margin-bottom:2px;">
+						<?php esc_html_e( 'Structured Data', 'wp-pugmill' ); ?>
+						<span style="font-weight:400; text-transform:none; letter-spacing:0;">&mdash; <?php esc_html_e( 'JSON-LD schema output', 'wp-pugmill' ); ?></span>
+					</div>
+					<?php
+					wppugmill_feature_row(
+						__( 'FAQPage Schema', 'wp-pugmill' ),
+						__( 'Q&A pairs as FAQPage JSON-LD. No SEO plugin generates this.', 'wp-pugmill' ),
+						__( 'Pugmill', 'wp-pugmill' ),
+						$green
+					);
+					wppugmill_feature_row(
+						__( 'Entity Graph (mentions)', 'wp-pugmill' ),
+						__( 'Typed entity mentions with sameAs links for AI understanding.', 'wp-pugmill' ),
+						__( 'Pugmill', 'wp-pugmill' ),
+						$green
+					);
+					wppugmill_feature_row(
+						__( 'Citation Extraction', 'wp-pugmill' ),
+						__( 'Auto-pulled from external links in post content.', 'wp-pugmill' ),
+						__( 'Pugmill', 'wp-pugmill' ),
+						$green
+					);
+					wppugmill_feature_row(
+						__( 'Article Schema', 'wp-pugmill' ),
+						__( 'BlogPosting/Article with datePublished, author, wordCount.', 'wp-pugmill' ),
+						$defer_json_ld && $seo_name ? $seo_name : __( 'Pugmill', 'wp-pugmill' ),
+						$defer_json_ld && $seo_name ? $blue : $green
+					);
+					wppugmill_feature_row(
+						__( 'Breadcrumb Schema', 'wp-pugmill' ),
+						__( 'Helps AI engines understand your site hierarchy.', 'wp-pugmill' ),
+						$defer_breadcrumb && $seo_name ? $seo_name : __( 'Pugmill', 'wp-pugmill' ),
+						$defer_breadcrumb && $seo_name ? $blue : $green
+					);
+					?>
+				</div>
+
+				<!-- Group: On-Page Meta -->
+				<div style="margin-bottom:20px;">
+					<div style="font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#9ca3af; margin-bottom:2px;">
+						<?php esc_html_e( 'On-Page Meta', 'wp-pugmill' ); ?>
+						<span style="font-weight:400; text-transform:none; letter-spacing:0;">&mdash; <?php esc_html_e( 'cooperative with SEO plugin', 'wp-pugmill' ); ?></span>
+					</div>
+					<?php
+					wppugmill_feature_row(
+						__( 'Meta Description', 'wp-pugmill' ),
+						__( 'Falls back to AEO summary when no SEO plugin is active.', 'wp-pugmill' ),
+						$defer_seo_meta && $seo_name ? $seo_name : __( 'Pugmill', 'wp-pugmill' ),
+						$defer_seo_meta && $seo_name ? $blue : $green
+					);
+					wppugmill_feature_row(
+						__( 'Open Graph / Twitter Tags', 'wp-pugmill' ),
+						__( 'Social sharing metadata for link previews.', 'wp-pugmill' ),
+						$defer_seo_meta && $seo_name ? $seo_name : __( 'Pugmill', 'wp-pugmill' ),
+						$defer_seo_meta && $seo_name ? $blue : $green
+					);
+					?>
+				</div>
+
+				<!-- Group: Content You've Added -->
+				<div>
+					<div style="font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#9ca3af; margin-bottom:2px;">
+						<?php esc_html_e( 'Content You\'ve Added', 'wp-pugmill' ); ?>
+						<span style="font-weight:400; text-transform:none; letter-spacing:0;">&mdash; <?php echo esc_html( number_format_i18n( $cov_total ) . ' ' . _n( 'post/page', 'posts/pages', $cov_total, 'wp-pugmill' ) ); ?></span>
+					</div>
+					<?php
+					$summary_pct   = $f_pct( $cov_field_summary );
+					$questions_pct = $f_pct( $cov_field_questions );
+					$entities_pct  = $f_pct( $cov_field_entities );
+					$keywords_pct  = $f_pct( $cov_field_keywords );
+
+					wppugmill_feature_row(
+						__( 'AI Summary', 'wp-pugmill' ),
+						sprintf( __( '%1$s of %2$s posts (%3$d%%)', 'wp-pugmill' ), number_format_i18n( $cov_field_summary ), number_format_i18n( $cov_total ), $summary_pct ),
+						$summary_pct . '%',
+						$summary_pct >= 75 ? $green : ( $summary_pct >= 40 ? $amber : array( 'bg' => '#fee2e2', 'text' => '#b91c1c' ) ),
+						$summary_pct
+					);
+					wppugmill_feature_row(
+						__( 'Q&A Pairs', 'wp-pugmill' ),
+						sprintf( __( '%1$s of %2$s posts (%3$d%%)', 'wp-pugmill' ), number_format_i18n( $cov_field_questions ), number_format_i18n( $cov_total ), $questions_pct ),
+						$questions_pct . '%',
+						$questions_pct >= 75 ? $green : ( $questions_pct >= 40 ? $amber : array( 'bg' => '#fee2e2', 'text' => '#b91c1c' ) ),
+						$questions_pct
+					);
+					wppugmill_feature_row(
+						__( 'Named Entities', 'wp-pugmill' ),
+						sprintf( __( '%1$s of %2$s posts (%3$d%%)', 'wp-pugmill' ), number_format_i18n( $cov_field_entities ), number_format_i18n( $cov_total ), $entities_pct ),
+						$entities_pct . '%',
+						$entities_pct >= 75 ? $green : ( $entities_pct >= 40 ? $amber : array( 'bg' => '#fee2e2', 'text' => '#b91c1c' ) ),
+						$entities_pct
+					);
+					wppugmill_feature_row(
+						__( 'Keywords', 'wp-pugmill' ),
+						sprintf( __( '%1$s of %2$s posts (%3$d%%)', 'wp-pugmill' ), number_format_i18n( $cov_field_keywords ), number_format_i18n( $cov_total ), $keywords_pct ),
+						$keywords_pct . '%',
+						$keywords_pct >= 75 ? $green : ( $keywords_pct >= 40 ? $amber : array( 'bg' => '#fee2e2', 'text' => '#b91c1c' ) ),
+						$keywords_pct
+					);
+					?>
+				</div>
 			</div>
 
 			<!-- Donut 3: Top Crawlers -->
@@ -2269,13 +2455,6 @@ function wppugmill_render_settings_page() {
 				<?php echo wp_json_encode( $donut_cats ); ?>,
 				<?php echo wp_json_encode( number_format_i18n( $ai_total_30 + $training_total_30 + $search_total_30 + $seo_total_30 ) ); ?>,
 				<?php echo wp_json_encode( __( 'bot visits', 'wp-pugmill' ) ); ?>
-			);
-
-			drawDonut(
-				'wppugmill-donut-aeo',
-				<?php echo wp_json_encode( $donut_aeo_data ); ?>,
-				<?php echo wp_json_encode( $donut_aeo_pct . '%' ); ?>,
-				<?php echo wp_json_encode( __( 'have AEO', 'wp-pugmill' ) ); ?>
 			);
 
 			drawDonut(
