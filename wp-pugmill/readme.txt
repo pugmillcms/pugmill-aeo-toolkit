@@ -4,7 +4,7 @@ Tags: aeo, answer engine optimization, ai, structured data, bot analytics, llms-
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.2.3
+Stable tag: 1.2.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -164,6 +164,17 @@ Plus: llms.txt, per-post AEO markdown endpoints, and a bot analytics dashboard s
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.2.4 =
+* **Compatibility tab**: Removed "AEO-Exclusive Outputs" panel — this information is already communicated by the AEO Infrastructure card on the Bot Analytics page. Compatibility tab now focuses entirely on plugin coexistence.
+* **Compatibility tab**: Added note listing the five SEO plugins Pugmill auto-detects (Yoast, Rank Math, AIOSEO, The SEO Framework, SEOPress) with guidance for users running unlisted plugins.
+* **License tab**: Replaced marketing copy with a concise 4-step setup guide linking directly to the AI Provider, Author Voice, and Bot Analytics tabs.
+* **Removed**: Import from Another SEO Plugin feature and migration.php — avoids positioning conflict with SEO plugin makers.
+* **Network payload**: Fixed `pugmill_outputs_active` always sending `[]` due to a guard on a non-existent function; now uses `wppugmill_active_outputs()` which reads actual option flags.
+* **Network payload**: Added missing `pugmill_outputs_active` field to the manual "Send now" AJAX handler (was present in cron send only).
+* **AI Insights**: Added `aeo_field_coverage`, `posts_total`, and `posts_with_aeo` to the analytics context so the AI analyst can identify content coverage gaps and recommend Bulk AEO Generation where appropriate.
+* **Copy**: Various UX copy refinements — "AI-generated" → "AI-refined", flipped sentence order on AI Insights card, updated Bot Analytics Network opt-in description.
+* **Bot Activity chart**: Removed "Bot Analytics" from the AEO-Exclusive Outputs list (it is a dashboard, not an HTTP endpoint).
 
 = 1.2.3 =
 * **Charts**: Last 30 Days bar chart top scale now rounds up to the nearest 1/2/5 × 10ⁿ — e.g. a raw peak of 6,486 becomes 7,000, giving intuitive midpoint and grid lines.

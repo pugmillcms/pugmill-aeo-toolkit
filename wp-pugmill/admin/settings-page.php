@@ -502,12 +502,24 @@ function wppugmill_render_settings_page() {
 		     ════════════════════════════════════════════════════════════ -->
 		<div style="display:grid; grid-template-columns:1fr 280px; gap:28px; align-items:start; margin-top:24px;">
 		<div><!-- left column -->
-		<p style="<?php echo esc_attr( $p_style ); ?>">
-			<?php esc_html_e( 'A pugmill in a pottery studio turns slop into usable clay — de-aired, wedged, and ready to work. This plugin does the same for your content: takes the good parts of your existing SEO and transforms them into structured, AI-ready signal that answer engines can consume and cite.', 'wp-pugmill' ); ?>
-		</p>
-		<p style="<?php echo esc_attr( $p_style ); ?>">
-			<?php esc_html_e( 'WP Pugmill is free to use — manually fill in AEO metadata for every post, or connect your own AI Provider (Anthropic, OpenAI, or Google). The AI Provider key you use is encrypted on your server — usage is billed directly by your AI provider.', 'wp-pugmill' ); ?>
-		</p>
+		<ol style="<?php echo esc_attr( $p_style ); ?> margin:0 0 0 18px; padding:0; line-height:2;">
+			<li><?php esc_html_e( 'Add a Pro License Key below to unlock the full feature set (optional).', 'wp-pugmill' ); ?></li>
+			<li><?php printf(
+				/* translators: %s: link to AI Provider tab */
+				esc_html__( 'Add an AI Provider key on the %s tab — Anthropic, OpenAI, or Google. Your key is encrypted on your server; usage is billed by your provider.', 'wp-pugmill' ),
+				'<a href="' . esc_url( admin_url( 'admin.php?page=wp-pugmill&tab=ai-provider' ) ) . '">' . esc_html__( 'AI Provider', 'wp-pugmill' ) . '</a>'
+			); ?></li>
+			<li><?php printf(
+				/* translators: %s: link to Author Voice tab */
+				esc_html__( 'Set your writing style on the %s tab so AI-refined content matches your voice.', 'wp-pugmill' ),
+				'<a href="' . esc_url( admin_url( 'admin.php?page=wp-pugmill&tab=author-voice' ) ) . '">' . esc_html__( 'Author Voice', 'wp-pugmill' ) . '</a>'
+			); ?></li>
+			<li><?php printf(
+				/* translators: %s: link to Bot Analytics tab */
+				esc_html__( 'Opt in to the Pugmill AEO Intelligence Network on the %s tab to contribute bot activity and see how they are consuming your content.', 'wp-pugmill' ),
+				'<a href="' . esc_url( admin_url( 'admin.php?page=wp-pugmill&tab=analytics' ) ) . '">' . esc_html__( 'Bot Analytics', 'wp-pugmill' ) . '</a>'
+			); ?></li>
+		</ol>
 		<h3 style="font-size:13px; font-weight:700; color:#1d2327; margin:20px 0 6px;"><?php esc_html_e( 'Upgrade to WP Pugmill Pro', 'wp-pugmill' ); ?></h3>
 		<p style="<?php echo esc_attr( $p_style ); ?>">
 			<?php esc_html_e( 'Upgrading to WP Pugmill Pro unlocks the full feature set: Generate All AEO, SEO Generation, Tone Check, Topic Focus, Social Media Draftss, and more (see below).', 'wp-pugmill' ); ?>
@@ -1251,32 +1263,6 @@ function wppugmill_render_settings_page() {
 		<?php endif; ?>
 		</div><!-- /seo plugin status card -->
 
-		<!-- ── AEO-Exclusive Outputs ──────────────────────────────────── -->
-		<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px 24px; margin-top:16px;">
-		<h2 style="<?php echo esc_attr( $h2_style ); ?> margin-top:0;"><?php esc_html_e( 'AEO-Exclusive Outputs', 'wp-pugmill' ); ?></h2>
-		<p style="<?php echo esc_attr( $p_style ); ?> margin-top:0;"><?php esc_html_e( 'These are the AEO layer that AI answer engines use to understand, retrieve, and cite your content. They are always active — your Yoast or RankMath settings have no effect on them.', 'wp-pugmill' ); ?></p>
-		<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:10px; margin-top:12px;">
-			<?php
-			$aeo_exclusive = array(
-				array( 'icon' => '🤖', 'label' => __( 'FAQPage Schema', 'wp-pugmill' ), 'desc' => __( 'AI-extracted Q&A pairs in JSON-LD', 'wp-pugmill' ) ),
-				array( 'icon' => '🔗', 'label' => __( 'Entity Mentions', 'wp-pugmill' ), 'desc' => __( 'Typed entity graph with sameAs links', 'wp-pugmill' ) ),
-				array( 'icon' => '📎', 'label' => __( 'Citation Extraction', 'wp-pugmill' ), 'desc' => __( 'Auto-extracted external link citations', 'wp-pugmill' ) ),
-				array( 'icon' => '🏷️', 'label' => __( 'AI Keywords', 'wp-pugmill' ), 'desc' => __( 'Keywords in JSON-LD for AI retrieval', 'wp-pugmill' ) ),
-				array( 'icon' => '📄', 'label' => __( 'llms.txt', 'wp-pugmill' ), 'desc' => __( 'LLM-readable site index at /llms.txt', 'wp-pugmill' ) ),
-				array( 'icon' => '📝', 'label' => __( 'Markdown Assets', 'wp-pugmill' ), 'desc' => __( 'Per-post AEO markdown for bot tracking', 'wp-pugmill' ) ),
-				array( 'icon' => '📊', 'label' => __( 'Bot Analytics', 'wp-pugmill' ), 'desc' => __( 'AI crawler intelligence dashboard', 'wp-pugmill' ) ),
-			);
-			foreach ( $aeo_exclusive as $item ) : ?>
-			<div style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:6px; padding:12px 14px;">
-				<div style="font-size:18px; margin-bottom:4px;"><?php echo $item['icon']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div>
-				<div style="font-size:12px; font-weight:600; color:#111827; margin-bottom:2px;"><?php echo esc_html( $item['label'] ); ?></div>
-				<div style="font-size:11px; color:#6b7280; line-height:1.4;"><?php echo esc_html( $item['desc'] ); ?></div>
-				<div style="margin-top:6px; font-size:11px; font-weight:600; color:#16a34a;">&#10003; <?php esc_html_e( 'Always Active', 'wp-pugmill' ); ?></div>
-			</div>
-			<?php endforeach; ?>
-		</div>
-		</div><!-- /aeo-exclusive card -->
-
 		<!-- ── Overlapping SEO Outputs ────────────────────────────────── -->
 		<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px 24px; margin-top:16px;">
 		<h2 style="<?php echo esc_attr( $h2_style ); ?> margin-top:0;"><?php esc_html_e( 'Overlapping SEO Outputs', 'wp-pugmill' ); ?></h2>
@@ -1289,6 +1275,9 @@ function wppugmill_render_settings_page() {
 			<?php else : ?>
 			<?php esc_html_e( 'WP Pugmill is the only plugin managing these outputs. No conflicts detected.', 'wp-pugmill' ); ?>
 			<?php endif; ?>
+		</p>
+		<p style="<?php echo esc_attr( $p_style ); ?> margin-top:0; color:#666;">
+			<?php esc_html_e( 'WP Pugmill automatically detects: Yoast SEO, Rank Math, All in One SEO, The SEO Framework, and SEOPress. If you use a different SEO plugin, manage these outputs manually.', 'wp-pugmill' ); ?>
 		</p>
 
 		<form method="post" action="options.php" style="margin:0;">
@@ -1671,142 +1660,6 @@ function wppugmill_render_settings_page() {
 		}());
 		</script>
 
-		<!-- ── Import from Another SEO Plugin ───────────────────────── -->
-		<h2 style="<?php echo esc_attr( $h2_style ); ?> margin-top:32px;"><?php esc_html_e( 'Import from Another SEO Plugin', 'wp-pugmill' ); ?></h2>
-		<p style="<?php echo esc_attr( $p_style ); ?>">
-			<?php esc_html_e( 'WP Pugmill can import titles, meta descriptions, canonical URLs, robots settings, and OG fields from Yoast, Rank Math, All in One SEO, and SEOPress. Posts that already have WP Pugmill data are skipped by default.', 'wp-pugmill' ); ?>
-		</p>
-
-		<?php
-		$migration_sources = wppugmill_migration_sources();
-		if ( empty( $migration_sources ) ) :
-		?>
-		<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px 24px;">
-			<p style="color:#46b450; margin:0;">&#10003; <?php esc_html_e( 'No importable data found from Yoast, Rank Math, AIOSEO, or SEOPress.', 'wp-pugmill' ); ?></p>
-		</div>
-		<?php else : ?>
-
-		<div id="wppugmill-migration-wrap" style="max-width:700px;">
-			<?php foreach ( $migration_sources as $source_key => $source ) : ?>
-			<div class="wppugmill-migration-card"
-				id="wppugmill-card-<?php echo esc_attr( $source_key ); ?>"
-				style="background:#fff; border:1px solid #ddd; border-radius:6px; padding:16px 20px; margin-bottom:14px;">
-
-				<div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
-					<div>
-						<strong style="font-size:14px;"><?php echo esc_html( $source['label'] ); ?></strong>
-						<span style="color:#666; font-size:13px; margin-left:8px;">
-							<?php printf(
-								esc_html( _n( '%d post with SEO data', '%d posts with SEO data', $source['count'], 'wp-pugmill' ) ),
-								(int) $source['count']
-							); ?>
-						</span>
-						<?php if ( ! $source['active'] ) : ?>
-						<span style="background:#f0f0f1; color:#666; font-size:11px; padding:2px 7px; border-radius:3px; margin-left:6px;"><?php esc_html_e( 'Inactive', 'wp-pugmill' ); ?></span>
-						<?php endif; ?>
-					</div>
-					<div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-						<label style="font-size:12px; color:#555; display:flex; align-items:center; gap:4px;">
-							<input type="checkbox"
-								class="wppugmill-migration-overwrite"
-								data-source="<?php echo esc_attr( $source_key ); ?>"
-								style="margin:0;">
-							<?php esc_html_e( 'Overwrite existing', 'wp-pugmill' ); ?>
-						</label>
-						<button type="button"
-							class="button button-primary wppugmill-migration-btn"
-							data-source="<?php echo esc_attr( $source_key ); ?>"
-							data-total="<?php echo esc_attr( $source['count'] ); ?>">
-							<?php esc_html_e( 'Import', 'wp-pugmill' ); ?>
-						</button>
-					</div>
-				</div>
-
-				<div class="wppugmill-migration-progress" id="wppugmill-progress-<?php echo esc_attr( $source_key ); ?>" style="display:none; margin-top:14px;">
-					<div style="background:#f0f0f1; border-radius:4px; height:8px; overflow:hidden; margin-bottom:8px;">
-						<div class="wppugmill-progress-bar"
-							style="background:#2271b1; height:100%; width:0%; border-radius:4px; transition:width 0.3s ease;"></div>
-					</div>
-					<div class="wppugmill-progress-label" style="font-size:12px; color:#555;"></div>
-				</div>
-
-			</div>
-			<?php endforeach; ?>
-		</div><!-- #wppugmill-migration-wrap -->
-
-		<script>
-		(function() {
-			var nonce   = <?php echo wp_json_encode( wp_create_nonce( 'wppugmill_migration' ) ); ?>;
-			var ajaxUrl = <?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>;
-
-			function runBatch( source, offset, overwrite, total, migrated, skipped ) {
-				var card     = document.getElementById( 'wppugmill-card-' + source );
-				var progress = document.getElementById( 'wppugmill-progress-' + source );
-				var bar      = progress.querySelector( '.wppugmill-progress-bar' );
-				var label    = progress.querySelector( '.wppugmill-progress-label' );
-				var btn      = card.querySelector( '.wppugmill-migration-btn' );
-
-				progress.style.display = 'block';
-				btn.disabled = true;
-
-				var pct = total > 0 ? Math.min( 100, Math.round( ( offset / total ) * 100 ) ) : 0;
-				bar.style.width = pct + '%';
-				label.textContent = offset + ' / ' + total + ' processed\u2026';
-
-				var body = new URLSearchParams();
-				body.append( 'action',    'wppugmill_run_migration' );
-				body.append( 'nonce',     nonce );
-				body.append( 'source',    source );
-				body.append( 'offset',    offset );
-				body.append( 'overwrite', overwrite ? '1' : '0' );
-
-				fetch( ajaxUrl, {
-					method:      'POST',
-					credentials: 'same-origin',
-					headers:     { 'Content-Type': 'application/x-www-form-urlencoded' },
-					body:        body.toString(),
-				} )
-				.then( function( r ) { return r.json(); } )
-				.then( function( res ) {
-					if ( ! res.success ) {
-						label.textContent = '\u2717 Error: ' + ( res.data && res.data.message ? res.data.message : 'Unknown error.' );
-						btn.disabled = false;
-						return;
-					}
-					var d = res.data;
-					migrated += d.migrated;
-					skipped  += d.skipped;
-					var newOffset = offset + d.processed;
-					if ( d.done ) {
-						bar.style.width      = '100%';
-						bar.style.background = '#46b450';
-						label.style.color    = '#46b450';
-						label.textContent    = '\u2713 Done \u2014 ' + migrated + ' imported, ' + skipped + ' skipped.';
-						btn.disabled         = false;
-						btn.textContent      = 'Re-import';
-					} else {
-						runBatch( source, newOffset, overwrite, total, migrated, skipped );
-					}
-				} )
-				.catch( function() {
-					label.textContent = '\u2717 Network error. Please try again.';
-					btn.disabled = false;
-				} );
-			}
-
-			document.addEventListener( 'click', function( e ) {
-				if ( ! e.target.classList.contains( 'wppugmill-migration-btn' ) ) { return; }
-				var btn       = e.target;
-				var source    = btn.getAttribute( 'data-source' );
-				var total     = parseInt( btn.getAttribute( 'data-total' ), 10 ) || 0;
-				var card      = document.getElementById( 'wppugmill-card-' + source );
-				var overwrite = card.querySelector( '.wppugmill-migration-overwrite' ).checked;
-				runBatch( source, 0, overwrite, total, 0, 0 );
-			} );
-		}());
-		</script>
-		<?php endif; ?>
-
 		<?php elseif ( 'analytics' === $active_tab ) : ?>
 		<!-- ════════════════════════════════════════════════════════════
 		     BOT ANALYTICS TAB
@@ -2011,7 +1864,7 @@ function wppugmill_render_settings_page() {
 						<?php esc_html_e( 'AI Insights', 'wp-pugmill' ); ?>
 					</h3>
 					<p style="margin:0; font-size:12px; color:#6b7280;">
-						<?php esc_html_e( 'Submit your bot traffic to the Pugmill AEO Intelligence Network, or ask your AI provider for analysis and recommendations.', 'wp-pugmill' ); ?>
+						<?php esc_html_e( 'Ask your AI provider for analysis and recommendations, or submit your bot traffic to the Pugmill AEO Intelligence Network.', 'wp-pugmill' ); ?>
 					</p>
 				</div>
 				<div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
