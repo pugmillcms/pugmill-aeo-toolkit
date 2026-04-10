@@ -4,7 +4,7 @@ Tags: aeo, answer engine optimization, ai, structured data, bot analytics, llms-
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.2.0
+Stable tag: 1.2.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -165,8 +165,9 @@ Plus: llms.txt, per-post AEO markdown endpoints, and a bot analytics dashboard s
 
 == Changelog ==
 
-= 1.2.0 =
-* **Fix**: Radar chart axis labels ("Summary", "Q&A", "Entities", "Keywords") no longer clip — canvas restored to 260px with reduced polygon radius (55) to give labels room. Abbreviated axis labels use sidebar vocabulary; full names retained in the bar rows below.
+= 1.2.1 =
+* **Labels**: AEO Infrastructure feature list vocabulary aligned with post sidebar. "On-Page Meta" → "Meta Tags" (these are `<head>` elements, not visible page content). Structured Data items drop redundant "Schema" suffix and use sidebar words: Q&A Pairs, Named Entities, Article, Breadcrumbs. robots.txt moved from Meta Tags into AEO Endpoints alongside llms.txt. Slashes removed from llms.txt and llms-full.txt display names.
+* **Charts**: Benchmark bar chart scale (`q_max`) now rounds up to the nearest 1/2/5 × 10ⁿ instead of using the raw peak — gives intuitive axis breaks (e.g. 1,423 visits → scale to 2,000 not 1,423).
 * **Fix**: "Bot Analytics" removed from the AEO Endpoints feature list in the Infrastructure column — it is the analytics dashboard, not an HTTP endpoint.
 * **Fix**: Structured Data items renamed to match post sidebar vocabulary: "FAQPage Schema" → "Q&A Schema", "Entity Graph" → "Named Entity Schema".
 * **Accessibility**: Legend changed from color-only "Purple = network average" to `Purple "avg" bar = network average`, pairing the visual color with the text label shown in the chart.

@@ -2375,30 +2375,30 @@ function wppugmill_render_settings_page() {
 						'heading' => 'AEO Endpoints',
 						'color'   => '#7c3aed',
 						'items'   => array(
-							array( 'name' => '/llms.txt',     'type' => $llms_off_g    ? 'off' : 'pm' ),
-							array( 'name' => '/llms-full.txt', 'type' => $llms_off_g    ? 'off' : 'pm' ),
-							array( 'name' => 'Post Markdown',  'type' => 'pm' ),
-							array( 'name' => 'Site Summary',   'type' => 'pm' ),
+							array( 'name' => 'llms.txt',      'type' => $llms_off_g    ? 'off' : 'pm' ),
+							array( 'name' => 'llms-full.txt', 'type' => $llms_off_g    ? 'off' : 'pm' ),
+							array( 'name' => 'robots.txt',    'type' => $robots_off_g  ? 'off' : 'pm' ),
+							array( 'name' => 'Post Markdown', 'type' => 'pm' ),
+							array( 'name' => 'Site Summary',  'type' => 'pm' ),
 						),
 					),
 					array(
 						'heading' => 'Structured Data',
 						'color'   => '#16a34a',
 						'items'   => array(
-							array( 'name' => 'Q&A Schema',        'type' => 'pm' ),
-							array( 'name' => 'Named Entity Schema','type' => 'pm' ),
-							array( 'name' => 'Citations',         'type' => 'pm' ),
-							array( 'name' => 'Article Schema',    'type' => ( $defer_json_ld_g && $seo_name_g ) ? 'seo' : 'pm' ),
-							array( 'name' => 'Breadcrumb Schema', 'type' => ( $defer_bc_g      && $seo_name_g ) ? 'seo' : 'pm' ),
+							array( 'name' => 'Q&A Pairs',    'type' => 'pm' ),
+							array( 'name' => 'Named Entities','type' => 'pm' ),
+							array( 'name' => 'Citations',     'type' => 'pm' ),
+							array( 'name' => 'Article',       'type' => ( $defer_json_ld_g && $seo_name_g ) ? 'seo' : 'pm' ),
+							array( 'name' => 'Breadcrumbs',   'type' => ( $defer_bc_g      && $seo_name_g ) ? 'seo' : 'pm' ),
 						),
 					),
 					array(
-						'heading' => 'On-Page Meta',
+						'heading' => 'Meta Tags',
 						'color'   => '#0369a1',
 						'items'   => array(
-							array( 'name' => 'robots.txt',       'type' => $robots_off_g ? 'off' : 'pm' ),
-							array( 'name' => 'Meta Description',  'type' => ( $defer_meta_g && $seo_name_g ) ? 'seo' : 'pm' ),
-							array( 'name' => 'Open Graph Tags',   'type' => ( $defer_meta_g && $seo_name_g ) ? 'seo' : 'pm' ),
+							array( 'name' => 'Meta Description', 'type' => ( $defer_meta_g && $seo_name_g ) ? 'seo' : 'pm' ),
+							array( 'name' => 'Open Graph',       'type' => ( $defer_meta_g && $seo_name_g ) ? 'seo' : 'pm' ),
 						),
 					),
 				);
@@ -2785,10 +2785,15 @@ function wppugmill_render_settings_page() {
 			}
 			arsort( $q_sorted );
 
-			// Scale max across both your counts and network avgs
+			// Scale max: raw peak across your counts + network avgs, then round up to nearest nice number
 			$q_max = 1;
 			foreach ( $q_sorted as $bot_key => $cnt ) {
 				$q_max = max( $q_max, $cnt, (int) ( $network_avgs[ $bot_key ] ?? 0 ) );
+			}
+			// Round up to 1/2/5/10 × magnitude for intuitive axis breaks
+			$_qmag = (int) pow( 10, (int) floor( log10( max( $q_max, 1 ) ) ) );
+			foreach ( array( 1, 2, 5, 10 ) as $_f ) {
+				if ( $_f * $_qmag >= $q_max ) { $q_max = $_f * $_qmag; break; }
 			}
 
 			// Network trend
