@@ -1884,8 +1884,12 @@ function wppugmill_render_settings_page() {
 			 WHERE post_status = 'publish'
 			 AND post_type IN ('post','page')"
 		);
-		$cov_full    = 0;
-		$cov_partial = 0;
+		$cov_full            = 0;
+		$cov_partial         = 0;
+		$cov_field_summary   = 0;
+		$cov_field_questions = 0;
+		$cov_field_entities  = 0;
+		$cov_field_keywords  = 0;
 		if ( $cov_total > 0 ) {
 			// Single JOIN — no LIMIT — accurate across all published posts.
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
@@ -2227,10 +2231,10 @@ function wppugmill_render_settings_page() {
 					<div style="display:flex; flex-direction:column; gap:10px; min-width:140px;">
 						<?php
 						$radar_fields = array(
-							array( 'label' => __( 'AI Summary',     'wp-pugmill' ), 'count' => $cov_field_summary,   'pct' => $f_pct( $cov_field_summary ) ),
-							array( 'label' => __( 'Q&A Pairs',      'wp-pugmill' ), 'count' => $cov_field_questions, 'pct' => $f_pct( $cov_field_questions ) ),
-							array( 'label' => __( 'Named Entities', 'wp-pugmill' ), 'count' => $cov_field_entities,  'pct' => $f_pct( $cov_field_entities ) ),
-							array( 'label' => __( 'Keywords',       'wp-pugmill' ), 'count' => $cov_field_keywords,  'pct' => $f_pct( $cov_field_keywords ) ),
+							array( 'label' => __( 'AI Summary',     'wp-pugmill' ), 'count' => $cov_field_summary,   'pct' => ( $cov_total > 0 ? (int) round( $cov_field_summary   / $cov_total * 100 ) : 0 ) ),
+							array( 'label' => __( 'Q&A Pairs',      'wp-pugmill' ), 'count' => $cov_field_questions, 'pct' => ( $cov_total > 0 ? (int) round( $cov_field_questions / $cov_total * 100 ) : 0 ) ),
+							array( 'label' => __( 'Named Entities', 'wp-pugmill' ), 'count' => $cov_field_entities,  'pct' => ( $cov_total > 0 ? (int) round( $cov_field_entities  / $cov_total * 100 ) : 0 ) ),
+							array( 'label' => __( 'Keywords',       'wp-pugmill' ), 'count' => $cov_field_keywords,  'pct' => ( $cov_total > 0 ? (int) round( $cov_field_keywords  / $cov_total * 100 ) : 0 ) ),
 						);
 						foreach ( $radar_fields as $rf ) :
 							$rc = $rf['pct'] >= 75 ? '#16a34a' : ( $rf['pct'] >= 40 ? '#d97706' : '#e11d48' );
