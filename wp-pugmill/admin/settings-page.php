@@ -2185,28 +2185,25 @@ function wppugmill_render_settings_page() {
 		$donut_top_short = ! empty( $donut_topbots ) ? preg_replace( '/\s*\/.*$/', '', $donut_topbots[0]['label'] ) : '';
 		?>
 
-		<!-- ── 2+1 Summary Row: Radar + Two-ring donut + Semi-gauge ─────────── -->
+		<!-- ── 3-column Summary Row: Bot Activity | AEO Content Coverage | AEO Infrastructure ── -->
 		<style>
 		.pugmill-summary-row {
 			display: grid;
-			grid-template-columns: 2fr 1fr;
-			grid-template-rows: auto auto;
+			grid-template-columns: 1fr 1fr 1fr;
 			gap: 16px;
 			margin: 24px 0;
 		}
-		.pugmill-summary-row .radar-card {
-			grid-column: 1;
-			grid-row: 1 / 3;
+		@media (max-width: 1000px) {
+			.pugmill-summary-row { grid-template-columns: 1fr 1fr; }
 		}
-		@media (max-width: 900px) {
+		@media (max-width: 640px) {
 			.pugmill-summary-row { grid-template-columns: 1fr; }
-			.pugmill-summary-row .radar-card { grid-row: auto; }
 		}
 		.pugmill-card {
 			background: #fff;
 			border: 1px solid #ddd;
 			border-radius: 8px;
-			padding: 20px 24px;
+			padding: 18px 20px;
 		}
 		.pugmill-card h3 {
 			margin: 0 0 4px;
@@ -2214,107 +2211,214 @@ function wppugmill_render_settings_page() {
 			font-weight: 600;
 		}
 		.pugmill-card .card-sub {
-			margin: 0 0 14px;
+			margin: 0 0 12px;
 			font-size: 11px;
 			color: #6b7280;
 		}
+		.pugmill-feat-group {
+			font-size: 10px;
+			font-weight: 700;
+			text-transform: uppercase;
+			letter-spacing: .06em;
+			margin: 10px 0 4px;
+			padding-bottom: 3px;
+			border-bottom: 1px solid #f0f0f0;
+		}
+		.pugmill-feat-group:first-child { margin-top: 2px; }
+		.pugmill-feat-row {
+			display: flex;
+			align-items: center;
+			gap: 7px;
+			font-size: 11px;
+			padding: 3px 0;
+		}
+		.pugmill-feat-dot {
+			width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+		}
+		.pugmill-feat-name { flex: 1; color: #374151; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+		.pugmill-feat-badge {
+			font-size: 9px;
+			font-weight: 600;
+			padding: 1px 5px;
+			border-radius: 3px;
+			white-space: nowrap;
+		}
+		.pugmill-feat-badge.pm  { background: #dcfce7; color: #15803d; }
+		.pugmill-feat-badge.seo { background: #dbeafe; color: #1d4ed8; }
+		.pugmill-feat-badge.off { background: #f3f4f6; color: #9ca3af; }
 		</style>
 
 		<div class="pugmill-summary-row">
 
-			<!-- Left 2/3: Radar — Content Coverage ──────────────────────────── -->
-			<div class="pugmill-card radar-card">
-				<h3><?php esc_html_e( 'AEO Content Coverage', 'wp-pugmill' ); ?></h3>
-				<p class="card-sub"><?php esc_html_e( 'How thoroughly you\'ve enriched your posts with AEO content fields. The closer the polygon fills the grid, the more content AI engines have to work with.', 'wp-pugmill' ); ?></p>
-				<div style="display:flex; align-items:center; justify-content:center; gap:32px; flex-wrap:wrap;">
-					<canvas id="pugmill-radar" style="display:block; max-width:260px; max-height:260px; width:100%; height:auto;"></canvas>
-					<div style="display:flex; flex-direction:column; gap:10px; min-width:140px;">
-						<?php
-						$radar_fields = array(
-							array( 'label' => __( 'AI Summary',     'wp-pugmill' ), 'count' => $cov_field_summary,   'pct' => ( $cov_total > 0 ? (int) round( $cov_field_summary   / $cov_total * 100 ) : 0 ) ),
-							array( 'label' => __( 'Q&A Pairs',      'wp-pugmill' ), 'count' => $cov_field_questions, 'pct' => ( $cov_total > 0 ? (int) round( $cov_field_questions / $cov_total * 100 ) : 0 ) ),
-							array( 'label' => __( 'Named Entities', 'wp-pugmill' ), 'count' => $cov_field_entities,  'pct' => ( $cov_total > 0 ? (int) round( $cov_field_entities  / $cov_total * 100 ) : 0 ) ),
-							array( 'label' => __( 'Keywords',       'wp-pugmill' ), 'count' => $cov_field_keywords,  'pct' => ( $cov_total > 0 ? (int) round( $cov_field_keywords  / $cov_total * 100 ) : 0 ) ),
-						);
-						foreach ( $radar_fields as $rf ) :
-							$rc = $rf['pct'] >= 75 ? '#16a34a' : ( $rf['pct'] >= 40 ? '#d97706' : '#e11d48' );
-						?>
-						<div>
-							<div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:3px;">
-								<span style="color:#374151; font-weight:600;"><?php echo esc_html( $rf['label'] ); ?></span>
-								<span style="color:<?php echo esc_attr( $rc ); ?>; font-weight:700;"><?php echo (int) $rf['pct']; ?>%</span>
-							</div>
-							<div style="height:4px; background:#f0f0f0; border-radius:2px; overflow:hidden;">
-								<div style="height:100%; width:<?php echo (int) $rf['pct']; ?>%; background:<?php echo esc_attr( $rc ); ?>; border-radius:2px;"></div>
-							</div>
-						</div>
-						<?php endforeach; ?>
-						<div style="margin-top:6px; padding-top:8px; border-top:1px solid #f0f0f0; font-size:10px; color:#9ca3af;">
-							<?php echo esc_html( number_format_i18n( $cov_total ) . ' ' . _n( 'post/page total', 'posts/pages total', $cov_total, 'wp-pugmill' ) ); ?>
-						</div>
-					</div>
-				</div>
-			</div>
-
-			<!-- Right top 1/3: Two-ring donut — Bot Activity ────────────────── -->
+			<!-- Col 1: Bot Activity ─────────────────────────────── -->
 			<div class="pugmill-card">
 				<h3><?php esc_html_e( 'Bot Activity', 'wp-pugmill' ); ?></h3>
 				<p class="card-sub"><?php esc_html_e( 'Inner ring: crawler categories. Outer ring: individual bots.', 'wp-pugmill' ); ?></p>
-				<div style="display:flex; align-items:center; gap:14px;">
-					<canvas id="pugmill-tworingdonut" width="140" height="140" style="width:140px; height:140px; flex-shrink:0;"></canvas>
-					<div style="display:flex; flex-direction:column; gap:5px; min-width:0; flex:1;">
-						<?php
-						$cat_labels = array(
-							'ai'       => __( 'AI Crawlers',       'wp-pugmill' ),
-							'training' => __( 'Training Crawlers', 'wp-pugmill' ),
-							'search'   => __( 'Search Engines',    'wp-pugmill' ),
-							'seo'      => __( 'SEO Tools',         'wp-pugmill' ),
-						);
-						foreach ( $inner_ring as $seg ) :
-						?>
-						<div style="display:flex; align-items:center; gap:6px; font-size:11px;">
-							<span style="width:8px; height:8px; border-radius:50%; background:<?php echo esc_attr( $seg['color'] ); ?>; flex-shrink:0;"></span>
-							<span style="color:#374151; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><?php echo esc_html( $cat_labels[ $seg['label'] ] ?? $seg['label'] ); ?></span>
-							<span style="color:#9ca3af; white-space:nowrap;"><?php echo esc_html( number_format_i18n( $seg['value'] ) ); ?></span>
-						</div>
-						<?php endforeach; ?>
-						<div style="margin-top:4px; padding-top:6px; border-top:1px solid #f0f0f0; font-size:10px; color:#9ca3af;">
-							<?php echo esc_html( number_format_i18n( $total_visits ) . ' ' . __( 'total visits', 'wp-pugmill' ) ); ?>
-						</div>
+				<div style="display:flex; justify-content:center; margin-bottom:14px;">
+					<canvas id="pugmill-tworingdonut" width="140" height="140" style="width:140px; height:140px;"></canvas>
+				</div>
+				<?php
+				$cat_labels_c1 = array(
+					'ai'       => __( 'AI Crawlers',       'wp-pugmill' ),
+					'training' => __( 'Training Crawlers', 'wp-pugmill' ),
+					'search'   => __( 'Search Engines',    'wp-pugmill' ),
+					'seo'      => __( 'SEO Tools',         'wp-pugmill' ),
+				);
+				$cat_bots_c1 = array(
+					'ai'       => $ai_bots,
+					'training' => $training_bots,
+					'search'   => $search_bots,
+					'seo'      => $seo_bots,
+				);
+				foreach ( array( 'ai', 'training', 'search', 'seo' ) as $cat_k ) :
+					$cat_tot_c1 = 0;
+					foreach ( $cat_bots_c1[ $cat_k ] as $bk => $_ ) {
+						$cat_tot_c1 += (int) ( $summary[ $bk ] ?? 0 );
+					}
+					if ( $cat_tot_c1 === 0 ) continue;
+				?>
+				<div style="margin-bottom:9px;">
+					<div style="display:flex; align-items:center; gap:6px; margin-bottom:3px;">
+						<span style="width:9px; height:9px; border-radius:50%; background:<?php echo esc_attr( $cat_colors[ $cat_k ] ); ?>; flex-shrink:0;"></span>
+						<span style="font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:<?php echo esc_attr( $cat_colors[ $cat_k ] ); ?>; flex:1;"><?php echo esc_html( $cat_labels_c1[ $cat_k ] ); ?></span>
+						<span style="font-size:10px; color:#9ca3af;"><?php echo esc_html( number_format_i18n( $cat_tot_c1 ) ); ?></span>
 					</div>
+					<?php
+					$bots_c1 = array();
+					foreach ( $cat_bots_c1[ $cat_k ] as $bk => $_ ) {
+						$bots_c1[ $bk ] = (int) ( $summary[ $bk ] ?? 0 );
+					}
+					arsort( $bots_c1 );
+					foreach ( $bots_c1 as $bk => $bv ) :
+						if ( $bv === 0 ) continue;
+						$binfo_c1 = $cat_bots_c1[ $cat_k ][ $bk ];
+					?>
+					<div style="display:flex; align-items:center; gap:6px; padding:1px 0 1px 14px; font-size:11px;">
+						<span style="width:7px; height:7px; border-radius:50%; background:<?php echo esc_attr( $cat_light[ $cat_k ] ); ?>; border:1px solid <?php echo esc_attr( $cat_colors[ $cat_k ] ); ?>; flex-shrink:0;"></span>
+						<span style="flex:1; color:#374151; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><?php echo esc_html( $binfo_c1['label'] ); ?></span>
+						<span style="color:#9ca3af; white-space:nowrap; font-size:10px;"><?php echo esc_html( number_format_i18n( $bv ) ); ?></span>
+					</div>
+					<?php endforeach; ?>
+				</div>
+				<?php endforeach; ?>
+				<div style="margin-top:6px; padding-top:7px; border-top:1px solid #f0f0f0; font-size:10px; color:#9ca3af;">
+					<?php echo esc_html( number_format_i18n( $total_visits ) . ' ' . __( 'total visits (30 days)', 'wp-pugmill' ) ); ?>
 				</div>
 			</div>
 
-			<!-- Right bottom 1/3: Semi-gauge — AEO Infrastructure ───────────── -->
+			<!-- Col 2: AEO Content Coverage ───────────────────── -->
 			<div class="pugmill-card">
-				<h3><?php esc_html_e( 'AEO Infrastructure', 'wp-pugmill' ); ?></h3>
-				<p class="card-sub"><?php esc_html_e( 'Active AEO outputs across endpoints, schema, and meta.', 'wp-pugmill' ); ?></p>
-				<div style="display:flex; align-items:center; gap:14px;">
-					<canvas id="pugmill-gauge" style="width:120px; height:68px; flex-shrink:0;"></canvas>
-					<div style="display:flex; flex-direction:column; gap:6px; flex:1; min-width:0;">
-						<div style="display:flex; align-items:center; gap:6px; font-size:11px;">
-							<span style="width:8px; height:8px; border-radius:50%; background:#16a34a; flex-shrink:0;"></span>
-							<span style="color:#374151; flex:1;"><?php esc_html_e( 'Pugmill', 'wp-pugmill' ); ?></span>
-							<span style="color:#9ca3af;"><?php echo (int) ( $gauge_pugmill + $gauge_coop ); ?></span>
+				<h3><?php esc_html_e( 'AEO Content Coverage', 'wp-pugmill' ); ?></h3>
+				<p class="card-sub"><?php esc_html_e( 'How thoroughly your posts are enriched with AEO content fields.', 'wp-pugmill' ); ?></p>
+				<div style="display:flex; justify-content:center; margin-bottom:14px;">
+					<canvas id="pugmill-radar" style="display:block; width:200px; height:200px;"></canvas>
+				</div>
+				<div style="display:flex; flex-direction:column; gap:10px;">
+					<?php
+					$radar_fields = array(
+						array( 'label' => __( 'AI Summary',     'wp-pugmill' ), 'count' => $cov_field_summary,   'pct' => ( $cov_total > 0 ? (int) round( $cov_field_summary   / $cov_total * 100 ) : 0 ) ),
+						array( 'label' => __( 'Q&A Pairs',      'wp-pugmill' ), 'count' => $cov_field_questions, 'pct' => ( $cov_total > 0 ? (int) round( $cov_field_questions / $cov_total * 100 ) : 0 ) ),
+						array( 'label' => __( 'Named Entities', 'wp-pugmill' ), 'count' => $cov_field_entities,  'pct' => ( $cov_total > 0 ? (int) round( $cov_field_entities  / $cov_total * 100 ) : 0 ) ),
+						array( 'label' => __( 'Keywords',       'wp-pugmill' ), 'count' => $cov_field_keywords,  'pct' => ( $cov_total > 0 ? (int) round( $cov_field_keywords  / $cov_total * 100 ) : 0 ) ),
+					);
+					foreach ( $radar_fields as $rf ) :
+						$rc = $rf['pct'] >= 75 ? '#16a34a' : ( $rf['pct'] >= 40 ? '#d97706' : '#e11d48' );
+					?>
+					<div>
+						<div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11px; margin-bottom:3px;">
+							<span style="color:#374151; font-weight:600;"><?php echo esc_html( $rf['label'] ); ?></span>
+							<span style="color:<?php echo esc_attr( $rc ); ?>; font-weight:700;"><?php echo (int) $rf['pct']; ?>% <span style="color:#9ca3af; font-weight:400; font-size:10px;">(<?php echo esc_html( number_format_i18n( $rf['count'] ) ); ?>)</span></span>
 						</div>
-						<?php if ( $gauge_seo > 0 ) : ?>
-						<div style="display:flex; align-items:center; gap:6px; font-size:11px;">
-							<span style="width:8px; height:8px; border-radius:50%; background:#3b82f6; flex-shrink:0;"></span>
-							<span style="color:#374151; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><?php echo esc_html( preg_replace( '/\s+\d.*$/', '', $seo_name_g ) ); ?></span>
-							<span style="color:#9ca3af;"><?php echo (int) $gauge_seo; ?></span>
-						</div>
-						<?php endif; ?>
-						<?php if ( $gauge_disabled > 0 ) : ?>
-						<div style="display:flex; align-items:center; gap:6px; font-size:11px;">
-							<span style="width:8px; height:8px; border-radius:50%; background:#d1d5db; flex-shrink:0;"></span>
-							<span style="color:#9ca3af; flex:1;"><?php esc_html_e( 'Disabled', 'wp-pugmill' ); ?></span>
-							<span style="color:#9ca3af;"><?php echo (int) $gauge_disabled; ?></span>
-						</div>
-						<?php endif; ?>
-						<div style="margin-top:4px; padding-top:6px; border-top:1px solid #f0f0f0; font-size:10px; color:#9ca3af;">
-							<?php echo esc_html( $gauge_active . ' of ' . $gauge_total . ' ' . __( 'outputs active', 'wp-pugmill' ) ); ?>
+						<div style="height:5px; background:#f0f0f0; border-radius:3px; overflow:hidden;">
+							<div style="height:100%; width:<?php echo (int) $rf['pct']; ?>%; background:<?php echo esc_attr( $rc ); ?>; border-radius:3px;"></div>
 						</div>
 					</div>
+					<?php endforeach; ?>
+				</div>
+				<div style="margin-top:8px; padding-top:7px; border-top:1px solid #f0f0f0; font-size:10px; color:#9ca3af;">
+					<?php echo esc_html( number_format_i18n( $cov_total ) . ' ' . _n( 'post/page total', 'posts/pages total', $cov_total, 'wp-pugmill' ) ); ?>
+				</div>
+			</div>
+
+			<!-- Col 3: AEO Infrastructure ─────────────────────── -->
+			<div class="pugmill-card">
+				<h3><?php esc_html_e( 'AEO Infrastructure', 'wp-pugmill' ); ?></h3>
+				<p class="card-sub"><?php esc_html_e( 'Active AEO outputs — endpoints, schema, and meta.', 'wp-pugmill' ); ?></p>
+				<div style="display:flex; justify-content:center; margin-bottom:10px;">
+					<canvas id="pugmill-gauge" style="width:140px; height:80px;"></canvas>
+				</div>
+				<div style="display:flex; justify-content:center; gap:12px; margin-bottom:12px; flex-wrap:wrap;">
+					<div style="display:flex; align-items:center; gap:5px; font-size:10px; color:#374151;">
+						<span style="width:8px; height:8px; border-radius:50%; background:#16a34a; flex-shrink:0;"></span>
+						<?php esc_html_e( 'Pugmill', 'wp-pugmill' ); ?>
+						<span style="color:#9ca3af;">(<?php echo (int) ( $gauge_pugmill + $gauge_coop ); ?>)</span>
+					</div>
+					<?php if ( $gauge_seo > 0 ) : ?>
+					<div style="display:flex; align-items:center; gap:5px; font-size:10px; color:#374151;">
+						<span style="width:8px; height:8px; border-radius:50%; background:#3b82f6; flex-shrink:0;"></span>
+						<?php echo esc_html( preg_replace( '/\s+\d.*$/', '', $seo_name_g ) ); ?>
+						<span style="color:#9ca3af;">(<?php echo (int) $gauge_seo; ?>)</span>
+					</div>
+					<?php endif; ?>
+					<?php if ( $gauge_disabled > 0 ) : ?>
+					<div style="display:flex; align-items:center; gap:5px; font-size:10px; color:#9ca3af;">
+						<span style="width:8px; height:8px; border-radius:50%; background:#d1d5db; flex-shrink:0;"></span>
+						<?php esc_html_e( 'Disabled', 'wp-pugmill' ); ?>
+						<span>(<?php echo (int) $gauge_disabled; ?>)</span>
+					</div>
+					<?php endif; ?>
+				</div>
+				<?php
+				$seo_short_g3 = $seo_name_g ? preg_replace( '/\s+\d.*$/', '', $seo_name_g ) : 'SEO';
+				$infra_groups = array(
+					array(
+						'heading' => 'AEO Endpoints',
+						'color'   => '#7c3aed',
+						'items'   => array(
+							array( 'name' => '/llms.txt',     'type' => $llms_off_g    ? 'off' : 'pm' ),
+							array( 'name' => '/llms-full.txt', 'type' => $llms_off_g    ? 'off' : 'pm' ),
+							array( 'name' => 'Post Markdown',  'type' => 'pm' ),
+							array( 'name' => 'Site Summary',   'type' => 'pm' ),
+							array( 'name' => 'Bot Analytics',  'type' => 'pm' ),
+						),
+					),
+					array(
+						'heading' => 'Structured Data',
+						'color'   => '#16a34a',
+						'items'   => array(
+							array( 'name' => 'FAQPage Schema',    'type' => 'pm' ),
+							array( 'name' => 'Entity Graph',      'type' => 'pm' ),
+							array( 'name' => 'Citations',         'type' => 'pm' ),
+							array( 'name' => 'Article Schema',    'type' => ( $defer_json_ld_g && $seo_name_g ) ? 'seo' : 'pm' ),
+							array( 'name' => 'Breadcrumb Schema', 'type' => ( $defer_bc_g      && $seo_name_g ) ? 'seo' : 'pm' ),
+						),
+					),
+					array(
+						'heading' => 'On-Page Meta',
+						'color'   => '#0369a1',
+						'items'   => array(
+							array( 'name' => 'robots.txt',       'type' => $robots_off_g ? 'off' : 'pm' ),
+							array( 'name' => 'Meta Description',  'type' => ( $defer_meta_g && $seo_name_g ) ? 'seo' : 'pm' ),
+							array( 'name' => 'Open Graph Tags',   'type' => ( $defer_meta_g && $seo_name_g ) ? 'seo' : 'pm' ),
+						),
+					),
+				);
+				foreach ( $infra_groups as $grp ) :
+				?>
+				<div class="pugmill-feat-group" style="color:<?php echo esc_attr( $grp['color'] ); ?>;"><?php echo esc_html( $grp['heading'] ); ?></div>
+				<?php foreach ( $grp['items'] as $feat ) :
+					$fdot = $feat['type'] === 'pm'  ? '#16a34a' : ( $feat['type'] === 'seo' ? '#3b82f6' : '#d1d5db' );
+					$flbl = $feat['type'] === 'pm'  ? 'Pugmill' : ( $feat['type'] === 'seo' ? $seo_short_g3 : 'Off' );
+				?>
+				<div class="pugmill-feat-row">
+					<span class="pugmill-feat-dot" style="background:<?php echo esc_attr( $fdot ); ?>;"></span>
+					<span class="pugmill-feat-name"><?php echo esc_html( $feat['name'] ); ?></span>
+					<span class="pugmill-feat-badge <?php echo esc_attr( $feat['type'] ); ?>"><?php echo esc_html( $flbl ); ?></span>
+				</div>
+				<?php endforeach; ?>
+				<?php endforeach; ?>
+				<div style="margin-top:8px; padding-top:7px; border-top:1px solid #f0f0f0; font-size:10px; color:#9ca3af;">
+					<?php echo esc_html( $gauge_active . ' of ' . $gauge_total . ' ' . __( 'outputs active', 'wp-pugmill' ) ); ?>
 				</div>
 			</div>
 
@@ -2340,7 +2444,7 @@ function wppugmill_render_settings_page() {
 
 			// ── 1. Radar chart ────────────────────────────────────────────────
 			(function () {
-				var SIZE   = 260;
+				var SIZE   = 200;
 				var ctx    = setupCanvas( 'pugmill-radar', SIZE, SIZE );
 				if ( !ctx ) return;
 
@@ -2351,7 +2455,7 @@ function wppugmill_render_settings_page() {
 				var n      = fields.length;   // 4
 				var cx     = SIZE / 2;
 				var cy     = SIZE / 2;
-				var maxR   = 88;              // max polygon radius
+				var maxR   = 68;              // max polygon radius
 				var levels = 4;
 				var PI2    = Math.PI * 2;
 				var start  = -Math.PI / 2;   // top
@@ -2482,13 +2586,13 @@ function wppugmill_render_settings_page() {
 
 			// ── 3. Semi-circular gauge ────────────────────────────────────────
 			(function () {
-				var W = 120, H = 68;
+				var W = 140, H = 80;
 				var ctx = setupCanvas( 'pugmill-gauge', W, H );
 				if ( !ctx ) return;
 
 				var cx    = W / 2;
 				var cy    = H - 8;
-				var R     = 52;
+				var R     = 60;
 				var thick = 13;
 				var pct   = <?php echo (int) $gauge_pct; ?> / 100;
 				var pugPct = <?php echo $gauge_total > 0 ? round( ( $gauge_pugmill + $gauge_coop ) / $gauge_total, 4 ) : 0; ?>;

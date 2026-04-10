@@ -4,7 +4,7 @@ Tags: aeo, answer engine optimization, ai, structured data, bot analytics, llms-
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.1.7
+Stable tag: 1.1.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -164,6 +164,11 @@ Plus: llms.txt, per-post AEO markdown endpoints, and a bot analytics dashboard s
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.1.8 =
+* **Redesign**: Bot Analytics summary row is now a 3-equal-column layout: Bot Activity (two-ring donut + full grouped bot legend with all individual bots listed under their category), AEO Content Coverage (radar chart + 4 progress bars with counts), and AEO Infrastructure (semi-gauge + full feature list grouped by AEO Endpoints / Structured Data / On-Page Meta with Pugmill/SEO/Off badges).
+* **Fix**: Bot Activity legend now shows every individual bot (not just categories) with its lighter-shade color dot, visit count, and category grouping.
+* **UX**: Radar canvas reduced to 200px for balanced column proportions; gauge enlarged to 140×80px for readability.
 
 = 1.1.1 =
 * **Fix**: `associatedMedia` (markdown endpoint link) moved from Article/BlogPosting node to FAQPage node. The Article node is suppressed in Yoast coexistence mode, which was silently hiding the markdown link from AI crawlers. FAQPage always outputs, so the link is now reliably discoverable.
