@@ -1875,24 +1875,28 @@ function wppugmill_render_settings_page() {
 		$has_api_key     = ! empty( wppugmill_get_encrypted_option( 'wppugmill_ai_api_key', '' ) );
 
 		// ── AEO content coverage (for donut chart) ────────────────────────────────
+		// Uses COUNT(*) for the total (no LIMIT) and a single JOIN to fetch all AEO
+		// meta rows, so the numbers match what Bulk AEO reports on large sites.
 		global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$cov_post_ids = $wpdb->get_col(
-			"SELECT ID FROM {$wpdb->posts}
+		$cov_total = (int) $wpdb->get_var(
+			"SELECT COUNT(*) FROM {$wpdb->posts}
 			 WHERE post_status = 'publish'
-			 AND post_type IN ('post','page')
-			 LIMIT 500"
+			 AND post_type IN ('post','page')"
 		);
-		$cov_total   = count( $cov_post_ids );
 		$cov_full    = 0;
 		$cov_partial = 0;
 		if ( $cov_total > 0 ) {
-			$cov_ids_in = implode( ',', array_map( 'intval', $cov_post_ids ) );
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared
+			// Single JOIN — no LIMIT — accurate across all published posts.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$cov_rows = $wpdb->get_results(
-				"SELECT meta_value FROM {$wpdb->postmeta}
-				 WHERE meta_key = '_wppugmill_aeo'
-				 AND post_id IN ({$cov_ids_in})"
+				"SELECT pm.meta_value
+				 FROM {$wpdb->postmeta} pm
+				 INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id
+				 WHERE pm.meta_key = '_wppugmill_aeo'
+				 AND p.post_status = 'publish'
+				 AND p.post_type IN ('post','page')
+				 AND LENGTH(pm.meta_value) > 10"
 			);
 			foreach ( (array) $cov_rows as $cov_row ) {
 				$aeo = json_decode( $cov_row->meta_value, true );
@@ -1907,8 +1911,12 @@ function wppugmill_render_settings_page() {
 				}
 			}
 		}
-		$cov_none     = max( 0, $cov_total - $cov_full - $cov_partial );
-		$cov_full_pct = $cov_total > 0 ? (int) round( $cov_full / $cov_total * 100 ) : 0;
+		$cov_none        = max( 0, $cov_total - $cov_full - $cov_partial );
+		$cov_any         = $cov_full + $cov_partial;
+		$cov_any_pct     = $cov_total > 0 ? (int) round( $cov_any     / $cov_total * 100 ) : 0;
+		$cov_full_pct    = $cov_total > 0 ? (int) round( $cov_full    / $cov_total * 100 ) : 0;
+		$cov_partial_pct = $cov_total > 0 ? (int) round( $cov_partial / $cov_total * 100 ) : 0;
+		$cov_none_pct    = $cov_total > 0 ? (int) round( $cov_none    / $cov_total * 100 ) : 0;
 
 		// Fetch network averages if opted in and enough sites are contributing
 		$network_avgs          = array();         // bot → total 30-day avg
@@ -2075,11 +2083,12 @@ function wppugmill_render_settings_page() {
 
 		// ── Donut 2: AEO content coverage ────────────────────────────────────────
 		$donut_aeo_data = array_values( array_filter( array(
-			array( 'label' => __( 'Full AEO',    'wp-pugmill' ), 'value' => $cov_full,    'color' => '#16a34a' ),
-			array( 'label' => __( 'Partial AEO', 'wp-pugmill' ), 'value' => $cov_partial, 'color' => '#d97706' ),
-			array( 'label' => __( 'No AEO',      'wp-pugmill' ), 'value' => $cov_none,    'color' => '#e5e7eb' ),
+			array( 'label' => __( 'Complete (all 3 fields)', 'wp-pugmill' ), 'value' => $cov_full,    'pct' => $cov_full_pct,    'color' => '#16a34a' ),
+			array( 'label' => __( 'Partial (1–2 fields)',   'wp-pugmill' ), 'value' => $cov_partial, 'pct' => $cov_partial_pct, 'color' => '#d97706' ),
+			array( 'label' => __( 'None',                    'wp-pugmill' ), 'value' => $cov_none,    'pct' => $cov_none_pct,    'color' => '#e5e7eb' ),
 		), function( $s ) { return $s['value'] > 0; } ) );
-		$donut_aeo_pct = $cov_full_pct;
+		// Center shows % with any AEO (complete + partial), not just % complete.
+		$donut_aeo_pct = $cov_any_pct;
 
 		// ── Donut 3: Top crawlers by volume ───────────────────────────────────
 		$donut_top_sorted = $summary;
@@ -2157,21 +2166,21 @@ function wppugmill_render_settings_page() {
 						<span>
 							<span style="width:8px; height:8px; border-radius:50%; background:<?php echo esc_attr( $seg['color'] ); ?>; flex-shrink:0;"></span>
 							<?php echo esc_html( $seg['label'] ); ?>
-							<em><?php echo esc_html( number_format_i18n( $seg['value'] ) ); ?></em>
+							<em><?php echo esc_html( number_format_i18n( $seg['value'] ) . ' (' . $seg['pct'] . '%)' ); ?></em>
 						</span>
 						<?php endforeach; ?>
 						<?php if ( $cov_total > 0 ) : ?>
 						<span style="margin-top:4px; padding-top:6px; border-top:1px solid #f0f0f0;">
 							<span style="width:8px; flex-shrink:0;"></span>
 							<span style="color:#9ca3af; font-size:10px;">
-								<?php echo esc_html( $cov_total . ' ' . _n( 'post/page', 'posts/pages', $cov_total, 'wp-pugmill' ) ); ?>
+								<?php echo esc_html( number_format_i18n( $cov_total ) . ' ' . _n( 'post/page', 'posts/pages', $cov_total, 'wp-pugmill' ) ); ?>
 							</span>
 						</span>
 						<?php endif; ?>
 					</div>
 				</div>
 				<p style="margin:12px 0 0; font-size:11px; color:#6b7280; line-height:1.5;">
-					<?php esc_html_e( 'How much of your published content has complete AEO metadata — summary, Q&amp;A pairs, and entities. Most bots still arrive via HTML as AEO-specific endpoints gain adoption — full coverage means your content is ready either way.', 'wp-pugmill' ); ?>
+					<?php esc_html_e( 'AEO coverage across all published posts and pages. Complete = all 3 fields (summary, Q&amp;A pairs, entities). Partial = 1–2 fields. The percentage in the chart centre shows posts with any AEO data.', 'wp-pugmill' ); ?>
 				</p>
 			</div>
 
@@ -2266,7 +2275,7 @@ function wppugmill_render_settings_page() {
 				'wppugmill-donut-aeo',
 				<?php echo wp_json_encode( $donut_aeo_data ); ?>,
 				<?php echo wp_json_encode( $donut_aeo_pct . '%' ); ?>,
-				<?php echo wp_json_encode( __( 'covered', 'wp-pugmill' ) ); ?>
+				<?php echo wp_json_encode( __( 'have AEO', 'wp-pugmill' ) ); ?>
 			);
 
 			drawDonut(
@@ -2701,8 +2710,9 @@ function wppugmill_render_settings_page() {
 					$url_param = (int) ( $url_dist['parameterized'] ?? 0 );
 					$url_total = $url_clean + $url_param;
 					if ( $url_total > 0 ) {
-						$url_lbl = $url_param / $url_total <= 0.2 ? 'Clean' : 'Mixed';
-						$url_col = 'Clean' === $url_lbl ? '#16a34a' : '#d97706';
+						$url_is_clean = $url_param / $url_total <= 0.2;
+						$url_lbl = $url_is_clean ? '✓ Clean' : '⚠ Mixed';
+						$url_col = $url_is_clean ? '#16a34a' : '#d97706';
 					} else {
 						$url_lbl = '—';
 						$url_col = '#9ca3af';
@@ -2713,9 +2723,10 @@ function wppugmill_render_settings_page() {
 					$s_404 = (int) ( $status_dist['404'] ?? 0 );
 					$s_tot = $s_ok + $s_404;
 					if ( $s_tot > 0 ) {
-						$rate_404 = round( $s_404 / $s_tot * 100 );
-						$r404_lbl = $rate_404 . '%';
-						$r404_col = $rate_404 >= 10 ? '#dc2626' : ( $rate_404 >= 3 ? '#d97706' : '#16a34a' );
+						$rate_404  = round( $s_404 / $s_tot * 100 );
+						$r404_tier = $rate_404 >= 10 ? 'High' : ( $rate_404 >= 3 ? 'Moderate' : 'Low' );
+						$r404_lbl  = $rate_404 . '% (' . $r404_tier . ')';
+						$r404_col  = $rate_404 >= 10 ? '#dc2626' : ( $rate_404 >= 3 ? '#d97706' : '#16a34a' );
 					} else {
 						$r404_lbl = '—';
 						$r404_col = '#9ca3af';
@@ -2725,9 +2736,10 @@ function wppugmill_render_settings_page() {
 					$gen_sum   = (int) ( $sig['php_gen_ms_sum']['all'] ?? 0 );
 					$gen_count = (int) ( $sig['php_gen_ms_count']['all'] ?? 0 );
 					if ( $gen_count > 0 ) {
-						$avg_ms     = (int) round( $gen_sum / $gen_count );
-						$avg_ms_lbl = number_format_i18n( $avg_ms ) . ' ms';
-						$avg_ms_col = $avg_ms >= 1000 ? '#dc2626' : ( $avg_ms >= 500 ? '#d97706' : '#16a34a' );
+						$avg_ms      = (int) round( $gen_sum / $gen_count );
+						$avg_ms_tier = $avg_ms >= 1000 ? 'Slow' : ( $avg_ms >= 500 ? 'Moderate' : 'Fast' );
+						$avg_ms_lbl  = number_format_i18n( $avg_ms ) . ' ms (' . $avg_ms_tier . ')';
+						$avg_ms_col  = $avg_ms >= 1000 ? '#dc2626' : ( $avg_ms >= 500 ? '#d97706' : '#16a34a' );
 					} else {
 						$avg_ms_lbl = '—';
 						$avg_ms_col = '#9ca3af';
@@ -2774,7 +2786,7 @@ function wppugmill_render_settings_page() {
 			</table>
 			</div>
 			<p style="font-size:11px; color:#9ca3af; margin:8px 0 0;">
-				<?php esc_html_e( 'Dominant value shown per signal. Fact Density: green = high structured content, amber = medium, grey = low. 404 Rate: green < 3%, amber 3–9%, red ≥ 10%. Avg ms: green < 500ms, amber 500–999ms, red ≥ 1s.', 'wp-pugmill' ); ?>
+				<?php esc_html_e( 'Dominant value shown per signal. Each cell uses color and a label together to indicate status. Thresholds: Fact Density — High / Medium / Low structured content. URL Type — ✓ Clean (clean URLs) / ⚠ Mixed (many parameterized URLs). 404 Rate — Low < 3%, Moderate 3–99%, High ≥10%. Avg ms — Fast < 500ms, Moderate 500–999ms, Slow ≥1s.', 'wp-pugmill' ); ?>
 			</p>
 		</div>
 		<?php endif; ?>
