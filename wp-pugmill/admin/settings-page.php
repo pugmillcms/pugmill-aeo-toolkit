@@ -2255,7 +2255,7 @@ function wppugmill_render_settings_page() {
 				<h3><?php esc_html_e( 'Bot Activity', 'wp-pugmill' ); ?></h3>
 				<p class="card-sub"><?php esc_html_e( 'Inner ring: crawler categories. Outer ring: individual bots.', 'wp-pugmill' ); ?></p>
 				<div style="display:flex; justify-content:center; margin-bottom:14px;">
-					<canvas id="pugmill-tworingdonut" width="140" height="140" style="width:140px; height:140px;"></canvas>
+					<canvas id="pugmill-tworingdonut" width="200" height="200" style="width:200px; height:200px;"></canvas>
 				</div>
 				<?php
 				$cat_labels_c1 = array(
@@ -2388,8 +2388,8 @@ function wppugmill_render_settings_page() {
 						'items'   => array(
 							array( 'name' => 'Q&A Pairs',    'type' => 'pm' ),
 							array( 'name' => 'Named Entities','type' => 'pm' ),
-							array( 'name' => 'Citations',     'type' => 'pm' ),
-							array( 'name' => 'Article',       'type' => ( $defer_json_ld_g && $seo_name_g ) ? 'seo' : 'pm' ),
+							array( 'name' => 'Citation JSON-LD', 'type' => 'pm' ),
+							array( 'name' => 'Article JSON-LD',  'type' => ( $defer_json_ld_g && $seo_name_g ) ? 'seo' : 'pm' ),
 							array( 'name' => 'Breadcrumbs',   'type' => ( $defer_bc_g      && $seo_name_g ) ? 'seo' : 'pm' ),
 						),
 					),
@@ -2532,7 +2532,7 @@ function wppugmill_render_settings_page() {
 
 			// ── 2. Two-ring donut ─────────────────────────────────────────────
 			(function () {
-				var SIZE = 140;
+				var SIZE = 200;
 				var ctx  = setupCanvas( 'pugmill-tworingdonut', SIZE, SIZE );
 				if ( !ctx ) return;
 
@@ -2540,16 +2540,18 @@ function wppugmill_render_settings_page() {
 				var outer = <?php echo wp_json_encode( $outer_ring ); ?>;
 				var total = <?php echo (int) $total_visits; ?>;
 
+				var cx = SIZE / 2, cy = SIZE / 2;
+
 				if ( total === 0 ) {
 					ctx.beginPath();
-					ctx.arc( 70, 70, 60, 0, Math.PI * 2 );
-					ctx.arc( 70, 70, 22, 0, Math.PI * 2, true );
+					ctx.arc( cx, cy, Math.round( SIZE * 0.43 ), 0, Math.PI * 2 );
+					ctx.arc( cx, cy, Math.round( SIZE * 0.155 ), 0, Math.PI * 2, true );
 					ctx.fillStyle = '#e5e7eb';
 					ctx.fill();
 					return;
 				}
 
-				var cx = SIZE / 2, cy = SIZE / 2;
+				// cx/cy already defined above
 				var PI2 = Math.PI * 2;
 				var GAP = 0.04;
 
@@ -2569,8 +2571,8 @@ function wppugmill_render_settings_page() {
 					});
 				}
 
-				drawRing( inner, 46, 28 ); // inner ring: categories
-				drawRing( outer, 62, 49 ); // outer ring: individual bots
+				drawRing( inner, 66, 40 ); // inner ring: categories
+				drawRing( outer, 88, 69 ); // outer ring: individual bots
 
 				// Center label
 				ctx.textAlign    = 'center';

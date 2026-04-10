@@ -4,7 +4,7 @@ Tags: aeo, answer engine optimization, ai, structured data, bot analytics, llms-
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.2.1
+Stable tag: 1.2.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -164,6 +164,10 @@ Plus: llms.txt, per-post AEO markdown endpoints, and a bot analytics dashboard s
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.2.2 =
+* **Labels**: Renamed "Citations" → "Citation JSON-LD" and "Article" → "Article JSON-LD" in the AEO Infrastructure feature list — clearer for AEO-savvy users who understand JSON-LD.
+* **Bot Activity chart**: Donut diameter increased from 140px to 200px; ring radii scaled proportionally (inner 66/40, outer 88/69) for better visual impact.
 
 = 1.2.1 =
 * **Labels**: AEO Infrastructure feature list vocabulary aligned with post sidebar. "On-Page Meta" → "Meta Tags" (these are `<head>` elements, not visible page content). Structured Data items drop redundant "Schema" suffix and use sidebar words: Q&A Pairs, Named Entities, Article, Breadcrumbs. robots.txt moved from Meta Tags into AEO Endpoints alongside llms.txt. Slashes removed from llms.txt and llms-full.txt display names.
