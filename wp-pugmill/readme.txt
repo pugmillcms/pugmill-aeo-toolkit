@@ -4,7 +4,7 @@ Tags: aeo, answer engine optimization, ai, structured data, bot analytics, llms-
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.1.8
+Stable tag: 1.1.9
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -164,6 +164,11 @@ Plus: llms.txt, per-post AEO markdown endpoints, and a bot analytics dashboard s
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.1.9 =
+* **Redesign**: Bot benchmark grid replaces the verbose 4-quadrant layout. Lead story is now "your site vs. network average" — category description text and large visit count headline removed (both visible in the summary row above). Cards are ~40% shorter with tighter padding and a "Your site vs. network average (N sites)" section header.
+* **UX**: CSS variables per card for color theming; `aria-*` meter attributes on benchmark bars for accessibility.
+* **Legend**: Simplified to "Last 30 days · Purple = network average".
 
 = 1.1.8 =
 * **Redesign**: Bot Analytics summary row is now a 3-equal-column layout: Bot Activity (two-ring donut + full grouped bot legend with all individual bots listed under their category), AEO Content Coverage (radar chart + 4 progress bars with counts), and AEO Infrastructure (semi-gauge + full feature list grouped by AEO Endpoints / Structured Data / On-Page Meta with Pugmill/SEO/Off badges).

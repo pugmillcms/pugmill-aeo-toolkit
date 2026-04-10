@@ -2642,14 +2642,11 @@ function wppugmill_render_settings_page() {
 		</script>
 		<?php endif; ?>
 
-		<!-- ── 2×2 Bot Quadrants ──────────────────────────────────────────── -->
-
-		<!-- ── 2×2 Bot Quadrants ──────────────────────────────────────────── -->
+		<!-- ── Bot Benchmark Grid ──────────────────────────────────────── -->
 		<?php
 		$quadrant_defs = array(
 			'ai'       => array(
 				'label'     => __( 'AI Crawlers', 'wp-pugmill' ),
-				'desc'      => __( 'Answer engines like ChatGPT and Perplexity that read your content to respond to user queries in real time.', 'wp-pugmill' ),
 				'bots'      => $ai_bots,
 				'total'     => $ai_total_30,
 				'accent'    => '#7c3aed',
@@ -2659,7 +2656,6 @@ function wppugmill_render_settings_page() {
 			),
 			'search'   => array(
 				'label'     => __( 'Search Engines', 'wp-pugmill' ),
-				'desc'      => __( 'Traditional search spiders indexing your content for results pages on Google, Bing, and others.', 'wp-pugmill' ),
 				'bots'      => $search_bots,
 				'total'     => $search_total_30,
 				'accent'    => '#0369a1',
@@ -2669,7 +2665,6 @@ function wppugmill_render_settings_page() {
 			),
 			'seo'      => array(
 				'label'     => __( 'SEO Bots', 'wp-pugmill' ),
-				'desc'      => __( 'Commercial tools like Semrush and Ahrefs auditing backlinks, rankings, and site health — not related to AI or search indexing.', 'wp-pugmill' ),
 				'bots'      => $seo_bots,
 				'total'     => $seo_total_30,
 				'accent'    => '#374151',
@@ -2679,7 +2674,6 @@ function wppugmill_render_settings_page() {
 			),
 			'training' => array(
 				'label'     => __( 'Training Crawlers', 'wp-pugmill' ),
-				'desc'      => __( 'Bots collecting data to train foundation models. Not tied to live user queries — your content may end up in a future AI\'s knowledge base.', 'wp-pugmill' ),
 				'bots'      => $training_bots,
 				'total'     => $training_total_30,
 				'accent'    => '#0891b2',
@@ -2693,30 +2687,112 @@ function wppugmill_render_settings_page() {
 		.wppugmill-quadrant-grid {
 			display: grid;
 			grid-template-columns: 1fr 1fr;
-			gap: 16px;
-			margin: 24px 0 4px;
+			gap: 12px;
+			margin: 20px 0 6px;
 		}
 		@media (max-width: 782px) {
 			.wppugmill-quadrant-grid { grid-template-columns: 1fr; }
 		}
+		.wppugmill-qcard {
+			background: var(--qbg);
+			border: 1px solid var(--qborder);
+			border-radius: 8px;
+			padding: 12px 14px;
+		}
+		.wppugmill-qcard-header {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			margin-bottom: 10px;
+			paddding-bottom: 6px;
+			border-bottom: 1px solid var(--qborder);
+		}
+		.wppugmill-qcard-label {
+			font-size: 11px;
+			font-weight: 700;
+			text-transform: uppercase;
+			letter-spacing: .06em;
+			color: var(--qaccent);
+		}
+		.wppugmill-qcard-trend {
+			font-size: 11px;
+			font-weight: 600;
+			white-space: nowrap;
+		}
+		.wppugmill-qcard-trend .trend-label {
+			font-size: 9px;
+			font-weight: 400;
+			color: #9ca3af;
+			margin-left: 2px;
+		}
+		.wppugmill-bot-row { margin-bottom: 7px; }
+		.wppugmill-bot-row:last-child { margin-bottom: 0; }
+		.wppugmill-bot-name-row {
+			display: flex;
+			align-items: center;
+			gap: 6px;
+			margin-bottom: 3px;
+			font-size: 11px;
+			color: #374151;
+		}
+		.wppugmill-bot-count {
+			margin-left: auto;
+			font-size: 11px;
+			font-weight: 600;
+			color: var(--qaccent);
+			flex-shrink: 0;
+		}
+		.wppugmill-bar-row {
+			display: flex;
+			align-items: center;
+			gap: 5px;
+			margin-bottom: 2px;
+		}
+		.wppugmill-bar-row:last-child { margin-bottom: 0; }
+		.wppugmill-bar-lbl {
+			font-size: 9px;
+			color: #9ca3af;
+			width: 18px;
+			flex-shrink: 0;
+		}
+		.wppugmill-bar-track {
+			flex: 1;
+			background: #e5e7eb;
+			border-radius: 2px;
+			height: 5px;
+			overflow: hidden;
+		}
+		.wppugmill-bar-fill { height: 100%; border-radius: 2px; }
 		</style>
+
+		<?php if ( ! empty( $network_avgs ) || $total_visits > 0 ) : ?>
+		<p style="font-size:12px; font-weight:600; color:#1d2327; margin:20px 0 0;">
+			<?php esc_html_e( 'Your site vs. network average', 'wp-pugmill' ); ?>
+			<?php if ( $network_sites > 0 ) : ?>
+			<span style="font-size:11px; font-weight:400; color:#9ca3af; margin-left:6px;">
+				<?php printf( esc_html( _n( '(%d site in network)', '(%d sites in network)', $network_sites, 'wp-pugmill' ) ), (int) $network_sites ); ?>
+			</span>
+			<?php endif; ?>
+		</p>
+		<?php endif; ?>
+
 		<div class="wppugmill-quadrant-grid">
 		<?php foreach ( $quadrant_defs as $cat_key => $q ) :
 
-			// Sort bots by local visit count descending
+			// Sort bots by local visit count desc
 			$q_sorted = array();
 			foreach ( $q['bots'] as $bot_key => $_ ) {
 				$q_sorted[ $bot_key ] = (int) ( $summary[ $bot_key ] ?? 0 );
 			}
 			arsort( $q_sorted );
 
-			// Scale max: highest of (local count, network avg) across all bots in quadrant
+			// Scale max across both your counts and network avgs
 			$q_max = 1;
 			foreach ( $q_sorted as $bot_key => $cnt ) {
 				$q_max = max( $q_max, $cnt, (int) ( $network_avgs[ $bot_key ] ?? 0 ) );
 			}
 
-			// Network trend for this quadrant
+			// Network trend
 			$nc        = $network_categories[ $cat_key ] ?? null;
 			$nc_change = ( $nc && isset( $nc['change_pct'] ) && null !== $nc['change_pct'] ) ? (int) $nc['change_pct'] : null;
 			$nc_arrow  = '';
@@ -2726,65 +2802,48 @@ function wppugmill_render_settings_page() {
 				elseif ( $nc_change < 0 ) { $nc_arrow = '&#8595;'; $nc_col = '#dc2626'; }
 				else                      { $nc_arrow = '&#8212;'; $nc_col = '#9ca3af'; }
 			}
-		?>
-		<div style="background:<?php echo esc_attr( $q['bg'] ); ?>; border:1px solid <?php echo esc_attr( $q['border'] ); ?>; border-radius:8px; padding:18px 20px;">
 
-			<!-- Quadrant header -->
-			<div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:<?php echo empty( $q_sorted ) ? '8' : '14'; ?>px;">
-				<div>
-					<div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:<?php echo esc_attr( $q['accent'] ); ?>; margin-bottom:2px;">
-						<?php echo esc_html( $q['label'] ); ?>
-					</div>
-					<div style="font-size:26px; font-weight:700; color:<?php echo esc_attr( $q['accent'] ); ?>; line-height:1.1;">
-						<?php echo esc_html( number_format_i18n( $q['total'] ) ); ?>
-						<span style="font-size:13px; font-weight:400; color:#6b7280;"><?php esc_html_e( 'Visits', 'wp-pugmill' ); ?></span>
-					</div>
-					<div style="font-size:11px; color:#6b7280; line-height:1.5; margin-top:4px;">
-						<?php echo esc_html( $q['desc'] ); ?>
-					</div>
-				</div>
+			$has_data = array_sum( $q_sorted ) > 0;
+		?>
+		<div class="wppugmill-qcard" style="--qbg:<?php echo esc_attr( $q['bg'] ); ?>; --qborder:<?php echo esc_attr( $q['border'] ); ?>; --qaccent:<?php echo esc_attr( $q['accent'] ); ?>;">
+
+			<div class="wppugmill-qcard-header">
+				<span class="wppugmill-qcard-label"><?php echo esc_html( $q['label'] ); ?></span>
 				<?php if ( null !== $nc_change ) : ?>
-				<div style="text-align:right; font-size:12px; font-weight:600; color:<?php echo esc_attr( $nc_col ); ?>; padding-top:2px; flex-shrink:0;">
-					<?php echo wp_kses_post( $nc_arrow ); ?>&nbsp;<?php echo esc_html( abs( $nc_change ) ); ?>%
-					<div style="font-size:10px; font-weight:400; color:#9ca3af;"><?php esc_html_e( 'network', 'wp-pugmill' ); ?></div>
-				</div>
+				<span class="wppugmill-qcard-trend" style="color:<?php echo esc_attr( $nc_col ); ?>;">
+					<?php echo wp_kses_post( $nc_arrow ); ?>&thinsp;<?php echo esc_html( abs( $nc_change ) ); ?>%
+					<span class="trend-label"><?php esc_html_e( 'network', 'wp-pugmill' ); ?></span>
+				</span>
 				<?php endif; ?>
 			</div>
 
-			<?php if ( empty( $q_sorted ) ) : ?>
-			<p style="font-size:12px; color:#9ca3af; margin:0; padding-bottom:4px;">
-				<?php echo esc_html( $q['empty_msg'] ); ?>
-			</p>
+			<?php if ( ! $has_data ) : ?>
+			<p style="font-size:11px; color:#9ca3af; margin:0;"><?php echo esc_html( $q['empty_msg'] ); ?></p>
 			<?php else : ?>
 			<?php foreach ( $q_sorted as $bot_key => $count ) :
+				if ( $count === 0 && ! isset( $network_avgs[ $bot_key ] ) ) continue;
 				$bot_info = $q['bots'][ $bot_key ];
 				$net_avg  = isset( $network_avgs[ $bot_key ] ) ? (int) $network_avgs[ $bot_key ] : null;
-				$my_pct   = (int) round( $count / $q_max * 100 );
+				$my_pct   = (int) round( $count   / $q_max * 100 );
 				$avg_pct  = ( null !== $net_avg ) ? (int) round( $net_avg / $q_max * 100 ) : 0;
 			?>
-			<div style="margin-bottom:10px;">
-				<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
-					<span style="display:inline-flex; align-items:center; gap:6px; font-size:12px; color:#374151; min-width:0; overflow:hidden;">
-						<span style="width:8px; height:8px; border-radius:50%; background:<?php echo esc_attr( $bot_info['color'] ); ?>; flex-shrink:0;"></span>
-						<span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><?php echo esc_html( $bot_info['label'] ); ?></span>
-					</span>
-					<span style="font-size:13px; font-weight:700; color:<?php echo esc_attr( $bot_info['color'] ); ?>; flex-shrink:0; margin-left:8px;">
-						<?php echo esc_html( number_format_i18n( $count ) ); ?>
-					</span>
+			<div class="wppugmill-bot-row">
+				<div class="wppugmill-bot-name-row">
+					<span style="width:7px; height:7px; border-radius:50%; background:<?php echo esc_attr( $bot_info['color'] ); ?>; flex-shrink:0;"></span>
+					<span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;"><?php echo esc_html( $bot_info['label'] ); ?></span>
+					<span class="wppugmill-bot-count"><?php echo esc_html( number_format_i18n( $count ) ); ?></span>
 				</div>
-				<!-- You bar -->
-				<div style="display:flex; align-items:center; gap:5px; margin-bottom:2px;">
-					<span style="font-size:9px; color:#9ca3af; width:18px; flex-shrink:0;"><?php esc_html_e( 'you', 'wp-pugmill' ); ?></span>
-					<div style="flex:1; background:#e5e7eb; border-radius:2px; height:6px; overflow:hidden;">
-						<div style="width:<?php echo esc_attr( $my_pct ); ?>%; height:100%; background:<?php echo esc_attr( $bot_info['color'] ); ?>; border-radius:2px;"></div>
+				<div class="wppugmill-bar-row">
+					<span class="wppugmill-bar-lbl" aria-label="<?php esc_attr_e( 'you', 'wp-pugmill' ); ?>"><?php esc_html_e( 'you', 'wp-pugmill' ); ?></span>
+					<div class="wppugmill-bar-track" role="meter" aria-valuenow="<?php echo (int) $my_pct; ?>" aria-valuemin="0" aria-valuemax="100">
+						<div class="wppugmill-bar-fill" style="width:<?php echo (int) $my_pct; ?>%; background:<?php echo esc_attr( $bot_info['color'] ); ?>;"></div>
 					</div>
 				</div>
 				<?php if ( null !== $net_avg ) : ?>
-				<!-- Avg bar -->
-				<div style="display:flex; align-items:center; gap:5px;">
-					<span style="font-size:9px; color:#7c3aed; width:18px; flex-shrink:0;"><?php esc_html_e( 'avg', 'wp-pugmill' ); ?></span>
-					<div style="flex:1; background:#e5e7eb; border-radius:2px; height:6px; overflow:hidden;">
-						<div style="width:<?php echo esc_attr( $avg_pct ); ?>%; height:100%; background:#7c3aed; border-radius:2px;"></div>
+				<div class="wppugmill-bar-row">
+					<span class="wppugmill-bar-lbl" style="color:#7c3aed;" aria-label="<?php esc_attr_e( 'network average', 'wp-pugmill' ); ?>"><?php esc_html_e( 'avg', 'wp-pugmill' ); ?></span>
+					<div class="wppugmill-bar-track" role="meter" aria-valuenow="<?php echo (int) $avg_pct; ?>" aria-valuemin="0" aria-valuemax="100">
+						<div class="wppugmill-bar-fill" style="width:<?php echo (int) $avg_pct; ?>%; background:#7c3aed;"></div>
 					</div>
 				</div>
 				<?php endif; ?>
@@ -2795,19 +2854,11 @@ function wppugmill_render_settings_page() {
 		</div>
 		<?php endforeach; ?>
 		</div>
-
-		<!-- Legend -->
-		<p style="font-size:11px; color:#9ca3af; margin:4px 0 24px;">
+		<p style="font-size:11px; color:#9ca3af; margin:6px 0 24px;">
 			<?php esc_html_e( 'Last 30 days', 'wp-pugmill' ); ?>
 			<?php if ( ! empty( $network_avgs ) ) : ?>
-			&nbsp;&middot;&nbsp; <?php esc_html_e( 'Thin purple bar = network average', 'wp-pugmill' ); ?>
+			&nbsp;&middot;&nbsp; <span style="color:#7c3aed; font-weight:600;"><?php esc_html_e( 'Purple', 'wp-pugmill' ); ?></span> = <?php esc_html_e( 'network average', 'wp-pugmill' ); ?>
 			<?php endif; ?>
-			<?php if ( $network_sites > 0 ) :
-				printf(
-					' &middot; ' . esc_html( _n( 'Network: %d site', 'Network: %d sites', $network_sites, 'wp-pugmill' ) ),
-					(int) $network_sites
-				);
-			endif; ?>
 		</p>
 
 		<!-- 30-day trend chart -->
