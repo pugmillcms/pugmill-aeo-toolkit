@@ -4,7 +4,7 @@ Tags: aeo, answer engine optimization, ai, structured data, bot analytics, llms-
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.2.2
+Stable tag: 1.2.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -164,6 +164,9 @@ Plus: llms.txt, per-post AEO markdown endpoints, and a bot analytics dashboard s
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.2.3 =
+* **Charts**: Last 30 Days bar chart top scale now rounds up to the nearest 1/2/5 × 10ⁿ — e.g. a raw peak of 6,486 becomes 7,000, giving intuitive midpoint and grid lines.
 
 = 1.2.2 =
 * **Labels**: Renamed "Citations" → "Citation JSON-LD" and "Article" → "Article JSON-LD" in the AEO Infrastructure feature list — clearer for AEO-savvy users who understand JSON-LD.

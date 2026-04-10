@@ -3362,6 +3362,15 @@ function wppugmill_render_settings_page() {
 				ds.values.forEach( function( v ) { if ( v > maxVal ) { maxVal = v; } } );
 			} );
 
+			// Round up to nearest 1/2/5 × 10^n for intuitive axis breaks (e.g. 6486 → 7000)
+			(function() {
+				var mag = Math.pow( 10, Math.floor( Math.log10( Math.max( maxVal, 1 ) ) ) );
+				var factors = [ 1, 2, 5, 10 ];
+				for ( var i = 0; i < factors.length; i++ ) {
+					if ( factors[ i ] * mag >= maxVal ) { maxVal = factors[ i ] * mag; break; }
+				}
+			})();
+
 			function drawChart() {
 				var ctx  = canvas.getContext( '2d' );
 				var dpr  = window.devicePixelRatio || 1;
