@@ -4,7 +4,7 @@ Tags: aeo, answer engine optimization, ai, structured data, bot analytics, llms-
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.1.9
+Stable tag: 1.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -165,10 +165,13 @@ Plus: llms.txt, per-post AEO markdown endpoints, and a bot analytics dashboard s
 
 == Changelog ==
 
-= 1.1.9 =
-* **Redesign**: Bot benchmark grid replaces the verbose 4-quadrant layout. Lead story is now "your site vs. network average" — category description text and large visit count headline removed (both visible in the summary row above). Cards are ~40% shorter with tighter padding and a "Your site vs. network average (N sites)" section header.
-* **UX**: CSS variables per card for color theming; `aria-*` meter attributes on benchmark bars for accessibility.
-* **Legend**: Simplified to "Last 30 days · Purple = network average".
+= 1.2.0 =
+* **Fix**: Radar chart axis labels ("Summary", "Q&A", "Entities", "Keywords") no longer clip — canvas restored to 260px with reduced polygon radius (55) to give labels room. Abbreviated axis labels use sidebar vocabulary; full names retained in the bar rows below.
+* **Fix**: "Bot Analytics" removed from the AEO Endpoints feature list in the Infrastructure column — it is the analytics dashboard, not an HTTP endpoint.
+* **Fix**: Structured Data items renamed to match post sidebar vocabulary: "FAQPage Schema" → "Q&A Schema", "Entity Graph" → "Named Entity Schema".
+* **Accessibility**: Legend changed from color-only "Purple = network average" to `Purple "avg" bar = network average`, pairing the visual color with the text label shown in the chart.
+* **Redesign**: Bot benchmark grid replaces the verbose 4-quadrant layout — lead story is "your site vs. network average". Category descriptions and large visit counts removed (visible in summary row above). Cards are ~40% shorter.
+* **UX**: CSS variables per benchmark card for color theming; `aria-*` meter attributes on benchmark bars.
 
 = 1.1.8 =
 * **Redesign**: Bot Analytics summary row is now a 3-equal-column layout: Bot Activity (two-ring donut + full grouped bot legend with all individual bots listed under their category), AEO Content Coverage (radar chart + 4 progress bars with counts), and AEO Infrastructure (semi-gauge + full feature list grouped by AEO Endpoints / Structured Data / On-Page Meta with Pugmill/SEO/Off badges).

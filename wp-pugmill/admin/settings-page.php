@@ -2316,10 +2316,10 @@ function wppugmill_render_settings_page() {
 				<div style="display:flex; flex-direction:column; gap:10px;">
 					<?php
 					$radar_fields = array(
-						array( 'label' => __( 'AI Summary',     'wp-pugmill' ), 'count' => $cov_field_summary,   'pct' => ( $cov_total > 0 ? (int) round( $cov_field_summary   / $cov_total * 100 ) : 0 ) ),
-						array( 'label' => __( 'Q&A Pairs',      'wp-pugmill' ), 'count' => $cov_field_questions, 'pct' => ( $cov_total > 0 ? (int) round( $cov_field_questions / $cov_total * 100 ) : 0 ) ),
-						array( 'label' => __( 'Named Entities', 'wp-pugmill' ), 'count' => $cov_field_entities,  'pct' => ( $cov_total > 0 ? (int) round( $cov_field_entities  / $cov_total * 100 ) : 0 ) ),
-						array( 'label' => __( 'Keywords',       'wp-pugmill' ), 'count' => $cov_field_keywords,  'pct' => ( $cov_total > 0 ? (int) round( $cov_field_keywords  / $cov_total * 100 ) : 0 ) ),
+						array( 'label' => __( 'AI Summary',     'wp-pugmill' ), 'short' => 'Summary',  'count' => $cov_field_summary,   'pct' => ( $cov_total > 0 ? (int) round( $cov_field_summary   / $cov_total * 100 ) : 0 ) ),
+						array( 'label' => __( 'Q&A Pairs',      'wp-pugmill' ), 'short' => 'Q&A',      'count' => $cov_field_questions, 'pct' => ( $cov_total > 0 ? (int) round( $cov_field_questions / $cov_total * 100 ) : 0 ) ),
+						array( 'label' => __( 'Named Entities', 'wp-pugmill' ), 'short' => 'Entities', 'count' => $cov_field_entities,  'pct' => ( $cov_total > 0 ? (int) round( $cov_field_entities  / $cov_total * 100 ) : 0 ) ),
+						array( 'label' => __( 'Keywords',       'wp-pugmill' ), 'short' => 'Keywords', 'count' => $cov_field_keywords,  'pct' => ( $cov_total > 0 ? (int) round( $cov_field_keywords  / $cov_total * 100 ) : 0 ) ),
 					);
 					foreach ( $radar_fields as $rf ) :
 						$rc = $rf['pct'] >= 75 ? '#16a34a' : ( $rf['pct'] >= 40 ? '#d97706' : '#e11d48' );
@@ -2379,15 +2379,14 @@ function wppugmill_render_settings_page() {
 							array( 'name' => '/llms-full.txt', 'type' => $llms_off_g    ? 'off' : 'pm' ),
 							array( 'name' => 'Post Markdown',  'type' => 'pm' ),
 							array( 'name' => 'Site Summary',   'type' => 'pm' ),
-							array( 'name' => 'Bot Analytics',  'type' => 'pm' ),
 						),
 					),
 					array(
 						'heading' => 'Structured Data',
 						'color'   => '#16a34a',
 						'items'   => array(
-							array( 'name' => 'FAQPage Schema',    'type' => 'pm' ),
-							array( 'name' => 'Entity Graph',      'type' => 'pm' ),
+							array( 'name' => 'Q&A Schema',        'type' => 'pm' ),
+							array( 'name' => 'Named Entity Schema','type' => 'pm' ),
 							array( 'name' => 'Citations',         'type' => 'pm' ),
 							array( 'name' => 'Article Schema',    'type' => ( $defer_json_ld_g && $seo_name_g ) ? 'seo' : 'pm' ),
 							array( 'name' => 'Breadcrumb Schema', 'type' => ( $defer_bc_g      && $seo_name_g ) ? 'seo' : 'pm' ),
@@ -2444,18 +2443,18 @@ function wppugmill_render_settings_page() {
 
 			// ── 1. Radar chart ────────────────────────────────────────────────
 			(function () {
-				var SIZE   = 200;
+				var SIZE   = 260;
 				var ctx    = setupCanvas( 'pugmill-radar', SIZE, SIZE );
 				if ( !ctx ) return;
 
 				var fields = <?php echo wp_json_encode( array_map( function( $f ) {
-					return array( 'label' => $f['label'], 'pct' => $f['pct'] );
+					return array( 'label' => $f['short'], 'pct' => $f['pct'] );
 				}, $radar_fields ) ); ?>;
 
 				var n      = fields.length;   // 4
 				var cx     = SIZE / 2;
 				var cy     = SIZE / 2;
-				var maxR   = 68;              // max polygon radius
+				var maxR   = 55;              // max polygon radius
 				var levels = 4;
 				var PI2    = Math.PI * 2;
 				var start  = -Math.PI / 2;   // top
@@ -2857,7 +2856,7 @@ function wppugmill_render_settings_page() {
 		<p style="font-size:11px; color:#9ca3af; margin:6px 0 24px;">
 			<?php esc_html_e( 'Last 30 days', 'wp-pugmill' ); ?>
 			<?php if ( ! empty( $network_avgs ) ) : ?>
-			&nbsp;&middot;&nbsp; <span style="color:#7c3aed; font-weight:600;"><?php esc_html_e( 'Purple', 'wp-pugmill' ); ?></span> = <?php esc_html_e( 'network average', 'wp-pugmill' ); ?>
+			&nbsp;&middot;&nbsp; <?php esc_html_e( 'Purple', 'wp-pugmill' ); ?> <span style="color:#7c3aed; font-weight:700; font-family:monospace;">&ldquo;avg&rdquo;</span> <?php esc_html_e( 'bar', 'wp-pugmill' ); ?> = <?php esc_html_e( 'network average', 'wp-pugmill' ); ?>
 			<?php endif; ?>
 		</p>
 
