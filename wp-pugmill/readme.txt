@@ -4,7 +4,7 @@ Tags: aeo, answer engine optimization, ai, structured data, bot analytics, llms-
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.2.4
+Stable tag: 1.2.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -164,6 +164,16 @@ Plus: llms.txt, per-post AEO markdown endpoints, and a bot analytics dashboard s
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.2.5 =
+* **Bug fix**: Network category trend arrows (↑/↓ % network) in the Bot Benchmark quadrant grid were never displaying — the API returns category keys like "AI Answer Engine" but the plugin was looking up "ai". Fixed with a remapping layer.
+* **Network coverage**: Plugin now captures the `content_coverage` block from the network API response and uses it to show a "net avg" comparison bar beneath each AEO field bar in the AEO Content Coverage card.
+* **AEO Content Coverage card**: Removed the radar/spider chart — replaced with taller horizontal bars that are directly comparable to the bar charts on pugmillaeo.com/intelligence. Adds a thin purple "net avg" bar beneath each field bar when network data is available.
+* **Category labels**: Aligned category display names across the plugin and the public dashboard — "AI Crawlers" → "AI Answer Engines", "Training Crawlers" → "AI Training Crawlers", "SEO Bots" → "SEO Tools".
+* **pugmillaeo.com**: Section order on /intelligence reordered — Bot Activity Trends now follows Categories immediately, then What Bots Are Fetching (categories → bots → resources → signals → coverage).
+* **pugmillaeo.com**: Resource type distribution now grouped by taxonomy (AEO Endpoints / Discovery / Page Crawls) instead of sorted by volume — makes the AEO vs non-AEO split immediately visible.
+* **pugmillaeo.com**: Category cards now render in canonical AI-first order (AI Answer Engines, AI Training Crawlers, Search Engines, SEO Tools) matching the plugin's quadrant layout.
+* **pugmillaeo.com**: Signal Intelligence bar charts now use human-readable bucket labels (Short/Medium/Long, Fresh/Recent/Mature/Archive) instead of raw database keys.
 
 = 1.2.4 =
 * **Compatibility tab**: Removed "AEO-Exclusive Outputs" panel — this information is already communicated by the AEO Infrastructure card on the Bot Analytics page. Compatibility tab now focuses entirely on plugin coexistence.
