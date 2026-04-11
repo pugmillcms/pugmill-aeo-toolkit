@@ -3531,12 +3531,24 @@ function wppugmill_render_settings_page() {
 			   AND p.post_type IN ('{$pt_in}')"
 		);
 
+		// ── Unscored count — how many posts site-wide have no stored score ───────
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared
+		$unscored_total = (int) $wpdb->get_var(
+			"SELECT COUNT( p.ID )
+			 FROM {$wpdb->posts} p
+			 LEFT JOIN {$wpdb->postmeta} ts ON ts.post_id = p.ID AND ts.meta_key = '_wppugmill_score'
+			 WHERE p.post_status = 'publish'
+			   AND p.post_type IN ('{$pt_in}')
+			   AND ts.meta_value IS NULL"
+		);
+
 		// ── Main query — stored meta only, no per-row recalculation ──────────────
+		// ts.meta_value kept raw (not COALESCE) so NULL = never scored vs 0 = scored.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared
 		$audit_rows = $wpdb->get_results( $wpdb->prepare(
 			"SELECT p.ID, p.post_title, p.post_type,
 			        COALESCE( cs.meta_value + 0, 0 ) AS content_score,
-			        COALESCE( ts.meta_value + 0, 0 ) AS total_score,
+			        ts.meta_value                    AS total_score_raw,
 			        aeo.meta_value                   AS aeo_json
 			 FROM {$wpdb->posts} p
 			 LEFT JOIN {$wpdb->postmeta} cs  ON cs.post_id  = p.ID AND cs.meta_key  = '_wppugmill_content_score'
@@ -3600,6 +3612,24 @@ function wppugmill_render_settings_page() {
 			</div>
 			<?php endif; ?>
 
+			<?php if ( $unscored_total > 0 ) : ?>
+			<div id="pugmill-backfill-banner" style="display:flex; align-items:center; gap:12px; background:#fffbeb; border:1px solid #fde68a; border-radius:6px; padding:10px 16px; margin-bottom:16px; font-size:13px; color:#92400e;">
+				<span id="pugmill-backfill-msg">
+					<?php printf(
+						/* translators: %d: number of unscored posts */
+						esc_html( _n( '%d post not yet scored.', '%d posts not yet scored.', $unscored_total, 'wp-pugmill' ) ),
+						(int) $unscored_total
+					); ?>
+				</span>
+				<button type="button" id="pugmill-backfill-btn" class="button" style="flex-shrink:0;">
+					<?php esc_html_e( 'Calculate All Scores', 'wp-pugmill' ); ?>
+				</button>
+				<span id="pugmill-backfill-progress" style="font-size:12px; color:#b45309;"></span>
+			</div>
+			<?php endif; ?>
+
+			<div id="pugmill-page-score-status" style="font-size:12px; color:#6b7280; margin-bottom:8px; min-height:18px;"></div>
+
 			<?php if ( empty( $audit_rows ) ) : ?>
 				<p style="color:#666;"><?php esc_html_e( 'No published posts found.', 'wp-pugmill' ); ?></p>
 			<?php else : ?>
@@ -3626,34 +3656,41 @@ function wppugmill_render_settings_page() {
 				</thead>
 				<tbody>
 				<?php foreach ( $audit_rows as $row ) :
-					$aeo        = json_decode( $row->aeo_json ?? '{}', true ) ?: array();
-					$summary    = trim( $aeo['summary'] ?? '' );
-					$questions  = array_filter( $aeo['questions'] ?? array(), function( $q ) { return ! empty( $q['q'] ) && ! empty( $q['a'] ); } );
-					$entities   = array_filter( $aeo['entities'] ?? array(), function( $e ) { return ! empty( $e['name'] ); } );
-					$keywords   = array_filter( $aeo['keywords'] ?? array(), 'strlen' );
-					$missing    = array();
-					if ( empty( $summary ) )            $missing[] = 'Summary';
-					if ( count( $questions ) < 1 )      $missing[] = 'Q&amp;A';
-					if ( count( $entities ) < 1 )       $missing[] = 'Entities';
-					if ( count( $keywords ) < 5 )       $missing[] = 'Keywords';
-					$score      = (int) $row->total_score;
-					$color      = $score_color( $score );
-					$edit_url   = get_edit_post_link( $row->ID );
+					$is_unscored = null === $row->total_score_raw;
+					$aeo         = json_decode( $row->aeo_json ?? '{}', true ) ?: array();
+					$summary     = trim( $aeo['summary'] ?? '' );
+					$questions   = array_filter( $aeo['questions'] ?? array(), function( $q ) { return ! empty( $q['q'] ) && ! empty( $q['a'] ); } );
+					$entities    = array_filter( $aeo['entities'] ?? array(), function( $e ) { return ! empty( $e['name'] ); } );
+					$keywords    = array_filter( $aeo['keywords'] ?? array(), 'strlen' );
+					$missing     = array();
+					if ( empty( $summary ) )           $missing[] = 'Summary';
+					if ( count( $questions ) < 1 )     $missing[] = 'Q&amp;A';
+					if ( count( $entities ) < 1 )      $missing[] = 'Entities';
+					if ( count( $keywords ) < 5 )      $missing[] = 'Keywords';
+					$score    = (int) $row->total_score_raw;
+					$color    = $score_color( $score );
+					$edit_url = get_edit_post_link( $row->ID );
 				?>
-				<tr data-post-id="<?php echo absint( $row->ID ); ?>">
+				<tr data-post-id="<?php echo absint( $row->ID ); ?>"<?php echo $is_unscored ? ' data-unscored="1"' : ''; ?>>
 					<td>
 						<a href="<?php echo esc_url( $edit_url ); ?>" style="font-weight:600;">
 							<?php echo esc_html( $row->post_title ?: __( '(no title)', 'wp-pugmill' ) ); ?>
 						</a>
 					</td>
 					<td style="color:#666; font-size:12px;"><?php echo esc_html( $row->post_type ); ?></td>
-					<td style="text-align:center;">
-						<span style="display:inline-block; padding:2px 10px; border-radius:999px; background:<?php echo esc_attr( $color ); ?>1a; color:<?php echo esc_attr( $color ); ?>; font-size:12px; font-weight:700;">
+					<td style="text-align:center;" class="pugmill-score-cell">
+						<?php if ( $is_unscored ) : ?>
+						<span class="pugmill-score-pulse" style="display:inline-block; width:36px; height:20px; border-radius:999px; background:#e5e7eb; animation:pugmill-pulse 1.4s ease-in-out infinite;"></span>
+						<?php else : ?>
+						<span class="pugmill-score-pill" style="display:inline-block; padding:2px 10px; border-radius:999px; background:<?php echo esc_attr( $color ); ?>1a; color:<?php echo esc_attr( $color ); ?>; font-size:12px; font-weight:700;">
 							<?php echo absint( $score ); ?>
 						</span>
+						<?php endif; ?>
 					</td>
-					<td>
-						<?php if ( empty( $missing ) ) : ?>
+					<td class="pugmill-missing-cell">
+						<?php if ( $is_unscored ) : ?>
+						<span class="pugmill-score-pulse" style="display:inline-block; width:120px; height:18px; border-radius:4px; background:#e5e7eb; animation:pugmill-pulse 1.4s ease-in-out infinite;"></span>
+						<?php elseif ( empty( $missing ) ) : ?>
 							<span style="color:#46b450; font-size:12px;">✓ <?php esc_html_e( 'All AEO fields complete', 'wp-pugmill' ); ?></span>
 						<?php else : ?>
 							<?php foreach ( $missing as $field ) : ?>
@@ -3704,37 +3741,173 @@ function wppugmill_render_settings_page() {
 			<?php endif; ?>
 		</div>
 
-		<?php if ( $is_ai_mode ) : ?>
+		<style>
+		@keyframes pugmill-pulse {
+			0%, 100% { opacity: 1; }
+			50%       { opacity: 0.4; }
+		}
+		</style>
 		<script>
 		( function() {
-			var ajaxUrl = <?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>;
+			var ajaxUrl  = <?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>;
+			var scoreNonce   = <?php echo wp_json_encode( wp_create_nonce( 'wppugmill_calculate_scores' ) ); ?>;
+			<?php if ( $is_ai_mode ) : ?>
+			var generateNonce = <?php echo wp_json_encode( $audit_nonce ); ?>;
+			<?php endif; ?>
 
+			// ── Shared: update a row with calculated score data ─────────────────────
+			function applyScoreToRow( row, data ) {
+				var scoreCell   = row.querySelector( '.pugmill-score-cell' );
+				var missingCell = row.querySelector( '.pugmill-missing-cell' );
+				var color       = data.color;
+
+				// Score pill
+				if ( scoreCell ) {
+					scoreCell.innerHTML = '<span class="pugmill-score-pill" style="display:inline-block;padding:2px 10px;border-radius:999px;background:' + color + '1a;color:' + color + ';font-size:12px;font-weight:700;">' + data.score + '</span>';
+				}
+
+				// Missing field tags
+				if ( missingCell ) {
+					if ( ! data.missing || data.missing.length === 0 ) {
+						missingCell.innerHTML = '<span style="color:#46b450;font-size:12px;">✓ <?php echo esc_js( __( 'All AEO fields complete', 'wp-pugmill' ) ); ?></span>';
+					} else {
+						missingCell.innerHTML = data.missing.map( function( f ) {
+							return '<span style="display:inline-block;margin:2px 3px 2px 0;padding:1px 8px;border-radius:4px;background:#fee2e2;color:#b91c1c;font-size:11px;font-weight:600;">' + f + '</span>';
+						} ).join( '' );
+					}
+				}
+
+				row.removeAttribute( 'data-unscored' );
+			}
+
+			// ── 1. Live update unscored rows on the current page ────────────────────
+			var unscoredRows = Array.from( document.querySelectorAll( 'tr[data-unscored]' ) );
+			var pageStatus   = document.getElementById( 'pugmill-page-score-status' );
+
+			if ( unscoredRows.length > 0 ) {
+				var unscoredIds = unscoredRows.map( function( r ) { return r.dataset.postId; } );
+				if ( pageStatus ) pageStatus.textContent = '<?php echo esc_js( __( 'Calculating scores…', 'wp-pugmill' ) ); ?>';
+
+				var body = new URLSearchParams( { action: 'wppugmill_calculate_scores', nonce: scoreNonce } );
+				unscoredIds.forEach( function( id ) { body.append( 'post_ids[]', id ); } );
+
+				fetch( ajaxUrl, {
+					method:  'POST',
+					headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+					body:    body.toString(),
+				} )
+				.then( function( r ) { return r.json(); } )
+				.then( function( res ) {
+					if ( res.success ) {
+						Object.keys( res.data ).forEach( function( postId ) {
+							var row = document.querySelector( 'tr[data-post-id="' + postId + '"]' );
+							if ( row ) applyScoreToRow( row, res.data[ postId ] );
+						} );
+					}
+					if ( pageStatus ) pageStatus.textContent = '';
+				} )
+				.catch( function() {
+					if ( pageStatus ) pageStatus.textContent = '';
+				} );
+			}
+
+			// ── 2. Site-wide backfill ───────────────────────────────────────────────
+			var backfillBtn      = document.getElementById( 'pugmill-backfill-btn' );
+			var backfillMsg      = document.getElementById( 'pugmill-backfill-msg' );
+			var backfillProgress = document.getElementById( 'pugmill-backfill-progress' );
+			var backfillBanner   = document.getElementById( 'pugmill-backfill-banner' );
+
+			function runBackfillBatch() {
+				fetch( ajaxUrl, {
+					method:  'POST',
+					headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+					body:    new URLSearchParams( { action: 'wppugmill_get_unscored_batch', nonce: scoreNonce } ),
+				} )
+				.then( function( r ) { return r.json(); } )
+				.then( function( res ) {
+					if ( ! res.success || ! res.data.ids || res.data.ids.length === 0 ) {
+						// All done.
+						if ( backfillBanner ) backfillBanner.style.display = 'none';
+						if ( pageStatus ) {
+							pageStatus.textContent = '<?php echo esc_js( __( '✓ All scores up to date', 'wp-pugmill' ) ); ?>';
+							setTimeout( function() { pageStatus.textContent = ''; }, 3000 );
+						}
+						return;
+					}
+
+					var remaining = res.data.remaining;
+					if ( backfillMsg )      backfillMsg.textContent     = remaining + ' <?php echo esc_js( __( 'posts remaining…', 'wp-pugmill' ) ); ?>';
+					if ( backfillProgress ) backfillProgress.textContent = '<?php echo esc_js( __( 'Processing batch…', 'wp-pugmill' ) ); ?>';
+
+					// Calculate this batch.
+					var batchBody = new URLSearchParams( { action: 'wppugmill_calculate_scores', nonce: scoreNonce } );
+					res.data.ids.forEach( function( id ) { batchBody.append( 'post_ids[]', id ); } );
+
+					fetch( ajaxUrl, {
+						method:  'POST',
+						headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+						body:    batchBody.toString(),
+					} )
+					.then( function( r ) { return r.json(); } )
+					.then( function( calcRes ) {
+						if ( calcRes.success ) {
+							// Update any rows currently visible on this page.
+							Object.keys( calcRes.data ).forEach( function( postId ) {
+								var row = document.querySelector( 'tr[data-post-id="' + postId + '"]' );
+								if ( row ) applyScoreToRow( row, calcRes.data[ postId ] );
+							} );
+						}
+						if ( backfillProgress ) backfillProgress.textContent = '';
+						// Continue until empty.
+						runBackfillBatch();
+					} )
+					.catch( function() {
+						if ( backfillBtn )      backfillBtn.disabled    = false;
+						if ( backfillProgress ) backfillProgress.textContent = '<?php echo esc_js( __( 'Network error — try again.', 'wp-pugmill' ) ); ?>';
+					} );
+				} )
+				.catch( function() {
+					if ( backfillBtn )      backfillBtn.disabled    = false;
+					if ( backfillProgress ) backfillProgress.textContent = '<?php echo esc_js( __( 'Network error — try again.', 'wp-pugmill' ) ); ?>';
+				} );
+			}
+
+			if ( backfillBtn ) {
+				backfillBtn.addEventListener( 'click', function() {
+					backfillBtn.disabled = true;
+					runBackfillBatch();
+				} );
+			}
+
+			<?php if ( $is_ai_mode ) : ?>
+			// ── 3. Per-row Generate All ─────────────────────────────────────────────
 			document.querySelectorAll( '.wppugmill-audit-generate' ).forEach( function( btn ) {
 				btn.addEventListener( 'click', function() {
-					var postId  = btn.dataset.postId;
-					var nonce   = btn.dataset.nonce;
-					var row     = btn.closest( 'tr' );
-					var status  = row.querySelector( '.wppugmill-audit-status' );
+					var postId = btn.dataset.postId;
+					var row    = btn.closest( 'tr' );
+					var status = row.querySelector( '.wppugmill-audit-status' );
 
-					btn.disabled     = true;
-					btn.textContent  = '<?php echo esc_js( __( 'Generating…', 'wp-pugmill' ) ); ?>';
+					btn.disabled       = true;
+					btn.textContent    = '<?php echo esc_js( __( 'Generating…', 'wp-pugmill' ) ); ?>';
 					status.textContent = '';
 
 					fetch( ajaxUrl, {
 						method:  'POST',
 						headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-						body:    new URLSearchParams( { action: 'wppugmill_generate_aeo', nonce: nonce, post_id: postId } ),
+						body:    new URLSearchParams( { action: 'wppugmill_generate_aeo', nonce: generateNonce, post_id: postId } ),
 					} )
 					.then( function( r ) { return r.json(); } )
 					.then( function( res ) {
 						if ( res.success ) {
-							status.textContent = '<?php echo esc_js( __( '✓ Generated — open post to review & save', 'wp-pugmill' ) ); ?>';
+							status.textContent = '✓ Generated — open post to review & save';
 							status.style.color = '#46b450';
-							// Clear the missing tags since fields are now populated.
-							var missingCell = row.cells[3];
-							missingCell.innerHTML = '<span style="color:#46b450;font-size:12px;">✓ <?php echo esc_js( __( 'Generated — save in editor', 'wp-pugmill' ) ); ?></span>';
+							// Turn missing tags green — fields generated but not yet saved.
+							row.querySelectorAll( '.pugmill-missing-cell span' ).forEach( function( tag ) {
+								tag.style.background = '#dcfce7';
+								tag.style.color      = '#15803d';
+							} );
 						} else {
-							status.textContent = res.data?.message || '<?php echo esc_js( __( 'Generation failed.', 'wp-pugmill' ) ); ?>';
+							status.textContent = ( res.data && res.data.message ) ? res.data.message : '<?php echo esc_js( __( 'Generation failed.', 'wp-pugmill' ) ); ?>';
 							status.style.color = '#dc3232';
 						}
 						btn.disabled    = false;
@@ -3748,9 +3921,10 @@ function wppugmill_render_settings_page() {
 					} );
 				} );
 			} );
+			<?php endif; ?>
+
 		}() );
 		</script>
-		<?php endif; ?>
 
 		<?php elseif ( 'bulk-aeo' === $active_tab ) : ?>
 		<!-- ════════════════════════════════════════════════════════════

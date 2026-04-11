@@ -4,7 +4,7 @@ Tags: aeo, answer engine optimization, ai, structured data, bot analytics, llms-
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.2.14
+Stable tag: 1.2.15
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -164,6 +164,12 @@ Plus: llms.txt, per-post AEO markdown endpoints, and a bot analytics dashboard s
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.2.15 =
+* **Audit AEO tab**: Unscored rows now show pulsing grey placeholders on page load; scores are fetched via AJAX and populated in real time without a page reload.
+* **Audit AEO tab**: "Calculate All Scores" backfill button processes all unscored posts in batches across the entire site, updating visible rows as they complete.
+* **Scoring**: Added wppugmill_calculate_scores AJAX handler — calculates health + content scores for a batch of post IDs and persists both meta values.
+* **Scoring**: Added wppugmill_get_unscored_batch AJAX handler — returns next batch of posts missing a stored score, with remaining count.
 
 = 1.2.14 =
 * **Scoring**: PHP health score rewritten to match JS sidebar scoring exactly — same 12 checks, same point values. Dropped SEO title/meta description; added content structure checks (400+ words, H2/H3, no H1, opening paragraph), keywords in content, and featured image alt text.
