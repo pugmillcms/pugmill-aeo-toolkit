@@ -67,7 +67,7 @@ function aeopugmill_ajax_generate_aeo() {
 
 	$allowed_types = array( 'Thing', 'Person', 'Organization', 'Product', 'Place', 'Event', 'Technology', 'DefinedTerm' );
 
-	wp_send_json_success( array(
+	$result = array(
 		'summary'   => sanitize_textarea_field( $aeo['summary'] ?? '' ),
 		'questions' => array_values( array_filter(
 			array_map( function( $qa ) {
@@ -97,7 +97,15 @@ function aeopugmill_ajax_generate_aeo() {
 		'keywords'  => array_values( array_filter(
 			array_map( 'sanitize_text_field', is_array( $aeo['keywords'] ?? null ) ? $aeo['keywords'] : array() )
 		) ),
-	) );
+	);
+
+	if ( ! empty( $_POST['autosave'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
+		aeopugmill_save_aeo( $r['post']->ID, $result );
+		$health = aeopugmill_health_score( $r['post']->ID );
+		update_post_meta( $r['post']->ID, '_aeopugmill_score', (int) $health['score'] );
+	}
+
+	wp_send_json_success( $result );
 }
 
 require_once __DIR__ . '/ai-content.php';

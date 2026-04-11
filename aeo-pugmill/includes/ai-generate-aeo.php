@@ -76,6 +76,23 @@ add_action( 'wp_ajax_aeopugmill_generate_qa',       'aeopugmill_ajax_generate_qa
 add_action( 'wp_ajax_aeopugmill_generate_entities', 'aeopugmill_ajax_generate_entities' );
 add_action( 'wp_ajax_aeopugmill_generate_keywords', 'aeopugmill_ajax_generate_keywords' );
 
+/**
+ * Merge a single generated AEO field into the stored meta and refresh the score.
+ * Called only when the autosave flag is present (e.g. from the Audit AEO page).
+ * The post editor omits the flag so users can review generated content before saving.
+ *
+ * @param int    $post_id
+ * @param string $field   summary|questions|entities|keywords
+ * @param mixed  $value
+ */
+function aeopugmill_autosave_aeo_field( $post_id, $field, $value ) {
+	$existing          = aeopugmill_get_aeo( $post_id );
+	$existing[ $field ] = $value;
+	aeopugmill_save_aeo( $post_id, $existing );
+	$health = aeopugmill_health_score( $post_id );
+	update_post_meta( $post_id, '_aeopugmill_score', (int) $health['score'] );
+}
+
 function aeopugmill_ajax_generate_summary() {
 	$r = aeopugmill_ai_request_setup( 'aeopugmill_generate_summary', 'Summary', false );
 	if ( empty( trim( $r['content'] ) ) ) {
@@ -93,6 +110,10 @@ function aeopugmill_ajax_generate_summary() {
 	$summary = sanitize_textarea_field( $decoded['summary'] ?? '' );
 	if ( empty( $summary ) ) {
 		wp_send_json_error( array( 'message' => __( 'AI returned an unexpected response. Please try again.', 'aeo-pugmill' ) ), 500 );
+	}
+
+	if ( ! empty( $_POST['autosave'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
+		aeopugmill_autosave_aeo_field( $r['post']->ID, 'summary', $summary );
 	}
 
 	wp_send_json_success( array( 'summary' => $summary ) );
@@ -127,6 +148,10 @@ function aeopugmill_ajax_generate_qa() {
 		}, $raw_pairs ),
 		function( $qa ) { return ! empty( $qa['q'] ) && ! empty( $qa['a'] ); }
 	) );
+
+	if ( ! empty( $_POST['autosave'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
+		aeopugmill_autosave_aeo_field( $r['post']->ID, 'questions', $questions );
+	}
 
 	wp_send_json_success( array( 'questions' => $questions ) );
 }
@@ -169,6 +194,10 @@ function aeopugmill_ajax_generate_entities() {
 		function( $e ) { return ! empty( $e['name'] ); }
 	) );
 
+	if ( ! empty( $_POST['autosave'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
+		aeopugmill_autosave_aeo_field( $r['post']->ID, 'entities', $entities );
+	}
+
 	wp_send_json_success( array( 'entities' => $entities ) );
 }
 
@@ -195,6 +224,10 @@ function aeopugmill_ajax_generate_keywords() {
 	$keywords = array_values( array_filter(
 		array_map( 'sanitize_text_field', $raw_keywords )
 	) );
+
+	if ( ! empty( $_POST['autosave'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
+		aeopugmill_autosave_aeo_field( $r['post']->ID, 'keywords', $keywords );
+	}
 
 	wp_send_json_success( array( 'keywords' => $keywords ) );
 }

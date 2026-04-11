@@ -3793,7 +3793,7 @@ function aeopugmill_render_settings_page() {
 						fetch( ajaxUrl, {
 							method:  'POST',
 							headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-							body:    new URLSearchParams( { action: map.action, nonce: map.nonce, post_id: postId } ),
+							body:    new URLSearchParams( { action: map.action, nonce: map.nonce, post_id: postId, autosave: '1' } ),
 						} )
 						.then( function( r ) { return r.json(); } )
 						.then( function( res ) {
@@ -3871,15 +3871,15 @@ function aeopugmill_render_settings_page() {
 					fetch( ajaxUrl, {
 						method:  'POST',
 						headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-						body:    new URLSearchParams( { action: 'aeopugmill_generate_aeo', nonce: generateNonce, post_id: postId } ),
+						body:    new URLSearchParams( { action: 'aeopugmill_generate_aeo', nonce: generateNonce, post_id: postId, autosave: '1' } ),
 					} )
 					.then( function( r ) { return r.json(); } )
 					.then( function( res ) {
 						if ( res.success ) {
-							status.textContent = '✓ Generated — open post to review & save';
+							status.textContent = '✓ Generated';
 							status.style.color = '#46b450';
-							// Turn missing tags green — fields generated but not yet saved.
-							row.querySelectorAll( '.pugmill-missing-cell span' ).forEach( function( tag ) {
+							// Turn missing tags green.
+							row.querySelectorAll( '.pugmill-missing-cell span, .pugmill-missing-cell button' ).forEach( function( tag ) {
 								tag.style.background = '#dcfce7';
 								tag.style.color      = '#15803d';
 							} );
