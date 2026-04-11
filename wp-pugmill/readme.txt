@@ -4,7 +4,7 @@ Tags: aeo, answer engine optimization, ai, structured data, bot analytics, llms-
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.2.11
+Stable tag: 1.2.12
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -164,6 +164,9 @@ Plus: llms.txt, per-post AEO markdown endpoints, and a bot analytics dashboard s
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.2.12 =
+* **Posts list (edit.php)**: Removed AEO Score as a standalone column — avoids layout conflicts with Yoast/RankMath/AIOSEO columns. Score now appears as a small lavender pill inline after each post title, injected via JavaScript with no impact on column structure.
 
 = 1.2.11 =
 * **Sidebar**: Removed SEO panel (SERP preview, SEO title, meta description, canonical, robots, OG image) — Pugmill is AEO-focused and these fields overlap with Yoast/RankMath/AIOSEO. Existing saved SEO data continues to output correctly. Featured image alt text moved up under the AEO section.

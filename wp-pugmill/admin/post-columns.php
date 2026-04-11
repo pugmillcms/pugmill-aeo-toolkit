@@ -1,9 +1,12 @@
 <?php
 /**
- * Posts/Pages list table column — SEO + AEO health badge.
+ * Post list table — AEO score pill + delete warning.
  *
- * Adds a "Pugmill" column to all public post type list tables showing a
- * color-coded score badge. Clicking the badge opens the post editor.
+ * The score is injected inline after each post title via JavaScript so we
+ * don't add a new column (which can break the list table layout when other
+ * plugins like Yoast or RankMath also add columns). Score data is output as
+ * a JSON map in admin_head and the script appends a lavender pill to each
+ * title cell.
  *
  * @package WPPugmill
  */
@@ -13,134 +16,100 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Register the column for all public post types.
+ * Output AEO score pills inline after each post title.
  *
- * @param  array  $columns Existing columns.
- * @return array
+ * Scores are collected server-side (updating the cached meta as a side-effect),
+ * serialised into a JS map, and rendered client-side so we don't touch any
+ * existing column structure.
  */
-function wppugmill_add_list_column( $columns ) {
-	// Insert after the title column for natural placement.
-	$new = array();
-	foreach ( $columns as $key => $label ) {
-		$new[ $key ] = $label;
-		if ( 'title' === $key ) {
-			$new['wppugmill_score'] = '<span title="WP Pugmill SEO + AEO Score" style="display:inline-flex;align-items:center;gap:4px;"><svg viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-miterlimit="10" width="12" height="12" style="opacity:0.7"><polygon points="47.33 254.69 116.33 300.93 116.33 301.39 116.53 394.54 116.05 393.87 8.76 254.66 8.74 254.63 116.03 115.41 116.51 114.75 116.31 207.89 116.31 208.36 47.09 254.53 47.33 254.69"/><polygon points="288.69 254.69 219.69 300.93 219.69 301.39 219.49 394.54 219.97 393.87 327.26 254.66 327.28 254.63 219.99 115.41 219.52 114.75 219.71 207.89 219.71 208.36 288.93 254.53 288.69 254.69"/><polygon points="369.43 254.69 300.43 300.93 300.43 301.39 300.23 394.54 300.71 393.87 408 254.66 408.02 254.63 300.73 115.41 300.25 114.75 300.45 207.89 300.45 208.36 369.67 254.53 369.43 254.69"/><polygon points="451.21 254.69 382.22 300.93 382.22 301.39 382.02 394.54 382.49 393.87 489.79 254.66 489.81 254.63 382.52 115.41 382.04 114.75 382.24 207.89 382.24 208.36 451.46 254.53 451.21 254.69"/><polygon points="110.13 487.08 154.03 487.18 154.1 486.67 227.28 11.14 226.9 11.14 182.99 11.14 182.92 11.65 109.61 487.08 110.13 487.08"/></svg> AEO Score</span>';
-		}
-	}
-	return $new;
-}
-
-/**
- * Render the column cell for a given post.
- *
- * @param string $column  Column key.
- * @param int    $post_id Post ID.
- */
-function wppugmill_render_list_column( $column, $post_id ) {
-	if ( 'wppugmill_score' !== $column ) {
-		return;
-	}
-
-	// _wppugmill_score is pre-loaded in the WP object cache by the list table —
-	// this get_post_meta call makes no extra DB query.
-	$cached_score = get_post_meta( $post_id, '_wppugmill_score', true );
-
-	$health = wppugmill_health_score( $post_id );
-	$score  = $health['score'];
-	$grade  = $health['grade'];
-	$color  = $health['color'];
-
-	// Keep the sort cache in sync. The comparison avoids an unnecessary DB write;
-	// update_post_meta is only called when the cached value is missing or stale.
-	if ( '' === $cached_score || (int) $cached_score !== $score ) {
-		update_post_meta( $post_id, '_wppugmill_score', $score );
-	}
-
-	// Compact dot + number badge
-	printf(
-		'<span title="%s" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:%s;">
-			<span style="width:8px;height:8px;border-radius:50%%;background:%s;flex-shrink:0;"></span>
-			%d
-		</span>',
-		esc_attr( $grade . ' — ' . $score . '/100' ),
-		esc_attr( $color ),
-		esc_attr( $color ),
-		absint( $score )
-	);
-}
-
-/**
- * Set a fixed narrow width for the score column via inline CSS.
- */
-function wppugmill_list_column_css() {
+function wppugmill_inline_score_pills() {
 	$screen = get_current_screen();
 	if ( ! $screen ) {
 		return;
 	}
-	// Only inject on list table screens for public post types.
 	$post_types = get_post_types( array( 'public' => true ), 'names' );
 	$screens    = array_map( function( $pt ) { return 'edit-' . $pt; }, $post_types );
 	if ( ! in_array( $screen->id, $screens, true ) ) {
 		return;
 	}
-	echo '<style>.column-wppugmill_score { width: 60px; text-align: center; white-space: nowrap; }</style>' . "\n";
-}
-add_action( 'admin_head', 'wppugmill_list_column_css' );
 
-/**
- * Register the score column as sortable for all public post types.
- *
- * @param  array $sortable Existing sortable columns.
- * @return array
- */
-function wppugmill_sortable_columns( $sortable ) {
-	$sortable['wppugmill_score'] = 'wppugmill_score';
-	return $sortable;
-}
+	// Collect scores for every post currently visible in the list table.
+	// WP has already run the main query, so $wp_query->posts is available.
+	global $wp_query;
+	$scores = array();
+	if ( ! empty( $wp_query->posts ) ) {
+		foreach ( $wp_query->posts as $post ) {
+			$health = wppugmill_health_score( $post->ID );
+			$score  = $health['score'];
+			$grade  = $health['grade'];
+			$color  = $health['color'];
 
-/**
- * Modify the list-table query when sorting by AEO score.
- *
- * Uses named meta-query clauses so posts that have never been scored
- * (no _wppugmill_score meta yet) are still included in the results.
- *
- * @param WP_Query $query
- */
-function wppugmill_score_orderby( $query ) {
-	if ( ! is_admin() || ! $query->is_main_query() ) {
+			// Keep the cached meta in sync (no extra DB query — WP object cache).
+			$cached = get_post_meta( $post->ID, '_wppugmill_score', true );
+			if ( '' === $cached || (int) $cached !== $score ) {
+				update_post_meta( $post->ID, '_wppugmill_score', $score );
+			}
+
+			$scores[ $post->ID ] = array(
+				'score' => $score,
+				'grade' => $grade,
+				'color' => $color,
+			);
+		}
+	}
+
+	if ( empty( $scores ) ) {
 		return;
 	}
-	if ( 'wppugmill_score' !== $query->get( 'orderby' ) ) {
-		return;
-	}
-	$query->set( 'meta_query', array(
-		'relation'     => 'OR',
-		'score_clause' => array(
-			'key'     => '_wppugmill_score',
-			'compare' => 'EXISTS',
-			'type'    => 'NUMERIC',
-		),
-		array(
-			'key'     => '_wppugmill_score',
-			'compare' => 'NOT EXISTS',
-		),
-	) );
-	$query->set( 'orderby', 'score_clause' );
-}
-add_action( 'pre_get_posts', 'wppugmill_score_orderby' );
+	?>
+	<script>
+	( function() {
+		var scores = <?php echo wp_json_encode( $scores ); ?>;
 
-/**
- * Hook the column into every public post type's list table.
- */
-function wppugmill_register_list_columns() {
-	$post_types = get_post_types( array( 'public' => true ), 'names' );
-	foreach ( $post_types as $post_type ) {
-		add_filter( "manage_{$post_type}_posts_columns",          'wppugmill_add_list_column' );
-		add_action( "manage_{$post_type}_posts_custom_column",    'wppugmill_render_list_column', 10, 2 );
-		add_filter( "manage_edit-{$post_type}_sortable_columns",  'wppugmill_sortable_columns' );
-	}
+		function inject() {
+			Object.keys( scores ).forEach( function( id ) {
+				var row = document.getElementById( 'post-' + id );
+				if ( ! row ) { return; }
+				// Avoid double-injection on re-renders.
+				if ( row.querySelector( '.wppugmill-score-pill' ) ) { return; }
+
+				var titleLink = row.querySelector( '.row-title' );
+				if ( ! titleLink ) { return; }
+
+				var s    = scores[ id ];
+				var pill = document.createElement( 'span' );
+				pill.className   = 'wppugmill-score-pill';
+				pill.title       = 'AEO Score: ' + s.grade + ' — ' + s.score + '/100';
+				pill.textContent = 'AEO ' + s.score;
+				pill.style.cssText = [
+					'display:inline-flex',
+					'align-items:center',
+					'margin-left:7px',
+					'padding:1px 7px',
+					'font-size:10px',
+					'font-weight:700',
+					'border-radius:999px',
+					'background:#ede9fe',
+					'color:#5b21b6',
+					'vertical-align:middle',
+					'white-space:nowrap',
+					'letter-spacing:0.02em',
+					'cursor:default',
+				].join( ';' );
+				titleLink.parentNode.insertBefore( pill, titleLink.nextSibling );
+			} );
+		}
+
+		if ( document.readyState === 'loading' ) {
+			document.addEventListener( 'DOMContentLoaded', inject );
+		} else {
+			inject();
+		}
+	}() );
+	</script>
+	<?php
 }
-add_action( 'admin_init', 'wppugmill_register_list_columns' );
+add_action( 'admin_head', 'wppugmill_inline_score_pills' );
 
 /**
  * Warn before deleting the plugin — all post meta is wiped on full deletion.
