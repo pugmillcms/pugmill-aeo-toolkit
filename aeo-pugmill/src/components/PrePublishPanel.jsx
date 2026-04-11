@@ -1,0 +1,56 @@
+/**
+ * AEO Pugmill — Pre-publish AEO health check panel.
+ *
+ * Shows a compact version of the completeness score in the Gutenberg
+ * pre-publish flow. Expands automatically when the score is < 100.
+ *
+ * @package WPPugmill
+ */
+
+import { PluginPrePublishPanel } from '@wordpress/editor';
+import { useSelect } from '@wordpress/data';
+
+import { useAeoMeta } from '../hooks';
+import { useSeoMeta } from '../hooks';
+import { CheckList }  from './CheckList';
+import { computeScore } from '../scoring';
+
+export function PrePublishPanel() {
+	const { aeo } = useAeoMeta();
+	const { seo } = useSeoMeta();
+
+	const draftContent       = useSelect( ( s ) => s( 'core/editor' ).getEditedPostContent(), [] );
+	const featuredImageId    = useSelect( ( s ) => s( 'core/editor' ).getEditedPostAttribute( 'featured_media' ), [] );
+	const featuredMediaAlt   = useSelect( ( s ) => featuredImageId ? s( 'core' ).getMedia( featuredImageId )?.alt_text || '' : '', [ featuredImageId ] );
+
+	const { score, color, grade, items } = computeScore( aeo, seo, { postContent: draftContent, featuredImageAlt: featuredMediaAlt } );
+	const failing = items.filter( ( item ) => ! item.pass );
+
+	return (
+		<PluginPrePublishPanel title="AEO Health Check" initialOpen={ score < 100 }>
+			{ score === 100 ? (
+				<p style={ { display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#46b450', margin: 0 } }>
+					<strong>✓ 100/100 — Your AEO is complete.</strong>
+				</p>
+			) : (
+				<>
+					<div style={ { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' } }>
+						<span style={ { fontSize: '28px', fontWeight: '700', color, lineHeight: 1 } }>
+							{ score }
+						</span>
+						<span style={ { fontSize: '13px', color: '#666', lineHeight: 1 } }>
+							/100<br />
+							<strong style={ { color } }>{ grade }</strong>
+						</span>
+					</div>
+
+					<CheckList items={ failing } failingOnly={ true } />
+
+					<p style={ { fontSize: '11px', color: '#666', marginTop: '10px', marginBottom: 0 } }>
+						Go back and complete these in the <strong>AEO Pugmill</strong> panel.
+					</p>
+				</>
+			) }
+		</PluginPrePublishPanel>
+	);
+}

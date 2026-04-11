@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
-# Build WP Pugmill distribution zip.
+# Build AEO Pugmill distribution zip.
 # Usage: ./build.sh
-# Output: wp-pugmill-{version}.zip in the project root.
+# Output: aeo-pugmill-{version}.zip in the project root.
 
 set -euo pipefail
 
-PLUGIN_DIR="wp-pugmill"
-PLUGIN_FILE="$PLUGIN_DIR/wp-pugmill.php"
+PLUGIN_DIR="aeo-pugmill"
+PLUGIN_FILE="$PLUGIN_DIR/aeo-pugmill.php"
 
 # ── Read version from plugin header ───────────────────────────────────────────
 VERSION=$(grep -m1 '^\s*\* Version:' "$PLUGIN_FILE" | sed 's/.*Version:[[:space:]]*//' | tr -d '[:space:]')
-ZIP_NAME="wp-pugmill-${VERSION}.zip"
+ZIP_NAME="aeo-pugmill-${VERSION}.zip"
 
-echo "Building WP Pugmill v${VERSION}..."
+echo "Building AEO Pugmill v${VERSION}..."
 
 # ── Compile JS ─────────────────────────────────────────────────────────────────
 (cd "$PLUGIN_DIR" && npm run build)
@@ -29,6 +29,7 @@ zip -r "$ZIP_NAME" "$PLUGIN_DIR" \
   --exclude "$PLUGIN_DIR/package-lock.json" \
   --exclude "$PLUGIN_DIR/requirements.md" \
   --exclude "$PLUGIN_DIR/.DS_Store" \
-  --exclude "*/.DS_Store"
+  --exclude "*/.DS_Store" \
+  --exclude "$PLUGIN_DIR/vitest.config.js"
 
 echo "Done: $ZIP_NAME"

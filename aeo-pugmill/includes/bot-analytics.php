@@ -1,0 +1,1703 @@
+<?php
+/**
+ * AI Bot Analytics — detect, log, and query AI crawler visits.
+ *
+ * Schema v2 (two-table model):
+ *
+ *   {prefix}aeopugmill_bot_daily
+ *     Aggregate table. One row per (bot × resource_type × day).
+ *     Upserted on every bot visit. Primary key prevents bloat —
+ *     max rows = bots × resource_types × days_retained.
+ *     Retained for 90 days.
+ *
+ *   {prefix}aeopugmill_bot_recent
+ *     Ring-buffer of individual visits for the "Recent Activity" table.
+ *     Stores the actual URL. Pruned to the last 7 days daily.
+ *
+ * Storage notes vs v1 (single-row-per-visit):
+ *   v1: unbounded growth, avg ~150–200 bytes/row, full-table-scan prune
+ *   v2: bot_daily capped at ~5k rows/90 days; bot_recent trimmed to 7 days
+ *
+ * @package WPPugmill
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+define( 'AEOPUGMILL_BOT_DB_VERSION', '3' );
+
+// ── Bot ID map ────────────────────────────────────────────────────────────────
+
+/**
+ * Canonical bot name → TINYINT ID (0 reserved for unknown bots).
+ *
+ * IDs 1-12 are legacy — kept stable for backward compatibility with existing
+ * bot_daily rows. New bots are assigned from 13 upward.
+ *
+ * @return array<string, int>
+ */
+function aeopugmill_bot_ids() {
+	return array(
+		// ── AI companies (training + realtime bundled by company) ──────────
+		'ChatGPT'    => 1,   // GPTBot (training), ChatGPT-User, OAI-SearchBot (realtime)
+		'Claude'     => 2,   // ClaudeBot (training), Claude-User (realtime)
+		'Perplexity' => 3,   // PerplexityBot (training + realtime)
+		'Gemini'     => 4,   // Google-Extended
+		'Amazonbot'  => 5,   // Amazonbot (training), Amzn-User (realtime)
+		'Meta'       => 6,   // Meta-ExternalAgent (training)
+		// ── Search engines ────────────────────────────────────────────────
+		'Googlebot'   => 7,
+		'Bingbot'     => 8,
+		'Applebot'    => 9,
+		'DuckDuckBot' => 10,  // DuckDuckBot + DuckAssistBot
+		'Bytespider'  => 11,  // ByteDance (TikTok) — training crawler
+		'GoogleOther' => 12,
+		// ── New AI training crawlers ───────────────────────────────────────
+		'Cohere'     => 13,   // cohere-ai, CohereAI
+		'DeepSeek'   => 14,   // DeepSeekBot
+		'Grok'       => 15,   // GrokBot, xAI-Grok
+		'CCBot'      => 16,   // Common Crawl (feeds many LLM training sets)
+		'Mistral'    => 17,   // MistralAI-User, MistralBot
+		// ── New search engines ────────────────────────────────────────────
+		'YandexBot'  => 18,
+		'BaiduBot'   => 19,
+		// ── Commercial SEO / analytics bots ──────────────────────────────
+		'SemrushBot' => 20,
+		'AhrefsBot'  => 21,
+		'DotBot'     => 22,
+		'MJ12bot'    => 23,
+		'Barkrowler' => 24,
+		'AI2Bot'     => 25,
+	);
+}
+
+/** @return int|null */
+function aeopugmill_bot_id( $name ) {
+	return aeopugmill_bot_ids()[ $name ] ?? null;
+}
+
+/** @return string */
+function aeopugmill_bot_name( $id ) {
+	static $flip;
+	if ( null === $flip ) {
+		$flip = array_flip( aeopugmill_bot_ids() );
+	}
+	return $flip[ (int) $id ] ?? 'Unknown';
+}
+
+// ── Resource type map ─────────────────────────────────────────────────────────
+
+/**
+ * TINYINT resource ID → human label.
+ *
+ * 0 — Regular HTML page crawl (no AEO data)
+ * 1 — /llms.txt                (AI discovery index)
+ * 2 — /llms-full.txt           (paginated AEO content)
+ * 3 — /{post}/?aeopugmill_llm=1 (per-post markdown)
+ * 4 — /?aeopugmill_llm=1        (site summary markdown)
+ * 5 — /sitemap.xml             (crawl discovery)
+ * 6 — /robots.txt              (crawl policy)
+ * 7 — AEO Post HTML            (singular post with AEO metadata — FAQPage, entities, etc.)
+ *
+ * @return array<int, string>
+ */
+function aeopugmill_resource_type_labels() {
+	return array(
+		0 => 'HTML Page',
+		1 => 'llms.txt',
+		2 => 'llms-full.txt',
+		3 => 'Post Markdown',
+		4 => 'Site Summary',
+		5 => 'Sitemap',
+		6 => 'Robots.txt',
+		7 => 'AEO Post',
+	);
+}
+
+/**
+ * Resource type category — used for visual grouping in the dashboard.
+ *
+ * @return array<int, string>  'aeo' | 'discovery' | 'crawl'
+ */
+function aeopugmill_resource_type_categories() {
+	return array(
+		0 => 'crawl',
+		1 => 'aeo',
+		2 => 'aeo',
+		3 => 'aeo',
+		4 => 'aeo',
+		5 => 'discovery',
+		6 => 'discovery',
+		7 => 'aeo',
+	);
+}
+
+// ── Bot fingerprints ──────────────────────────────────────────────────────────
+
+/**
+ * Map canonical bot names to their UA substrings.
+ *
+ * Order matters: more-specific entries (Google-Extended) must appear before
+ * broader ones (Googlebot) so the correct bot is matched first.
+ *
+ * @return array<string, string[]>
+ */
+function aeopugmill_bot_fingerprints() {
+	return array(
+		// ── AI companies ─────────────────────────────────────────────────
+		// Checked before search engines so Google-Extended beats Googlebot.
+		'ChatGPT'    => array( 'GPTBot', 'ChatGPT-User', 'OAI-SearchBot' ),
+		'Claude'     => array( 'ClaudeBot', 'Claude-User', 'anthropic-ai' ),
+		'Perplexity' => array( 'PerplexityBot', 'Perplexity-User' ),
+		'Gemini'     => array( 'Google-Extended' ),
+		'Amazonbot'  => array( 'Amazonbot', 'Amzn-User' ),
+		'Meta'       => array( 'meta-externalagent', 'Meta-ExternalFetcher' ),
+		'Cohere'     => array( 'cohere-ai', 'CohereAI', 'CohereBot' ),
+		'DeepSeek'   => array( 'DeepSeekBot' ),
+		'Grok'       => array( 'GrokBot', 'xAI-Grok', 'grok-' ),
+		'CCBot'      => array( 'CCBot' ),
+		'Mistral'    => array( 'MistralAI-User', 'MistralBot', 'mistralai' ),
+		// ── Search engines ────────────────────────────────────────────────
+		'GoogleOther' => array( 'GoogleOther' ),
+		'Googlebot'   => array( 'Googlebot' ),
+		'Bingbot'     => array( 'bingbot' ),
+		'Applebot'    => array( 'Applebot-Extended', 'Applebot' ),
+		'DuckDuckBot' => array( 'DuckDuckBot', 'DuckAssistBot' ),
+		'Bytespider'  => array( 'Bytespider' ),
+		'YandexBot'   => array( 'YandexBot', 'YaDirectFetcher' ),
+		'BaiduBot'    => array( 'Baiduspider', 'BaiduSpider' ),
+		// ── Commercial SEO / analytics bots ──────────────────────────────
+		'SemrushBot'  => array( 'SemrushBot' ),
+		'AhrefsBot'   => array( 'AhrefsBot' ),
+		'DotBot'      => array( 'DotBot', 'dotbot' ),
+		'MJ12bot'     => array( 'MJ12bot' ),
+		'Barkrowler'  => array( 'Barkrowler' ),
+		'AI2Bot'      => array( 'AI2Bot', 'Ai2Bot' ),
+	);
+}
+
+/**
+ * Detect if a UA string belongs to a known bot.
+ *
+ * @param  string       $ua
+ * @return string|false  Canonical bot name, or false.
+ */
+function aeopugmill_detect_ai_bot( $ua ) {
+	if ( empty( $ua ) ) {
+		return false;
+	}
+	foreach ( aeopugmill_bot_fingerprints() as $bot => $needles ) {
+		foreach ( $needles as $needle ) {
+			if ( false !== stripos( $ua, $needle ) ) {
+				return $bot;
+			}
+		}
+	}
+	return false;
+}
+
+/**
+ * Parse a human-readable bot name from a User-Agent string.
+ * Returns the leading token before '/', '(', or whitespace.
+ *
+ * @param  string $ua
+ * @return string
+ */
+function aeopugmill_parse_bot_name_from_ua( $ua ) {
+	// Prefer the domain from any embedded URL — most bots include their info page.
+	// e.g. "AhrefsBot/7.0; +https://ahrefs.com/robot/" → "ahrefs.com"
+	if ( preg_match( '/https?:\/\/(?:www\.)?([a-zA-Z0-9][a-zA-Z0-9\-]*\.[a-zA-Z]{2,})/i', $ua, $m ) ) {
+		return strtolower( $m[1] );
+	}
+	// Fall back to the leading alphabetic token (e.g. "curl", "python-requests").
+	if ( preg_match( '/^([A-Za-z][A-Za-z0-9_\-\.]{1,40})/', $ua, $m ) ) {
+		return $m[1];
+	}
+	// Truly unidentifiable — return empty so the caller can show "Unknown N".
+	return '';
+}
+
+/**
+ * Detect whether an unrecognised UA string is a bot of some kind.
+ *
+ * Returns a parsed display name if the UA looks like a bot, false otherwise.
+ * Browser-like UAs (Mozilla + Chrome/Safari/Firefox) are always ignored.
+ *
+ * @param  string       $ua
+ * @return string|false  Parsed bot name, or false.
+ */
+function aeopugmill_detect_unknown_bot( $ua ) {
+	if ( empty( $ua ) ) {
+		return false;
+	}
+
+	// Skip browser-like UAs — they'll always dwarf real bots in volume.
+	if ( false !== stripos( $ua, 'Mozilla/' ) ) {
+		if ( false !== stripos( $ua, 'Chrome/' ) ||
+			 false !== stripos( $ua, 'Safari/' ) ||
+			 false !== stripos( $ua, 'Firefox/' ) ) {
+			return false;
+		}
+	}
+
+	// Bot signal keywords — any hit in the UA string = treat as a bot.
+	static $signals = array(
+		'bot', 'spider', 'crawl', 'fetch', 'scraper', 'checker',
+		'scanner', 'monitor', 'wget', 'curl', 'python-requests',
+		'python/', 'go-http-client', 'java/', 'okhttp', 'libwww',
+		'Slurp', 'ia_archiver', 'archive.org_bot',
+	);
+	foreach ( $signals as $signal ) {
+		if ( false !== stripos( $ua, $signal ) ) {
+			return aeopugmill_parse_bot_name_from_ua( $ua );
+		}
+	}
+
+	return false;
+}
+
+// ── Resource type detection ───────────────────────────────────────────────────
+
+/**
+ * Determine the resource type for the current request.
+ *
+ * Called at init priority 99, before WP query vars are fully resolved.
+ * Uses REQUEST_URI (always available) and $_GET (real query params only).
+ *
+ * @return int  Resource type ID (see aeopugmill_resource_type_labels())
+ */
+function aeopugmill_detect_resource_type() {
+	$uri = isset( $_SERVER['REQUEST_URI'] ) ? wp_unslash( $_SERVER['REQUEST_URI'] ) : ''; // phpcs:ignore
+
+	// ?aeopugmill_llm=1 is a real GET param (not a rewrite), available early.
+	if ( isset( $_GET['aeopugmill_llm'] ) ) { // phpcs:ignore
+		$request_path = rtrim( (string) parse_url( $uri, PHP_URL_PATH ), '/' );
+		$home_path    = rtrim( (string) parse_url( home_url(), PHP_URL_PATH ), '/' );
+		return ( $request_path === $home_path ) ? 4 : 3;
+	}
+
+	// Clean-URL rewrites: visible in REQUEST_URI even before parse_request.
+	if ( false !== strpos( $uri, 'llms-full.txt' ) ) {
+		return 2;
+	}
+	if ( false !== strpos( $uri, 'llms.txt' ) ) {
+		return 1;
+	}
+	if ( false !== strpos( $uri, 'sitemap.xml' ) ) {
+		return 5;
+	}
+	if ( false !== strpos( $uri, 'robots.txt' ) ) {
+		return 6;
+	}
+
+	return 0;
+}
+
+// ── DB table install / upgrade ────────────────────────────────────────────────
+
+/**
+ * Create or upgrade the analytics tables.
+ * Safe to call repeatedly (uses dbDelta + explicit checks).
+ */
+function aeopugmill_bot_analytics_install() {
+	global $wpdb;
+
+	$cc = $wpdb->get_charset_collate();
+
+	// Daily aggregates — one row per (bot × resource_type × day).
+	// Primary key is the natural deduplication key; upserts increment count.
+	$daily_sql = "CREATE TABLE {$wpdb->prefix}aeopugmill_bot_daily (
+		bot_id        TINYINT UNSIGNED NOT NULL,
+		resource_type TINYINT UNSIGNED NOT NULL DEFAULT 0,
+		day           MEDIUMINT UNSIGNED NOT NULL,
+		count         MEDIUMINT UNSIGNED NOT NULL DEFAULT 1,
+		PRIMARY KEY (bot_id, resource_type, day)
+	) {$cc};";
+
+	// Recent visits ring-buffer — actual URLs for the activity table.
+	// bot_name stores the parsed UA name for unknown bots (bot_id = 0).
+	// Pruned to 7 days daily; never grows large.
+	$recent_sql = "CREATE TABLE {$wpdb->prefix}aeopugmill_bot_recent (
+		id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+		bot_id        TINYINT UNSIGNED NOT NULL,
+		bot_name      VARCHAR(64) NOT NULL DEFAULT '',
+		resource_type TINYINT UNSIGNED NOT NULL DEFAULT 0,
+		url           VARCHAR(500) NOT NULL DEFAULT '',
+		visited_at    INT UNSIGNED NOT NULL,
+		PRIMARY KEY (id),
+		KEY bot_time (bot_id, visited_at)
+	) {$cc};";
+
+	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+	dbDelta( $daily_sql );
+	dbDelta( $recent_sql );
+
+	// v3: add bot_name column to bot_recent for unknown bot display names.
+	// dbDelta doesn't add columns to existing tables, so we use ALTER TABLE.
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	$cols = $wpdb->get_col( "DESCRIBE {$wpdb->prefix}aeopugmill_bot_recent", 0 );
+	if ( ! in_array( 'bot_name', (array) $cols, true ) ) {
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$wpdb->query( "ALTER TABLE {$wpdb->prefix}aeopugmill_bot_recent ADD COLUMN bot_name VARCHAR(64) NOT NULL DEFAULT '' AFTER bot_id" );
+	}
+
+	update_option( 'aeopugmill_bot_db_version', AEOPUGMILL_BOT_DB_VERSION );
+}
+
+/**
+ * Lazy-install / auto-upgrade check.
+ * Runs on plugins_loaded so schema updates apply without manual action.
+ */
+function aeopugmill_bot_analytics_maybe_install() {
+	$installed = get_option( 'aeopugmill_bot_db_version' );
+
+	if ( $installed === AEOPUGMILL_BOT_DB_VERSION ) {
+		return;
+	}
+
+	aeopugmill_bot_analytics_install();
+
+	// Migrate data from the v1 single-visit table if it exists.
+	if ( '1' === $installed ) {
+		aeopugmill_bot_analytics_migrate_v1();
+	}
+	// v2 → v3: install() already runs the ALTER TABLE for bot_name column.
+}
+add_action( 'plugins_loaded', 'aeopugmill_bot_analytics_maybe_install' );
+
+// ── v1 → v2 migration ────────────────────────────────────────────────────────
+
+/**
+ * Migrate data from the old single-row-per-visit table into the new schema.
+ *
+ * - Aggregates old visits into bot_daily (resource_type = 0, HTML page).
+ * - Populates bot_recent from the 200 most recent old rows.
+ * - Drops the old table when done.
+ */
+function aeopugmill_bot_analytics_migrate_v1() {
+	global $wpdb;
+
+	$old = $wpdb->prefix . 'aeopugmill_bot_visits';
+
+	// Check the old table actually exists before touching it.
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	if ( $wpdb->get_var( "SHOW TABLES LIKE '{$old}'" ) !== $old ) {
+		return;
+	}
+
+	$bot_ids = aeopugmill_bot_ids();
+
+	// ── Aggregate into bot_daily ──────────────────────────────────────────
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	$agg_rows = $wpdb->get_results(
+		"SELECT bot, DATE(visited_at) AS day_str, COUNT(*) AS cnt
+		 FROM {$old}
+		 GROUP BY bot, DATE(visited_at)",
+		ARRAY_A
+	);
+
+	foreach ( (array) $agg_rows as $row ) {
+		$bot_id = $bot_ids[ $row['bot'] ] ?? null;
+		if ( ! $bot_id ) {
+			continue;
+		}
+		$day = (int) floor( strtotime( $row['day_str'] ) / DAY_IN_SECONDS );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$wpdb->query( $wpdb->prepare(
+			"INSERT INTO {$wpdb->prefix}aeopugmill_bot_daily
+			 (bot_id, resource_type, day, count)
+			 VALUES (%d, 0, %d, %d)
+			 ON DUPLICATE KEY UPDATE count = count + VALUES(count)",
+			$bot_id,
+			$day,
+			(int) $row['cnt']
+		) );
+	}
+
+	// ── Seed bot_recent from the 200 newest old visits ────────────────────
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	$recent_rows = $wpdb->get_results(
+		"SELECT bot, url, visited_at FROM {$old}
+		 ORDER BY visited_at DESC LIMIT 200",
+		ARRAY_A
+	);
+
+	foreach ( (array) $recent_rows as $row ) {
+		$bot_id = $bot_ids[ $row['bot'] ] ?? null;
+		if ( ! $bot_id ) {
+			continue;
+		}
+		$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->prefix . 'aeopugmill_bot_recent',
+			array(
+				'bot_id'        => $bot_id,
+				'resource_type' => 0,
+				'url'           => substr( (string) $row['url'], 0, 500 ),
+				'visited_at'    => (int) strtotime( $row['visited_at'] ),
+			),
+			array( '%d', '%d', '%s', '%d' )
+		);
+	}
+
+	// ── Drop old table ────────────────────────────────────────────────────
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	$wpdb->query( "DROP TABLE IF EXISTS {$old}" );
+}
+
+// ── Logging ───────────────────────────────────────────────────────────────────
+
+/**
+ * Record one bot visit.
+ *
+ * Two writes:
+ *  1. Upsert into bot_daily (aggregate counter, deduped by PK).
+ *     Unknown bots (bot_id = 0) are all aggregated together.
+ *  2. Insert into bot_recent (ring-buffer, for the activity table).
+ *     Unknown bots store their parsed name in the bot_name column.
+ *
+ * @param string $bot           Canonical bot name (empty string for unknowns).
+ * @param string $url           Request URI (stored in recent only).
+ * @param int    $resource_type Resource type ID.
+ * @param string $unknown_name  Parsed UA name — used only when $bot is empty.
+ */
+function aeopugmill_log_bot_visit( $bot, $url, $resource_type = 0, $unknown_name = '' ) {
+	// Only collect data if the site owner has opted in to the intelligence network.
+	if ( ! get_option( 'aeopugmill_analytics_opted_in' ) ) {
+		return;
+	}
+
+	global $wpdb;
+
+	if ( $bot ) {
+		$bot_id      = aeopugmill_bot_id( $bot );
+		$stored_name = '';         // known bots: name derived from ID at read time
+		if ( ! $bot_id ) {
+			return; // unrecognised canonical name — shouldn't happen
+		}
+	} else {
+		$bot_id      = 0;          // sentinel: unknown bot
+		$stored_name = substr( $unknown_name ?: 'Unknown', 0, 64 );
+	}
+
+	$day = (int) floor( time() / DAY_IN_SECONDS );
+
+	// Upsert aggregate row — primary key prevents duplicate rows.
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	$wpdb->query( $wpdb->prepare(
+		"INSERT INTO {$wpdb->prefix}aeopugmill_bot_daily
+		 (bot_id, resource_type, day, count)
+		 VALUES (%d, %d, %d, 1)
+		 ON DUPLICATE KEY UPDATE count = count + 1",
+		$bot_id,
+		(int) $resource_type,
+		$day
+	) );
+
+	// Append to recent visits ring-buffer (includes bot_name for unknowns).
+	$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->prefix . 'aeopugmill_bot_recent',
+		array(
+			'bot_id'        => $bot_id,
+			'bot_name'      => $stored_name,
+			'resource_type' => (int) $resource_type,
+			'url'           => substr( (string) $url, 0, 500 ),
+			'visited_at'    => time(),
+		),
+		array( '%d', '%s', '%d', '%s', '%d' )
+	);
+
+	// Hard cap: keep only the 500 most recent rows so the table stays bounded
+	// regardless of crawl frequency. Deletes the oldest rows if over the limit.
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	$count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}aeopugmill_bot_recent" );
+	if ( $count > 500 ) {
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$wpdb->query( $wpdb->prepare(
+			"DELETE FROM {$wpdb->prefix}aeopugmill_bot_recent ORDER BY visited_at ASC, id ASC LIMIT %d",
+			$count - 500
+		) );
+	}
+}
+
+/**
+ * Phase 1 (init): detect the bot UA and resource type.
+ *
+ * For non-HTML resources (llms.txt, sitemap, markdown endpoints, etc.) we have
+ * everything we need at init — log immediately.
+ *
+ * For HTML page requests (resource type 0) we defer to template_redirect (phase 2)
+ * so we can check whether the page has AEO content and log type 7 instead of type 0.
+ * The detected bot identity is stashed in a static so phase 2 can retrieve it.
+ */
+function aeopugmill_maybe_log_bot_visit() {
+	if ( is_admin() ) {
+		return;
+	}
+	if ( defined( 'DOING_CRON' ) && DOING_CRON ) {
+		return;
+	}
+	if ( defined( 'WP_CLI' ) && WP_CLI ) {
+		return;
+	}
+
+	$ua  = isset( $_SERVER['HTTP_USER_AGENT'] ) ? wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) : ''; // phpcs:ignore
+	$bot = aeopugmill_detect_ai_bot( $ua );
+	$url = isset( $_SERVER['REQUEST_URI'] ) ? wp_unslash( $_SERVER['REQUEST_URI'] ) : ''; // phpcs:ignore
+
+	$resource_type = aeopugmill_detect_resource_type();
+
+	// HTML requests: defer to template_redirect so we can detect AEO context.
+	if ( $resource_type === 0 ) {
+		$unknown_name = $bot ? '' : aeopugmill_detect_unknown_bot( $ua );
+		if ( $bot || $unknown_name ) {
+			// Stash bot identity for phase 2.
+			aeopugmill_pending_bot_visit( $bot, $unknown_name, $url );
+		}
+		return;
+	}
+
+	// Non-HTML AEO / discovery endpoints: log immediately.
+	if ( $bot ) {
+		aeopugmill_log_bot_visit( $bot, $url, $resource_type );
+		return;
+	}
+
+	$unknown_name = aeopugmill_detect_unknown_bot( $ua );
+	if ( $unknown_name ) {
+		aeopugmill_log_bot_visit( '', $url, $resource_type, $unknown_name );
+	}
+}
+add_action( 'init', 'aeopugmill_maybe_log_bot_visit', 99 );
+
+/**
+ * Static store for the pending HTML bot visit detected at init.
+ * Passing null retrieves the stashed value without overwriting it.
+ *
+ * @param  string|null $bot          Known bot name, or '' for unknown bots.
+ * @param  string|null $unknown_name Parsed UA name for unknown bots.
+ * @param  string|null $url          Request URI.
+ * @return array|null  Stashed visit data, or null if nothing pending.
+ */
+function aeopugmill_pending_bot_visit( $bot = null, $unknown_name = null, $url = null ) {
+	static $pending = null;
+	if ( null !== $bot ) {
+		$pending = array( 'bot' => $bot, 'unknown_name' => $unknown_name, 'url' => $url );
+	}
+	return $pending;
+}
+
+/**
+ * Phase 2 (template_redirect): finalise the HTML bot visit log.
+ *
+ * Now that WordPress has resolved the queried object we can tell whether
+ * this is a singular post with AEO data (type 7) or a plain HTML crawl (type 0).
+ */
+function aeopugmill_log_html_bot_visit() {
+	$pending = aeopugmill_pending_bot_visit();
+	if ( ! $pending ) {
+		return;
+	}
+
+	// Determine whether this HTML page has AEO content.
+	$resource_type = 0; // default: plain HTML crawl
+	if ( is_singular() ) {
+		$aeo = get_post_meta( get_the_ID(), '_aeopugmill_aeo', true );
+		if ( ! empty( $aeo['summary'] ) || ! empty( $aeo['questions'] ) ) {
+			$resource_type = 7; // AEO Post: has FAQPage, entities, or summary
+		}
+	}
+
+	aeopugmill_log_bot_visit( $pending['bot'], $pending['url'], $resource_type, $pending['unknown_name'] );
+}
+add_action( 'template_redirect', 'aeopugmill_log_html_bot_visit', 1 );
+
+// ── Pruning ───────────────────────────────────────────────────────────────────
+
+/**
+ * Prune old data.
+ *
+ * - bot_daily: retain 90 days.
+ * - bot_recent: retain 7 days. Recent-activity table only.
+ *
+ * Scheduled daily via WP cron; also called on plugin activation.
+ */
+function aeopugmill_bot_analytics_prune() {
+	global $wpdb;
+
+	$oldest_day = (int) floor( time() / DAY_IN_SECONDS ) - 90;
+
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	$wpdb->query( $wpdb->prepare(
+		"DELETE FROM {$wpdb->prefix}aeopugmill_bot_daily WHERE day < %d",
+		$oldest_day
+	) );
+
+	$cutoff = time() - ( 7 * DAY_IN_SECONDS );
+
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	$wpdb->query( $wpdb->prepare(
+		"DELETE FROM {$wpdb->prefix}aeopugmill_bot_recent WHERE visited_at < %d",
+		$cutoff
+	) );
+}
+
+// ── Data queries ──────────────────────────────────────────────────────────────
+
+/**
+ * Total visits per bot over the last N days.
+ *
+ * @param  int $days
+ * @return array<string, int>  bot_name => count
+ */
+function aeopugmill_bot_analytics_summary( $days = 30 ) {
+	global $wpdb;
+
+	$since = (int) floor( time() / DAY_IN_SECONDS ) - (int) $days;
+
+	$rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->prepare(
+			"SELECT bot_id, SUM(count) AS cnt
+			 FROM {$wpdb->prefix}aeopugmill_bot_daily
+			 WHERE day >= %d
+			 GROUP BY bot_id",
+			$since
+		),
+		ARRAY_A
+	);
+
+	$result = array();
+	foreach ( (array) $rows as $row ) {
+		$result[ aeopugmill_bot_name( $row['bot_id'] ) ] = (int) $row['cnt'];
+	}
+	return $result;
+}
+
+/**
+ * Visit counts broken down by bot AND resource type over the last N days.
+ *
+ * Returns a 2-D array: $result[ bot_name ][ resource_type_id ] = count.
+ *
+ * @param  int $days
+ * @return array<string, array<int, int>>
+ */
+function aeopugmill_bot_analytics_by_resource( $days = 30 ) {
+	global $wpdb;
+
+	$since = (int) floor( time() / DAY_IN_SECONDS ) - (int) $days;
+
+	$rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->prepare(
+			"SELECT bot_id, resource_type, SUM(count) AS cnt
+			 FROM {$wpdb->prefix}aeopugmill_bot_daily
+			 WHERE day >= %d
+			 GROUP BY bot_id, resource_type",
+			$since
+		),
+		ARRAY_A
+	);
+
+	$result = array();
+	foreach ( (array) $rows as $row ) {
+		$bot  = aeopugmill_bot_name( $row['bot_id'] );
+		$type = (int) $row['resource_type'];
+		if ( ! isset( $result[ $bot ] ) ) {
+			$result[ $bot ] = array();
+		}
+		$result[ $bot ][ $type ] = (int) $row['cnt'];
+	}
+	return $result;
+}
+
+/**
+ * Daily visit counts per bot over the last N days.
+ *
+ * @param  int $days
+ * @return array  Each entry: [ 'bot' => string, 'day' => 'YYYY-MM-DD', 'cnt' => int ]
+ */
+function aeopugmill_bot_analytics_daily( $days = 30 ) {
+	global $wpdb;
+
+	$since = (int) floor( time() / DAY_IN_SECONDS ) - (int) $days;
+
+	$rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->prepare(
+			"SELECT bot_id, day, SUM(count) AS cnt
+			 FROM {$wpdb->prefix}aeopugmill_bot_daily
+			 WHERE day >= %d
+			 GROUP BY bot_id, day
+			 ORDER BY day ASC",
+			$since
+		),
+		ARRAY_A
+	);
+
+	$result = array();
+	foreach ( (array) $rows as $row ) {
+		$result[] = array(
+			'bot' => aeopugmill_bot_name( $row['bot_id'] ),
+			'day' => gmdate( 'Y-m-d', (int) $row['day'] * DAY_IN_SECONDS ),
+			'cnt' => (int) $row['cnt'],
+		);
+	}
+	return $result;
+}
+
+/**
+ * Most recent individual visits from the ring-buffer table.
+ *
+ * @param  int $limit
+ * @return array  Each entry: [ 'bot', 'resource_type' (int), 'resource_label', 'url', 'visited_at' (int, Unix) ]
+ */
+function aeopugmill_bot_analytics_recent( $limit = 50 ) {
+	global $wpdb;
+
+	$rows = (array) $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->prepare(
+			"SELECT bot_id, bot_name, resource_type, url, visited_at
+			 FROM {$wpdb->prefix}aeopugmill_bot_recent
+			 ORDER BY visited_at DESC, id DESC
+			 LIMIT %d",
+			(int) $limit
+		),
+		ARRAY_A
+	);
+
+	$labels = aeopugmill_resource_type_labels();
+	$result = array();
+	foreach ( $rows as $row ) {
+		$type   = (int) $row['resource_type'];
+		$bot_id = (int) $row['bot_id'];
+		// bot_id = 0 → unknown bot; use bot_name stored at log time.
+		$bot    = ( 0 === $bot_id )
+			? ( ! empty( $row['bot_name'] ) ? $row['bot_name'] : 'Unknown' )
+			: aeopugmill_bot_name( $bot_id );
+		$result[] = array(
+			'bot'            => $bot,
+			'resource_type'  => $type,
+			'resource_label' => $labels[ $type ] ?? 'Unknown',
+			'url'            => $row['url'],
+			'visited_at'     => (int) $row['visited_at'],
+		);
+	}
+	return $result;
+}
+
+/**
+ * All-time total visit count (sum of all aggregate rows).
+ *
+ * @return int
+ */
+function aeopugmill_bot_analytics_total() {
+	global $wpdb;
+
+	return (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		"SELECT SUM(count) FROM {$wpdb->prefix}aeopugmill_bot_daily"
+	);
+}
+
+/**
+ * Top posts by bot visit count from the recent ring-buffer.
+ *
+ * Aggregates HTML page (0) and Post Markdown (3) visits from bot_recent,
+ * normalises URLs (strips query strings), skips system paths, and returns
+ * the most-visited content URLs sorted by total count.
+ *
+ * @param  int $limit
+ * @return array  [ [ 'url', 'total', 'aeo', 'bots' => [ bot_name => count ] ], ... ]
+ */
+function aeopugmill_bot_analytics_top_posts( $limit = 10 ) {
+	global $wpdb;
+
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	$rows = (array) $wpdb->get_results(
+		"SELECT bot_id, resource_type, url FROM {$wpdb->prefix}aeopugmill_bot_recent WHERE resource_type IN (0, 3)",
+		ARRAY_A
+	);
+
+	// System path prefixes to skip — not content pages.
+	$skip_prefixes = array( '/wp-', '/feed', '/author/', '/tag/', '/category/', '/page/' );
+
+	$aggregated = array();
+
+	foreach ( $rows as $row ) {
+		$parsed_path = (string) parse_url( $row['url'], PHP_URL_PATH );
+		$path        = rtrim( $parsed_path, '/' );
+
+		if ( '' === $path || '/' === $path ) {
+			continue;
+		}
+
+		$skip = false;
+		foreach ( $skip_prefixes as $prefix ) {
+			if ( 0 === strpos( $path, $prefix ) ) {
+				$skip = true;
+				break;
+			}
+		}
+		// Skip bare /?p= style IDs — they're usually drafts.
+		if ( ! $skip && false !== strpos( $row['url'], '?p=' ) ) {
+			$skip = true;
+		}
+		if ( $skip ) {
+			continue;
+		}
+
+		$bot    = aeopugmill_bot_name( $row['bot_id'] );
+		$is_aeo = ( 3 === (int) $row['resource_type'] );
+
+		if ( ! isset( $aggregated[ $path ] ) ) {
+			$aggregated[ $path ] = array( 'url' => $path, 'total' => 0, 'aeo' => false, 'bots' => array() );
+		}
+		$aggregated[ $path ]['total']++;
+		$aggregated[ $path ]['bots'][ $bot ] = ( $aggregated[ $path ]['bots'][ $bot ] ?? 0 ) + 1;
+		if ( $is_aeo ) {
+			$aggregated[ $path ]['aeo'] = true;
+		}
+	}
+
+	usort( $aggregated, function( $a, $b ) { return $b['total'] - $a['total']; } );
+
+	return array_slice( array_values( $aggregated ), 0, $limit );
+}
+
+/**
+ * Build a rich analytics context payload for the AI insights prompt.
+ *
+ * Includes: 30-day summary, AEO conversion rate, 15-day trend split,
+ * network benchmark (if opted in), and top posts.
+ *
+ * @return array
+ */
+function aeopugmill_bot_analytics_insights_context() {
+	$days        = 30;
+	$summary     = aeopugmill_bot_analytics_summary( $days );
+	$by_resource = aeopugmill_bot_analytics_by_resource( $days );
+	$total       = aeopugmill_bot_analytics_total();
+	$top_posts   = aeopugmill_bot_analytics_top_posts( 5 );
+	$labels      = aeopugmill_resource_type_labels();
+	$daily       = aeopugmill_bot_analytics_daily( $days );
+
+	// Flatten resource breakdown to bot → label → count.
+	$reach = array();
+	foreach ( $by_resource as $bot => $types ) {
+		foreach ( $types as $type_id => $cnt ) {
+			$reach[ $bot ][ $labels[ $type_id ] ?? 'Unknown' ] = $cnt;
+		}
+	}
+
+	// ── AEO conversion rate ──────────────────────────────────────────────────
+	// AEO endpoints: llms.txt (1), llms-full.txt (2), Post Markdown (3), Site Summary (4).
+	$aeo_types   = array( 1, 2, 3, 4 );
+	$total_30    = 0;
+	$aeo_hits_30 = 0;
+	foreach ( $by_resource as $types ) {
+		foreach ( $types as $type_id => $cnt ) {
+			$total_30 += $cnt;
+			if ( in_array( $type_id, $aeo_types, true ) ) {
+				$aeo_hits_30 += $cnt;
+			}
+		}
+	}
+	$aeo_conversion_pct = $total_30 > 0 ? round( $aeo_hits_30 / $total_30 * 100, 1 ) : 0.0;
+
+	// ── Traffic trend: first 15 days vs last 15 days ─────────────────────────
+	$now       = (int) floor( time() / DAY_IN_SECONDS );
+	$split_day = $now - 15;
+	$period1   = array(); // days -30 to -16
+	$period2   = array(); // days -15 to now
+	foreach ( $daily as $row ) {
+		$row_day = (int) floor( strtotime( $row['day'] ) / DAY_IN_SECONDS );
+		$bot     = $row['bot'];
+		$cnt     = (int) $row['cnt'];
+		if ( $row_day < $split_day ) {
+			$period1[ $bot ] = ( $period1[ $bot ] ?? 0 ) + $cnt;
+		} else {
+			$period2[ $bot ] = ( $period2[ $bot ] ?? 0 ) + $cnt;
+		}
+	}
+	$trends          = array();
+	$all_trend_bots  = array_unique( array_merge( array_keys( $period1 ), array_keys( $period2 ) ) );
+	foreach ( $all_trend_bots as $bot ) {
+		$p1  = $period1[ $bot ] ?? 0;
+		$p2  = $period2[ $bot ] ?? 0;
+		$dir = $p2 > $p1 ? 'rising' : ( $p2 < $p1 ? 'falling' : 'flat' );
+		$pct = $p1 > 0 ? (int) round( ( $p2 - $p1 ) / $p1 * 100 ) : ( $p2 > 0 ? 100 : 0 );
+		$trends[ $bot ] = array(
+			'first_15_days' => $p1,
+			'last_15_days'  => $p2,
+			'direction'     => $dir,
+			'change_pct'    => $pct,
+		);
+	}
+
+	// ── Local crawl intelligence signals ─────────────────────────────────────
+	$local_signals = array();
+	if ( function_exists( 'aeopugmill_intel_get_signals_30d' ) ) {
+		$local_signals = aeopugmill_intel_get_signals_30d( 30 );
+	}
+
+	// ── Network benchmark ────────────────────────────────────────────────────
+	$network_context = null;
+	if ( get_option( 'aeopugmill_analytics_opted_in' ) ) {
+		$net_response = wp_remote_get( 'https://pugmillaeo.com/api/report', array( 'timeout' => 8, 'sslverify' => true ) );
+		if ( ! is_wp_error( $net_response ) ) {
+			$net_data      = json_decode( wp_remote_retrieve_body( $net_response ), true ) ?: array();
+			$network_sites = (int) ( $net_data['sites_contributing'] ?? 0 );
+			if ( $network_sites >= 1 && ! empty( $net_data['last_30_days'] ) ) {
+				$benchmarks = array();
+				$zero_bots  = array();
+				foreach ( $net_data['last_30_days'] as $bot => $resources ) {
+					$net_avg  = (int) round( array_sum( $resources ) / $network_sites );
+					$my_count = $summary[ $bot ] ?? 0;
+					if ( 0 === $my_count && $net_avg > 0 ) {
+						$zero_bots[] = array( 'bot' => $bot, 'network_avg_per_site' => $net_avg );
+					} else {
+						$ratio  = $net_avg > 0 ? round( $my_count / $net_avg, 2 ) : null;
+						$signal = null;
+						if ( null !== $ratio ) {
+							if ( $ratio >= 2.0 )      { $signal = 'well_above_average'; }
+							elseif ( $ratio >= 1.1 )  { $signal = 'above_average'; }
+							elseif ( $ratio >= 0.9 )  { $signal = 'at_average'; }
+							elseif ( $ratio >= 0.5 )  { $signal = 'below_average'; }
+							else                       { $signal = 'well_below_average'; }
+						}
+						$benchmarks[ $bot ] = array(
+							'your_count'  => $my_count,
+							'network_avg' => $net_avg,
+							'ratio'       => $ratio,
+							'signal'      => $signal,
+						);
+					}
+				}
+
+				// Network crawl intelligence signals (per-bot averages across contributing sites).
+				$net_signals = array();
+				if ( ! empty( $net_data['signals'] ) ) {
+					foreach ( $net_data['signals'] as $bot => $metrics ) {
+						if ( ! is_array( $metrics ) ) {
+							continue;
+						}
+						foreach ( $metrics as $metric => $buckets ) {
+							if ( ! is_array( $buckets ) ) {
+								continue;
+							}
+							foreach ( $buckets as $bucket => $vals ) {
+								if ( isset( $vals['tally_sum'], $vals['site_count'] ) && $vals['site_count'] > 0 ) {
+									$net_signals[ $bot ][ $metric ][ $bucket ] = array(
+										'network_avg_per_site' => round( $vals['tally_sum'] / $vals['site_count'], 1 ),
+										'site_count'           => (int) $vals['site_count'],
+									);
+								}
+							}
+						}
+					}
+				}
+
+				$network_context = array(
+					'sites_in_network'  => $network_sites,
+					'note'              => 'Pugmill AEO Intelligence Network: per-site 30-day averages',
+					'benchmarks'        => $benchmarks,
+					'zero_visit_bots'   => $zero_bots,
+					'crawl_signals'     => $net_signals,
+				);
+			}
+		}
+	}
+
+	// ── AEO field coverage ──────────────────────────────────────────────────
+	// How many published posts have each AEO field populated.
+	$aeo_field_rows_ctx = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		"SELECT meta_value FROM {$wpdb->postmeta}
+		 WHERE meta_key = '_aeopugmill_aeo'
+		 AND LENGTH(meta_value) > 10",
+		ARRAY_A
+	);
+	$ctx_field_summary   = 0;
+	$ctx_field_questions = 0;
+	$ctx_field_entities  = 0;
+	$ctx_field_keywords  = 0;
+	foreach ( (array) $aeo_field_rows_ctx as $ctx_aeo_row ) {
+		$ctx_aeo = json_decode( $ctx_aeo_row['meta_value'], true );
+		if ( ! is_array( $ctx_aeo ) ) { continue; }
+		if ( ! empty( $ctx_aeo['summary'] ) )   { $ctx_field_summary++; }
+		if ( ! empty( $ctx_aeo['questions'] ) ) { $ctx_field_questions++; }
+		if ( ! empty( $ctx_aeo['entities'] ) )  { $ctx_field_entities++; }
+		if ( ! empty( $ctx_aeo['keywords'] ) )  { $ctx_field_keywords++; }
+	}
+	$ctx_aeo_count  = max( $ctx_field_summary, $ctx_field_questions, $ctx_field_entities, $ctx_field_keywords );
+	$ctx_posts_total = (int) wp_count_posts()->publish;
+
+	$context = array(
+		'site'               => get_bloginfo( 'name' ),
+		'url'                => home_url(),
+		'period_days'        => $days,
+		'total_all_time'     => $total,
+		'total_30_days'      => $total_30,
+		'posts_total'        => $ctx_posts_total,
+		'posts_with_aeo'     => $ctx_aeo_count,
+		'aeo_field_coverage' => array(
+			'ai_summary'   => $ctx_field_summary,
+			'qa_pairs'     => $ctx_field_questions,
+			'named_entities' => $ctx_field_entities,
+			'keywords'     => $ctx_field_keywords,
+		),
+		'visits_by_bot'      => $summary,
+		'aeo_conversion_pct' => $aeo_conversion_pct,
+		'content_reach'      => $reach,
+		'traffic_trend'      => $trends,
+		'top_posts'          => array_map( function( $p ) {
+			return array(
+				'url'     => $p['url'],
+				'total'   => $p['total'],
+				'aeo_hit' => $p['aeo'],
+				'by_bot'  => $p['bots'],
+			);
+		}, $top_posts ),
+	);
+
+	if ( ! empty( $local_signals ) ) {
+		$context['crawl_signals'] = $local_signals;
+	}
+
+	if ( null !== $network_context ) {
+		$context['network_benchmark'] = $network_context;
+	}
+
+	return $context;
+}
+
+// ── AJAX: AI insights ─────────────────────────────────────────────────────────
+
+/**
+ * Return (or generate and cache) an AI-written analysis of bot analytics.
+ * Cached for 6 hours. Pass refresh=1 to bust the cache.
+ */
+function aeopugmill_ajax_analytics_insights() {
+	check_ajax_referer( 'aeopugmill_analytics_insights', 'nonce' );
+
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_send_json_error( __( 'Insufficient permissions.', 'aeo-pugmill' ), 403 );
+	}
+
+	$provider = get_option( 'aeopugmill_ai_provider', 'anthropic' );
+	$api_key  = aeopugmill_get_encrypted_option( 'aeopugmill_ai_api_key', '' );
+
+	if ( empty( $api_key ) ) {
+		wp_send_json_error( __( 'No API key configured. Add your key in Settings → AEO Pugmill.', 'aeo-pugmill' ) );
+	}
+
+	$cache_key = 'aeopugmill_ai_analytics_insights';
+	$refresh   = ! empty( $_POST['refresh'] );
+
+	if ( ! $refresh ) {
+		$cached = get_transient( $cache_key );
+		if ( false !== $cached ) {
+			wp_send_json_success( $cached );
+		}
+	}
+
+	$context  = aeopugmill_bot_analytics_insights_context();
+	$ctx_json = wp_json_encode( $context, JSON_PRETTY_PRINT );
+
+	$system = "You are an expert in AI search and Answer Engine Optimization (AEO). You receive bot traffic data from a WordPress site using the AEO Pugmill AEO plugin. Analyze the data and write a concise, insightful report in plain text — no markdown except the section headings below.
+
+Structure your response with exactly these six section headings, each on its own line preceded by '## ':
+
+## Bot Activity
+Which bots are most active and what that signals (citation activity, indexing depth, content discovery phase). Note AEO endpoint hits (llms.txt, llms-full.txt, Post Markdown, Site Summary) as strong positive signals — they mean a bot is reading your optimized content directly. Mention the AEO conversion percentage (what share of visits hit AEO endpoints vs generic HTML/sitemap crawling) and whether it is healthy.
+
+## Traffic Trend
+Compare each bot's first 15 days versus last 15 days. Name which bots are rising, falling, or flat and what that implies. If a bot appears only in the second half, call it out as newly active — that is worth watching.
+
+## Crawl Intelligence
+If crawl_signals data is present in the site data: interpret what the bots are actually reading. Signal meanings — word_count buckets: <500 = short posts, 500-1500 = standard posts, 1500+ = long-form; content_freshness buckets: 0-7d = very fresh, 8-30d = recent, 31-180d = aging, 180d+ = stale; fact_density: high = lots of structured markup (tables, lists, headings), medium = some, low = mostly prose; url_depth: 0-1 = homepage/top-level, 2-3 = standard pages, 4+ = deep crawl; url_type: clean = SEO-friendly URLs, parameterized = query string URLs. Note dominant patterns per bot and what they imply about content preferences. If network_benchmark.crawl_signals is also present, compare this site to network averages — call out meaningful differences (e.g., bots here reading much fresher or longer content than network average). If no crawl_signals data is present, skip this section entirely.
+
+## Network Benchmark
+If network_benchmark data is present: for each bot, state whether this site is well above average, above average, at average, below average, or well below average compared to the Pugmill AEO Intelligence Network (the ratio field tells you: ≥ 2.0 = well above, ≥ 1.1 = above, 0.9–1.1 = at average, ≥ 0.5 = below, < 0.5 = well below). For every bot listed in zero_visit_bots (bots the network sees but this site has zero visits from), name them and say the typical site gets N visits — this is a gap. If no network_benchmark data is present, skip this section entirely.
+
+## Content Coverage
+Which pages or post types are crawled most, which resource types are hit most, and any patterns worth noting (ignored sections, repeat visits on specific posts, etc.).
+
+## Recommendations
+Give 3–5 specific, prioritized actions. Use aeo_field_coverage to identify gaps: if posts_with_aeo is much less than posts_total, recommend running Bulk AEO Generation; if qa_pairs is low relative to ai_summary, recommend adding Q&A pairs to existing posts; if named_entities or keywords lag behind ai_summary, call that out specifically. For any bot that is below average or a zero-visit gap, give a targeted fix. Where crawl_signals reveal a pattern, turn it into a recommendation (e.g., if bots are mostly reading short posts, recommend expanding key posts to 1500+ words; if freshness skews stale, recommend updating top posts). Use this bot-specific guidance: ChatGPT — enrich llms.txt with Q&A pairs and AEO summaries, ChatGPT reads it directly; Perplexity — prioritize AEO summaries on high-traffic posts, Perplexity cites in real-time so freshness matters; ClaudeBot — keep sitemap current and add AEO markup to all posts; Gemini — Schema.org JSON-LD is key; Bingbot — clean sitemaps and solid meta descriptions; if AEO conversion rate is under 10%, recommend running Bulk AEO Generation on top posts first. Only mention bots present in the data or identified as network gaps.
+
+Rules: blank line between each heading and its paragraph. No bullet lists. 2–4 sentences per section. Total response under 550 words.";
+
+	$user = "Site: " . get_bloginfo( 'name' ) . " (" . home_url() . ")\n\nBot analytics data:\n\n" . $ctx_json . "\n\nProvide your analysis.";
+
+	$result = aeopugmill_call_ai( $provider, $api_key, $system, $user, 900 );
+
+	if ( is_wp_error( $result ) ) {
+		wp_send_json_error( $result->get_error_message() );
+	}
+
+	$payload = array(
+		'text'      => wp_kses_post( trim( $result ) ),
+		'generated' => time(),
+	);
+
+	set_transient( $cache_key, $payload, 6 * HOUR_IN_SECONDS );
+	wp_send_json_success( $payload );
+}
+add_action( 'wp_ajax_aeopugmill_analytics_insights', 'aeopugmill_ajax_analytics_insights' );
+
+// ── AJAX: CSV export ──────────────────────────────────────────────────────────
+
+/**
+ * Stream a CSV of daily aggregate data (all retained data, newest first).
+ */
+function aeopugmill_ajax_export_csv_daily() {
+	check_ajax_referer( 'aeopugmill_export_csv', 'nonce' );
+
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( esc_html__( 'Insufficient permissions.', 'aeo-pugmill' ), 403 );
+	}
+
+	global $wpdb;
+
+	$rows = (array) $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		"SELECT bot_id, resource_type, day, count
+		 FROM {$wpdb->prefix}aeopugmill_bot_daily
+		 ORDER BY day DESC, bot_id ASC",
+		ARRAY_A
+	);
+
+	$labels = aeopugmill_resource_type_labels();
+
+	header( 'Content-Type: text/csv; charset=UTF-8' );
+	header( 'Content-Disposition: attachment; filename="aeopugmill-bot-daily-' . gmdate( 'Y-m-d' ) . '.csv"' );
+	header( 'Pragma: no-cache' );
+
+	$out = fopen( 'php://output', 'w' );
+	fputcsv( $out, array( 'Date', 'Bot', 'Resource Type', 'Count' ) );
+
+	foreach ( $rows as $row ) {
+		fputcsv( $out, array(
+			gmdate( 'Y-m-d', (int) $row['day'] * DAY_IN_SECONDS ),
+			aeopugmill_bot_name( (int) $row['bot_id'] ),
+			$labels[ (int) $row['resource_type'] ] ?? 'Unknown',
+			(int) $row['count'],
+		) );
+	}
+
+	fclose( $out );
+	exit;
+}
+add_action( 'wp_ajax_aeopugmill_export_csv_daily', 'aeopugmill_ajax_export_csv_daily' );
+
+/**
+ * Stream a CSV of the recent visit ring-buffer.
+ */
+function aeopugmill_ajax_export_csv_recent() {
+	check_ajax_referer( 'aeopugmill_export_csv', 'nonce' );
+
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( esc_html__( 'Insufficient permissions.', 'aeo-pugmill' ), 403 );
+	}
+
+	global $wpdb;
+
+	$rows = (array) $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		"SELECT bot_id, bot_name, resource_type, url, visited_at
+		 FROM {$wpdb->prefix}aeopugmill_bot_recent
+		 ORDER BY visited_at DESC",
+		ARRAY_A
+	);
+
+	$labels = aeopugmill_resource_type_labels();
+
+	header( 'Content-Type: text/csv; charset=UTF-8' );
+	header( 'Content-Disposition: attachment; filename="aeopugmill-bot-visits-' . gmdate( 'Y-m-d' ) . '.csv"' );
+	header( 'Pragma: no-cache' );
+
+	$out = fopen( 'php://output', 'w' );
+	fputcsv( $out, array( 'Timestamp (UTC)', 'Bot', 'Resource Type', 'URL' ) );
+
+	foreach ( $rows as $row ) {
+		$bot_id  = (int) $row['bot_id'];
+		$display = ( 0 === $bot_id )
+			? ( ! empty( $row['bot_name'] ) ? $row['bot_name'] : 'Unknown' )
+			: aeopugmill_bot_name( $bot_id );
+		fputcsv( $out, array(
+			gmdate( 'Y-m-d H:i:s', (int) $row['visited_at'] ),
+			$display,
+			$labels[ (int) $row['resource_type'] ] ?? 'Unknown',
+			$row['url'],
+		) );
+	}
+
+	fclose( $out );
+	exit;
+}
+add_action( 'wp_ajax_aeopugmill_export_csv_recent', 'aeopugmill_ajax_export_csv_recent' );
+
+// ── Pugmill Intelligence — registration & daily send ─────────────────────────
+
+/**
+ * Register this site with the Pugmill AEO Intelligence Network.
+ *
+ * Called once when the user opts in. Sends a signed registration request to
+ * the Pugmill CMS server. On success, stores the returned network_token
+ * (encrypted) so `aeopugmill_intelligence_send()` can authenticate each
+ * daily submission.
+ *
+ * The HMAC proves this request came from real plugin code — the network secret
+ * is baked into the plugin build and is not transmitted to the end-user's site.
+ */
+function aeopugmill_intelligence_register() {
+	$network_secret = AEOPUGMILL_NETWORK_SECRET;
+
+	$site_id     = hash( 'sha256', home_url() . aeopugmill_instance_id() );
+	$opted_in_at = gmdate( 'c' );
+	$nonce       = bin2hex( random_bytes( 16 ) );
+
+	// Registration HMAC — proves the request originated from the real plugin.
+	$reg_hmac = hash_hmac( 'sha256', "{$site_id}:{$opted_in_at}:{$nonce}", $network_secret );
+
+	$response = wp_remote_post(
+		'https://pugmillaeo.com/api/ingest/register',
+		array(
+			'timeout'   => 15,
+			'sslverify' => true,
+			'headers'   => array(
+				'Content-Type'  => 'application/json',
+				'Authorization' => 'Bearer ' . $reg_hmac,
+			),
+			'body' => wp_json_encode( array(
+				'site_id'        => $site_id,
+				'opted_in_at'    => $opted_in_at,
+				'nonce'          => $nonce,
+				'plugin_version' => AEOPUGMILL_VERSION,
+			) ),
+		)
+	);
+
+	if ( is_wp_error( $response ) ) {
+		return $response->get_error_message();
+	}
+
+	$code = wp_remote_retrieve_response_code( $response );
+	if ( 200 !== (int) $code ) {
+		return 'HTTP ' . $code . ': ' . wp_remote_retrieve_body( $response );
+	}
+
+	$data = json_decode( wp_remote_retrieve_body( $response ), true );
+	if ( empty( $data['network_token'] ) ) {
+		return 'No token in response: ' . wp_remote_retrieve_body( $response );
+	}
+
+	// Persist the token (encrypted) so it survives across cron runs.
+	aeopugmill_save_encrypted_option( 'aeopugmill_network_token', $data['network_token'] );
+	return true;
+}
+
+/**
+ * Fire registration when the user opts in.
+ * The option value transitions from 0 → 1 at opt-in.
+ *
+ * @param mixed $old_value Previous option value.
+ * @param mixed $new_value New option value.
+ */
+function aeopugmill_on_analytics_opt_in( $old_value, $new_value ) {
+	if ( (int) $new_value === 1 && (int) $old_value !== 1 ) {
+		aeopugmill_intelligence_register(); // return value intentionally ignored
+	}
+}
+add_action( 'update_option_aeopugmill_analytics_opted_in', 'aeopugmill_on_analytics_opt_in', 10, 2 );
+
+// ── Pugmill Intelligence — daily send ─────────────────────────────────────────
+
+/**
+ * Resource type ID → slug for the intelligence network payload.
+ *
+ * @return array<int, string>
+ */
+function aeopugmill_intelligence_resource_slugs() {
+	return array(
+		0 => 'html',
+		1 => 'llms_txt',
+		2 => 'llms_full',
+		3 => 'post_markdown',
+		4 => 'site_summary',
+		5 => 'sitemap',
+		6 => 'robots_txt',
+		7 => 'aeo_post',
+	);
+}
+
+/**
+ * Send yesterday's aggregated bot visit data to the Pugmill AEO Intelligence Network.
+ * Fires daily via WP-Cron. Silent on failure — never affects the site.
+ */
+function aeopugmill_intelligence_send() {
+	if ( ! get_option( 'aeopugmill_analytics_opted_in' ) ) {
+		return;
+	}
+
+	global $wpdb;
+
+	$yesterday     = (int) floor( ( time() - DAY_IN_SECONDS ) / DAY_IN_SECONDS );
+	$resource_slugs = aeopugmill_intelligence_resource_slugs();
+
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	$rows = $wpdb->get_results( $wpdb->prepare(
+		"SELECT bot_id, resource_type, count
+		 FROM {$wpdb->prefix}aeopugmill_bot_daily
+		 WHERE day = %d",
+		$yesterday
+	), ARRAY_A );
+
+	if ( empty( $rows ) ) {
+		return;
+	}
+
+	// Build bots payload: { BotName: { resource_slug: count } }
+	// Unknown bots (bot_id = 0) are sent as 'Other' — the server can aggregate.
+	$bots = array();
+	foreach ( $rows as $row ) {
+		$bot_id   = (int) $row['bot_id'];
+		$bot_name = ( 0 === $bot_id ) ? 'Other' : aeopugmill_bot_name( $bot_id );
+		$resource = $resource_slugs[ (int) $row['resource_type'] ] ?? null;
+		if ( ! $resource ) {
+			continue;
+		}
+		if ( ! isset( $bots[ $bot_name ] ) ) {
+			$bots[ $bot_name ] = array();
+		}
+		$bots[ $bot_name ][ $resource ] = (int) $row['count'];
+	}
+
+	if ( empty( $bots ) ) {
+		return;
+	}
+
+	// AEO tier: how complete is this site's AEO data?
+	// 0 = no posts with AEO, 1 = 1-9 posts, 2 = 10+ posts
+	$aeo_count = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		"SELECT COUNT(*) FROM {$wpdb->postmeta}
+		 WHERE meta_key = '_aeopugmill_aeo'
+		 AND LENGTH(meta_value) > 50"
+	);
+	$aeo_tier = 0;
+	if ( $aeo_count >= 10 ) {
+		$aeo_tier = 2;
+	} elseif ( $aeo_count >= 1 ) {
+		$aeo_tier = 1;
+	}
+
+	// Per-field coverage counts for network intelligence.
+	$aeo_field_rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		"SELECT meta_value FROM {$wpdb->postmeta}
+		 WHERE meta_key = '_aeopugmill_aeo'
+		 AND LENGTH(meta_value) > 10",
+		ARRAY_A
+	);
+	$field_summary   = 0;
+	$field_questions = 0;
+	$field_entities  = 0;
+	$field_keywords  = 0;
+	foreach ( (array) $aeo_field_rows as $aeo_field_row ) {
+		$aeo_data = json_decode( $aeo_field_row['meta_value'], true );
+		if ( ! is_array( $aeo_data ) ) { continue; }
+		if ( ! empty( $aeo_data['summary'] ) )   { $field_summary++; }
+		if ( ! empty( $aeo_data['questions'] ) ) { $field_questions++; }
+		if ( ! empty( $aeo_data['entities'] ) )  { $field_entities++; }
+		if ( ! empty( $aeo_data['keywords'] ) )  { $field_keywords++; }
+	}
+
+	// Hash is salted with the site's private instance ID (stored only in their DB,
+	// never transmitted). This prevents rainbow table attacks — even a full list of
+	// known domains cannot reverse the hash without each site's unique UUID.
+	$site_id       = hash( 'sha256', home_url() . aeopugmill_instance_id() );
+	$date          = gmdate( 'Y-m-d', $yesterday * DAY_IN_SECONDS );
+	$network_token = aeopugmill_get_encrypted_option( 'aeopugmill_network_token', '' );
+
+	// If opted in but not yet registered (e.g. first run after activation), try now.
+	if ( empty( $network_token ) ) {
+		if ( aeopugmill_intelligence_register() ) {
+			$network_token = aeopugmill_get_encrypted_option( 'aeopugmill_network_token', '' );
+		}
+	}
+
+	// Cannot proceed without a token — site is not registered.
+	if ( empty( $network_token ) ) {
+		return;
+	}
+
+	// Submission HMAC — signs this specific day's payload with the site's token.
+	$submission_hmac = hash_hmac( 'sha256', "{$site_id}:{$date}:" . AEOPUGMILL_VERSION, $network_token );
+
+	// Per-bot crawl intelligence signals for yesterday.
+	// Structure: { BotName: { metric: { bucket: tally } } }
+	// Only included when the function exists (requires bot-intelligence.php v2+).
+	$signals = array();
+	if ( function_exists( 'aeopugmill_intel_get_signals_30d' ) ) {
+		$raw_signals = aeopugmill_intel_get_signals_30d( 1 ); // yesterday only
+		// Strip internal-only keys (e.g. '_site') before transmitting.
+		foreach ( $raw_signals as $bot_key => $bot_signals ) {
+			if ( substr( $bot_key, 0, 1 ) === '_' ) {
+				continue;
+			}
+			$signals[ $bot_key ] = $bot_signals;
+		}
+	}
+
+	// ── Schema v3 enrichment fields ───────────────────────────────────────
+	// All optional / backward-compatible. Server ignores unknown keys from
+	// older clients; older servers ignore new keys from newer clients.
+
+	// Detected SEO plugin (slug or null).
+	$seo_plugins     = function_exists( 'aeopugmill_detected_seo_plugins' ) ? aeopugmill_detected_seo_plugins() : array();
+	$seo_plugin_slug = ! empty( $seo_plugins ) ? array_key_first( $seo_plugins ) : null;
+
+	// Posts with full AEO data vs total published posts.
+	$posts_with_aeo = $aeo_count; // already computed above
+	$posts_total    = (int) wp_count_posts()->publish;
+
+	// Bot visits to markdown endpoints yesterday (resource_type 3).
+	$markdown_assets_served = 0;
+	foreach ( $rows as $row ) {
+		if ( (int) $row['resource_type'] === 3 ) {
+			$markdown_assets_served += (int) $row['count'];
+		}
+	}
+
+	// Which Pugmill output types are currently active (informational).
+	$pugmill_outputs_active = function_exists( 'aeopugmill_active_outputs' ) ? aeopugmill_active_outputs() : array();
+
+	$payload = array(
+		'schema_ver'             => 3,
+		'site_id'                => $site_id,
+		'date'                   => $date,
+		'plugin_version'         => AEOPUGMILL_VERSION,
+		'aeo_tier'               => $aeo_tier,
+		'seo_plugin'             => $seo_plugin_slug,
+		'posts_with_aeo'         => $posts_with_aeo,
+		'posts_total'            => $posts_total,
+		'markdown_assets_served' => $markdown_assets_served,
+		'pugmill_outputs_active' => $pugmill_outputs_active,
+		'field_coverage'         => array(
+			'summary'   => $field_summary,
+			'questions' => $field_questions,
+			'entities'  => $field_entities,
+			'keywords'  => $field_keywords,
+		),
+		'bots'                   => $bots,
+		'network_token'          => $network_token,
+	);
+
+	if ( ! empty( $signals ) ) {
+		$payload['signals'] = $signals;
+	}
+
+	/**
+	 * Filter the intelligence network payload before transmission.
+	 *
+	 * @param array $payload   Payload array.
+	 * @param int   $yesterday Unix-day integer for the reported day.
+	 */
+	$payload = apply_filters( 'aeopugmill_intelligence_payload', $payload, $yesterday );
+
+	wp_remote_post(
+		'https://pugmillaeo.com/api/ingest',
+		array(
+			'timeout'     => 10,
+			'sslverify'   => true,
+			'headers'     => array(
+				'Content-Type'  => 'application/json',
+				'Authorization' => 'Bearer ' . $submission_hmac,
+			),
+			'body'        => wp_json_encode( $payload ),
+			'blocking'    => false, // fire-and-forget — don't slow down cron
+		)
+	);
+}
+add_action( 'aeopugmill_intelligence_send', 'aeopugmill_intelligence_send' );
+
+/**
+ * AJAX handler: manually trigger an intelligence send and return the server response.
+ * Admin-only. Used by the "Send now" button on the Analytics tab for testing.
+ */
+function aeopugmill_ajax_manual_send() {
+	check_ajax_referer( 'aeopugmill_manual_send', 'nonce' );
+
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_send_json_error( __( 'Insufficient permissions.', 'aeo-pugmill' ) );
+	}
+
+	if ( ! get_option( 'aeopugmill_analytics_opted_in' ) ) {
+		wp_send_json_error( __( 'Not opted in to the Pugmill AEO Intelligence Network.', 'aeo-pugmill' ) );
+	}
+
+	global $wpdb;
+
+	$yesterday      = (int) floor( ( time() - DAY_IN_SECONDS ) / DAY_IN_SECONDS );
+	$resource_slugs = aeopugmill_intelligence_resource_slugs();
+
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	$rows = $wpdb->get_results( $wpdb->prepare(
+		"SELECT bot_id, resource_type, count
+		 FROM {$wpdb->prefix}aeopugmill_bot_daily
+		 WHERE day = %d",
+		$yesterday
+	), ARRAY_A );
+
+	if ( empty( $rows ) ) {
+		wp_send_json_error( __( 'No bot data recorded for yesterday — nothing to send.', 'aeo-pugmill' ) );
+	}
+
+	$bots = array();
+	foreach ( $rows as $row ) {
+		$bot_name = aeopugmill_bot_name( (int) $row['bot_id'] );
+		$resource = $resource_slugs[ (int) $row['resource_type'] ] ?? null;
+		if ( ! $resource || 'Unknown' === $bot_name ) {
+			continue;
+		}
+		if ( ! isset( $bots[ $bot_name ] ) ) {
+			$bots[ $bot_name ] = array();
+		}
+		$bots[ $bot_name ][ $resource ] = (int) $row['count'];
+	}
+
+	if ( empty( $bots ) ) {
+		wp_send_json_error( __( 'No recognised bot activity for yesterday.', 'aeo-pugmill' ) );
+	}
+
+	$aeo_count = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		"SELECT COUNT(*) FROM {$wpdb->postmeta}
+		 WHERE meta_key = '_aeopugmill_aeo'
+		 AND LENGTH(meta_value) > 50"
+	);
+	$aeo_tier = 0;
+	if ( $aeo_count >= 10 ) {
+		$aeo_tier = 2;
+	} elseif ( $aeo_count >= 1 ) {
+		$aeo_tier = 1;
+	}
+
+	// Per-field coverage counts for network intelligence.
+	$aeo_field_rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		"SELECT meta_value FROM {$wpdb->postmeta}
+		 WHERE meta_key = '_aeopugmill_aeo'
+		 AND LENGTH(meta_value) > 10",
+		ARRAY_A
+	);
+	$field_summary   = 0;
+	$field_questions = 0;
+	$field_entities  = 0;
+	$field_keywords  = 0;
+	foreach ( (array) $aeo_field_rows as $aeo_field_row ) {
+		$aeo_data = json_decode( $aeo_field_row['meta_value'], true );
+		if ( ! is_array( $aeo_data ) ) { continue; }
+		if ( ! empty( $aeo_data['summary'] ) )   { $field_summary++; }
+		if ( ! empty( $aeo_data['questions'] ) ) { $field_questions++; }
+		if ( ! empty( $aeo_data['entities'] ) )  { $field_entities++; }
+		if ( ! empty( $aeo_data['keywords'] ) )  { $field_keywords++; }
+	}
+
+	$site_id       = hash( 'sha256', home_url() . aeopugmill_instance_id() );
+	$date          = gmdate( 'Y-m-d', $yesterday * DAY_IN_SECONDS );
+	$network_token = aeopugmill_get_encrypted_option( 'aeopugmill_network_token', '' );
+
+	if ( empty( $network_token ) ) {
+		$reg_result = aeopugmill_intelligence_register();
+		if ( true === $reg_result || ( is_string( $reg_result ) && empty( $reg_result ) ) ) {
+			$network_token = aeopugmill_get_encrypted_option( 'aeopugmill_network_token', '' );
+		} else {
+			wp_send_json_error( 'Registration failed: ' . ( is_string( $reg_result ) ? $reg_result : 'unknown error' ) );
+		}
+	}
+
+	if ( empty( $network_token ) ) {
+		wp_send_json_error( __( 'Registration failed — token missing after register. Check your connection to pugmillaeo.com.', 'aeo-pugmill' ) );
+	}
+
+	$submission_hmac = hash_hmac( 'sha256', "{$site_id}:{$date}:" . AEOPUGMILL_VERSION, $network_token );
+
+	$signals = array();
+	if ( function_exists( 'aeopugmill_intel_get_signals_30d' ) ) {
+		$raw_signals = aeopugmill_intel_get_signals_30d( 1 );
+		foreach ( $raw_signals as $bot_key => $bot_signals ) {
+			if ( substr( $bot_key, 0, 1 ) === '_' ) {
+				continue;
+			}
+			$signals[ $bot_key ] = $bot_signals;
+		}
+	}
+
+	// Schema v3 enrichment (mirrors aeopugmill_intelligence_send()).
+	$seo_plugins_ajax     = function_exists( 'aeopugmill_detected_seo_plugins' ) ? aeopugmill_detected_seo_plugins() : array();
+	$seo_plugin_slug_ajax = ! empty( $seo_plugins_ajax ) ? array_key_first( $seo_plugins_ajax ) : null;
+	$posts_total_ajax     = (int) wp_count_posts()->publish;
+	$markdown_ajax        = 0;
+	foreach ( $rows as $row ) {
+		if ( (int) $row['resource_type'] === 3 ) {
+			$markdown_ajax += (int) $row['count'];
+		}
+	}
+	$pugmill_outputs_ajax = function_exists( 'aeopugmill_active_outputs' ) ? aeopugmill_active_outputs() : array();
+
+	$payload = array(
+		'schema_ver'             => 3,
+		'site_id'                => $site_id,
+		'date'                   => $date,
+		'plugin_version'         => AEOPUGMILL_VERSION,
+		'aeo_tier'               => $aeo_tier,
+		'seo_plugin'             => $seo_plugin_slug_ajax,
+		'posts_with_aeo'         => $aeo_count,
+		'posts_total'            => $posts_total_ajax,
+		'markdown_assets_served' => $markdown_ajax,
+		'pugmill_outputs_active' => $pugmill_outputs_ajax,
+		'field_coverage'         => array(
+			'summary'   => $field_summary,
+			'questions' => $field_questions,
+			'entities'  => $field_entities,
+			'keywords'  => $field_keywords,
+		),
+		'bots'                   => $bots,
+		'network_token'          => $network_token,
+	);
+
+	if ( ! empty( $signals ) ) {
+		$payload['signals'] = $signals;
+	}
+
+	/** This filter is documented in aeopugmill_intelligence_send(). */
+	$payload = apply_filters( 'aeopugmill_intelligence_payload', $payload, $yesterday );
+
+	// Blocking so we can report success/failure back to the UI.
+	$response = wp_remote_post(
+		'https://pugmillaeo.com/api/ingest',
+		array(
+			'timeout'   => 15,
+			'sslverify' => true,
+			'headers'   => array(
+				'Content-Type'  => 'application/json',
+				'Authorization' => 'Bearer ' . $submission_hmac,
+			),
+			'body'      => wp_json_encode( $payload ),
+			'blocking'  => true,
+		)
+	);
+
+	if ( is_wp_error( $response ) ) {
+		wp_send_json_error( $response->get_error_message() );
+	}
+
+	$code = (int) wp_remote_retrieve_response_code( $response );
+	$body = json_decode( wp_remote_retrieve_body( $response ), true );
+
+	if ( 200 === $code ) {
+		wp_send_json_success(
+			/* translators: %s: date string */
+			sprintf( __( 'Sent successfully for %s.', 'aeo-pugmill' ), $date )
+		);
+	}
+
+	$server_error = $body['error'] ?? __( 'Unknown error', 'aeo-pugmill' );
+	/* translators: 1: HTTP status code, 2: error message from server */
+	wp_send_json_error( sprintf( __( 'Server returned %1$d: %2$s', 'aeo-pugmill' ), $code, $server_error ) );
+}
+add_action( 'wp_ajax_aeopugmill_manual_send', 'aeopugmill_ajax_manual_send' );
