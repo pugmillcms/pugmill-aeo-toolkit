@@ -4,7 +4,7 @@ Tags: aeo, answer engine optimization, ai, structured data, bot analytics, llms-
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.2.18
+Stable tag: 1.2.19
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -164,6 +164,10 @@ Plus: llms.txt, per-post AEO markdown endpoints, and a bot analytics dashboard s
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.2.19 =
+* **Audit AEO tab**: Stored scores are never rendered in the initial page HTML. Every row always shows a placeholder on load; AJAX calculates all scores fresh using the same PHP logic as the post editor sidebar and replaces the placeholders. Eliminates stale/incorrect scores from previous installs appearing in the UI.
+* **Audit AEO tab**: Simplified query — removed aeo_json join since missing-field detection now happens exclusively in the AJAX response, not the PHP render.
 
 = 1.2.18 =
 * **Audit AEO tab**: Scores now recalculated fresh for every visible row on page load via AJAX — same algorithm as the post editor sidebar, so scores always match.

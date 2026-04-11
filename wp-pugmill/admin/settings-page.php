@@ -830,10 +830,6 @@ function wppugmill_render_settings_page() {
 				} );
 			} );
 
-			// Auto-run the test after a key save on this tab.
-			<?php if ( isset( $_GET['settings-updated'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
-			btn.click();
-			<?php endif; ?>
 		}());
 		</script>
 		<?php else : ?>
@@ -3530,16 +3526,17 @@ function wppugmill_render_settings_page() {
 		);
 
 		// ── Main query ────────────────────────────────────────────────────────────
-		// Scores are shown from stored meta on initial render, then immediately
-		// recalculated via AJAX for every visible row so values always stay fresh.
+		// Only fetch what's needed for display. The stored score is used for
+		// ORDER BY only — scores are never rendered from this value. Every row
+		// always shows a placeholder on initial render; AJAX calculates and
+		// replaces all scores fresh on page load (same logic as the post editor
+		// sidebar), so stale stored values never appear in the UI.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared
 		$audit_rows = $wpdb->get_results( $wpdb->prepare(
 			"SELECT p.ID, p.post_title, p.post_type,
-			        ts.meta_value  AS total_score_raw,
-			        aeo.meta_value AS aeo_json
+			        ts.meta_value AS total_score_raw
 			 FROM {$wpdb->posts} p
-			 LEFT JOIN {$wpdb->postmeta} ts  ON ts.post_id  = p.ID AND ts.meta_key  = '_wppugmill_score'
-			 LEFT JOIN {$wpdb->postmeta} aeo ON aeo.post_id = p.ID AND aeo.meta_key = '_wppugmill_aeo'
+			 LEFT JOIN {$wpdb->postmeta} ts ON ts.post_id = p.ID AND ts.meta_key = '_wppugmill_score'
 			 WHERE p.post_status = 'publish'
 			   AND p.post_type IN ('{$pt_in}')
 			 ORDER BY {$order_clause}
@@ -3550,13 +3547,6 @@ function wppugmill_render_settings_page() {
 
 		$total_pages = (int) ceil( $total_posts / $per_page );
 
-		// Colour helper — mirrors sidebar grade thresholds.
-		$score_color = function( $score ) {
-			if ( $score >= 90 ) return '#46b450';
-			if ( $score >= 70 ) return '#00a0d2';
-			if ( $score >= 40 ) return '#ffb900';
-			return '#dc3232';
-		};
 		?>
 		<div style="margin-top:24px;">
 			<p style="<?php echo esc_attr( $p_style ); ?>">
@@ -3626,22 +3616,9 @@ function wppugmill_render_settings_page() {
 				</thead>
 				<tbody>
 				<?php foreach ( $audit_rows as $row ) :
-					$is_unscored = null === $row->total_score_raw;
-					$aeo         = json_decode( $row->aeo_json ?? '{}', true ) ?: array();
-					$summary     = trim( $aeo['summary'] ?? '' );
-					$questions   = array_filter( $aeo['questions'] ?? array(), function( $q ) { return ! empty( $q['q'] ) && ! empty( $q['a'] ); } );
-					$entities    = array_filter( $aeo['entities'] ?? array(), function( $e ) { return ! empty( $e['name'] ); } );
-					$keywords    = array_filter( $aeo['keywords'] ?? array(), 'strlen' );
-					$missing     = array();
-					if ( empty( $summary ) )           $missing[] = 'Summary';
-					if ( count( $questions ) < 1 )     $missing[] = 'Q&amp;A';
-					if ( count( $entities ) < 1 )      $missing[] = 'Entities';
-					if ( count( $keywords ) < 5 )      $missing[] = 'Keywords';
-					$score    = (int) $row->total_score_raw;
-					$color    = $score_color( $score );
 					$edit_url = get_edit_post_link( $row->ID );
 				?>
-				<tr data-post-id="<?php echo absint( $row->ID ); ?>"<?php echo $is_unscored ? ' data-unscored="1"' : ''; ?>>
+				<tr data-post-id="<?php echo absint( $row->ID ); ?>">
 					<td>
 						<a href="<?php echo esc_url( $edit_url ); ?>" style="font-weight:600;">
 							<?php echo esc_html( $row->post_title ?: __( '(no title)', 'wp-pugmill' ) ); ?>
@@ -3649,26 +3626,10 @@ function wppugmill_render_settings_page() {
 					</td>
 					<td style="color:#666; font-size:12px;"><?php echo esc_html( $row->post_type ); ?></td>
 					<td style="text-align:center;" class="pugmill-score-cell">
-						<?php if ( $is_unscored ) : ?>
 						<span class="pugmill-score-pulse" style="display:inline-block; width:36px; height:20px; border-radius:999px; background:#e5e7eb; animation:pugmill-pulse 1.4s ease-in-out infinite;"></span>
-						<?php else : ?>
-						<span class="pugmill-score-pill" style="display:inline-block; padding:2px 10px; border-radius:999px; background:<?php echo esc_attr( $color ); ?>1a; color:<?php echo esc_attr( $color ); ?>; font-size:12px; font-weight:700;">
-							<?php echo absint( $score ); ?>
-						</span>
-						<?php endif; ?>
 					</td>
 					<td class="pugmill-missing-cell">
-						<?php if ( $is_unscored ) : ?>
 						<span class="pugmill-score-pulse" style="display:inline-block; width:120px; height:18px; border-radius:4px; background:#e5e7eb; animation:pugmill-pulse 1.4s ease-in-out infinite;"></span>
-						<?php elseif ( empty( $missing ) ) : ?>
-							<span style="color:#46b450; font-size:12px;">✓ <?php esc_html_e( 'All AEO fields complete', 'wp-pugmill' ); ?></span>
-						<?php else : ?>
-							<?php foreach ( $missing as $field ) : ?>
-							<span style="display:inline-block; margin:2px 3px 2px 0; padding:1px 8px; border-radius:4px; background:#fee2e2; color:#b91c1c; font-size:11px; font-weight:600;">
-								<?php echo $field; // phpcs:ignore — already escaped above ?>
-							</span>
-							<?php endforeach; ?>
-						<?php endif; ?>
 					</td>
 					<td style="text-align:center;">
 						<?php if ( $is_ai_mode ) : ?>
