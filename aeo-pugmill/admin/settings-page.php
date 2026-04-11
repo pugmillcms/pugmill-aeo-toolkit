@@ -3506,8 +3506,15 @@ function aeopugmill_render_settings_page() {
 		     AUDIT AEO TAB
 		     ════════════════════════════════════════════════════════════ -->
 		<?php
-		$is_ai_mode   = in_array( aeopugmill_mode(), array( 'ai', 'pro' ), true );
-		$audit_nonce  = wp_create_nonce( 'aeopugmill_generate_aeo' );
+		$is_ai_mode          = in_array( aeopugmill_mode(), array( 'ai', 'pro' ), true );
+		$can_generate_fields = in_array( aeopugmill_mode(), array( 'ai', 'free' ), true );
+		$audit_nonce         = wp_create_nonce( 'aeopugmill_generate_aeo' );
+		$field_nonces        = array(
+			'summary'  => wp_create_nonce( 'aeopugmill_generate_summary' ),
+			'qa'       => wp_create_nonce( 'aeopugmill_generate_qa' ),
+			'entities' => wp_create_nonce( 'aeopugmill_generate_entities' ),
+			'keywords' => wp_create_nonce( 'aeopugmill_generate_keywords' ),
+		);
 		$per_page     = 20;
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$current_page = isset( $_GET['audit_page'] ) ? max( 1, (int) $_GET['audit_page'] ) : 1;
@@ -3723,6 +3730,19 @@ function aeopugmill_render_settings_page() {
 			<?php if ( $is_ai_mode ) : ?>
 			var generateNonce = <?php echo wp_json_encode( $audit_nonce ); ?>;
 			<?php endif; ?>
+			<?php if ( $can_generate_fields ) : ?>
+			var canGenerateFields = true;
+			var fieldNonces = <?php echo wp_json_encode( $field_nonces ); ?>;
+			// Map label → { action, nonce key }
+			var fieldActionMap = {
+				'Summary'  : { action: 'aeopugmill_generate_summary',  nonce: fieldNonces.summary  },
+				'Q&A'      : { action: 'aeopugmill_generate_qa',       nonce: fieldNonces.qa       },
+				'Entities' : { action: 'aeopugmill_generate_entities', nonce: fieldNonces.entities },
+				'Keywords' : { action: 'aeopugmill_generate_keywords', nonce: fieldNonces.keywords },
+			};
+			<?php else : ?>
+			var canGenerateFields = false;
+			<?php endif; ?>
 
 			// ── Shared: update a row with calculated score data ─────────────────────
 			function applyScoreToRow( row, data ) {
@@ -3739,6 +3759,12 @@ function aeopugmill_render_settings_page() {
 				if ( missingCell ) {
 					if ( ! data.missing || data.missing.length === 0 ) {
 						missingCell.innerHTML = '<span style="color:#46b450;font-size:12px;">✓ <?php echo esc_js( __( 'All AEO fields complete', 'aeo-pugmill' ) ); ?></span>';
+					} else if ( canGenerateFields ) {
+						// Clickable generate buttons for each missing field
+						missingCell.innerHTML = data.missing.map( function( f ) {
+							return '<button type="button" class="pugmill-field-gen" data-field="' + f + '" style="display:inline-block;margin:2px 3px 2px 0;padding:1px 8px;border-radius:4px;background:#fee2e2;color:#b91c1c;font-size:11px;font-weight:600;border:none;cursor:pointer;" title="<?php echo esc_js( __( 'Click to generate', 'aeo-pugmill' ) ); ?>">' + f + '</button>';
+						} ).join( '' );
+						attachFieldGenListeners( row );
 					} else {
 						missingCell.innerHTML = data.missing.map( function( f ) {
 							return '<span style="display:inline-block;margin:2px 3px 2px 0;padding:1px 8px;border-radius:4px;background:#fee2e2;color:#b91c1c;font-size:11px;font-weight:600;">' + f + '</span>';
@@ -3747,6 +3773,55 @@ function aeopugmill_render_settings_page() {
 				}
 
 				row.removeAttribute( 'data-unscored' );
+			}
+
+			// ── Per-field generate (free + Pro users) ───────────────────────────────
+			function attachFieldGenListeners( row ) {
+				if ( ! canGenerateFields ) { return; }
+				var postId = row.dataset.postId;
+				row.querySelectorAll( '.pugmill-field-gen' ).forEach( function( btn ) {
+					btn.addEventListener( 'click', function() {
+						var field  = btn.dataset.field;
+						var map    = fieldActionMap[ field ];
+						if ( ! map ) { return; }
+
+						btn.disabled    = true;
+						btn.textContent = '…';
+						btn.style.background = '#fef9c3';
+						btn.style.color      = '#854d0e';
+
+						fetch( ajaxUrl, {
+							method:  'POST',
+							headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+							body:    new URLSearchParams( { action: map.action, nonce: map.nonce, post_id: postId } ),
+						} )
+						.then( function( r ) { return r.json(); } )
+						.then( function( res ) {
+							if ( res.success ) {
+								btn.textContent      = '✓ ' + field;
+								btn.style.background = '#dcfce7';
+								btn.style.color      = '#15803d';
+								btn.disabled         = true;
+								btn.style.cursor     = 'default';
+							} else {
+								var msg = ( res.data && res.data.message ) ? res.data.message : '<?php echo esc_js( __( 'Failed', 'aeo-pugmill' ) ); ?>';
+								btn.textContent      = '✗ ' + field;
+								btn.style.background = '#fee2e2';
+								btn.style.color      = '#b91c1c';
+								btn.title            = msg;
+								btn.disabled         = false;
+								btn.style.cursor     = 'pointer';
+							}
+						} )
+						.catch( function() {
+							btn.textContent      = '✗ ' + field;
+							btn.style.background = '#fee2e2';
+							btn.style.color      = '#b91c1c';
+							btn.disabled         = false;
+							btn.style.cursor     = 'pointer';
+						} );
+					} );
+				} );
 			}
 
 			// ── 1. Recalculate scores for all visible rows on page load ────────────
