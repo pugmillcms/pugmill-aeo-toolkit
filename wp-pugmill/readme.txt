@@ -4,7 +4,7 @@ Tags: aeo, answer engine optimization, ai, structured data, bot analytics, llms-
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.2.6
+Stable tag: 1.2.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -164,6 +164,9 @@ Plus: llms.txt, per-post AEO markdown endpoints, and a bot analytics dashboard s
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.2.7 =
+* **Uninstall**: Fixed incomplete cleanup — added 5 missing options (disable_breadcrumbs, disable_robots_append, disable_sitemap, industry, signal_db_version), 3 missing transients (llms_txt_conflict_check, ai_analytics_insights, intel_site_meta), 1 missing post meta key (_wppugmill_score), and the wppugmill_signal_daily custom table. Plugin deletion now removes all plugin data from the WordPress database.
 
 = 1.2.6 =
 * **Bot Analytics — AEO Content Coverage**: Expanded from 4 bars to 8 — now includes Summary quality (50+ chars), Q&A Pairs (3+), SEO Title, and Meta Description alongside the existing AEO fields. Grouped into AEO Fields and SEO Fields sections.
