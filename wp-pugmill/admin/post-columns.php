@@ -83,7 +83,7 @@ function wppugmill_list_column_css() {
 	if ( ! in_array( $screen->id, $screens, true ) ) {
 		return;
 	}
-	echo '<style>.column-wppugmill_score { width: 60px; text-align: center; } .column-title { min-width: 200px; }</style>' . "\n";
+	echo '<style>.column-wppugmill_score { width: 60px; text-align: center; white-space: nowrap; }</style>' . "\n";
 }
 add_action( 'admin_head', 'wppugmill_list_column_css' );
 
