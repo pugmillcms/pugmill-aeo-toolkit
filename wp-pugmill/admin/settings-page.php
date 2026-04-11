@@ -415,7 +415,7 @@ function wppugmill_render_settings_page() {
 	$api_key        = wppugmill_get_encrypted_option( 'wppugmill_ai_api_key', '' );
 
 	// Detect active tab — default is 'license'
-	$allowed_tabs = array( 'license', 'ai-provider', 'site-aeo', 'bulk-aeo', 'author-voice', 'compatibility', 'analytics' );
+	$allowed_tabs = array( 'license', 'ai-provider', 'site-aeo', 'audit-aeo', 'bulk-aeo', 'author-voice', 'compatibility', 'analytics' );
 	$active_tab   = isset( $_GET['tab'] ) && in_array( sanitize_key( $_GET['tab'] ), $allowed_tabs, true ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		? sanitize_key( $_GET['tab'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		: 'license';
@@ -496,6 +496,7 @@ function wppugmill_render_settings_page() {
 				'license'       => __( 'License', 'wp-pugmill' ),
 				'ai-provider'   => __( 'AI Provider', 'wp-pugmill' ),
 				'site-aeo'      => __( 'Site AEO', 'wp-pugmill' ),
+				'audit-aeo'     => __( 'Audit AEO', 'wp-pugmill' ),
 				'bulk-aeo'      => __( 'Bulk AEO', 'wp-pugmill' ),
 				'author-voice'  => __( 'Author Voice', 'wp-pugmill' ),
 				'compatibility' => __( 'Compatibility', 'wp-pugmill' ),
@@ -3461,6 +3462,291 @@ function wppugmill_render_settings_page() {
 						btn.disabled = false;
 						btn.textContent = '<?php echo esc_js( __( 'Send to Network', 'wp-pugmill' ) ); ?>';
 					} );
+			} );
+		}() );
+		</script>
+		<?php endif; ?>
+
+		<?php elseif ( 'audit-aeo' === $active_tab ) : ?>
+		<!-- ════════════════════════════════════════════════════════════
+		     AUDIT AEO TAB
+		     ════════════════════════════════════════════════════════════ -->
+		<?php
+		$is_ai_mode   = in_array( wppugmill_mode(), array( 'ai', 'pro' ), true );
+		$audit_nonce  = wp_create_nonce( 'wppugmill_generate_aeo' );
+		$per_page     = 20;
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$current_page = isset( $_GET['audit_page'] ) ? max( 1, (int) $_GET['audit_page'] ) : 1;
+		$offset       = ( $current_page - 1 ) * $per_page;
+
+		// ── Sort params ───────────────────────────────────────────────────────────
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$orderby      = isset( $_GET['orderby'] ) && 'score' === $_GET['orderby'] ? 'score' : 'opportunity';
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$order        = isset( $_GET['order'] ) && 'desc' === strtolower( $_GET['order'] ) ? 'DESC' : 'ASC';
+
+		// ── Post type filter ──────────────────────────────────────────────────────
+		global $wpdb;
+		$post_types_raw = get_post_types( array( 'public' => true ), 'names' );
+		unset( $post_types_raw['attachment'] );
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$filter_pt = isset( $_GET['audit_pt'] ) && isset( $post_types_raw[ $_GET['audit_pt'] ] )
+			? sanitize_key( $_GET['audit_pt'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			: '';
+		$show_pt_filter = count( $post_types_raw ) > 1;
+
+		$active_pt_list = $filter_pt ? array( $filter_pt ) : array_keys( $post_types_raw );
+		$pt_in          = implode( "','", array_map( 'esc_sql', $active_pt_list ) );
+
+		// ── ORDER BY clause ───────────────────────────────────────────────────────
+		// Default "opportunity" sort: content-ready posts first, lowest AEO score within that.
+		// Score sort: order by total AEO score only.
+		if ( 'score' === $orderby ) {
+			$order_clause = "total_score {$order}";
+		} else {
+			// Opportunity: content_score desc (fixed), total_score within that follows $order.
+			$order_clause = "content_score DESC, total_score {$order}";
+		}
+
+		// ── Base URL for sorting/pagination links ─────────────────────────────────
+		$audit_base = admin_url( 'options-general.php?page=wp-pugmill&tab=audit-aeo' );
+		if ( $filter_pt ) $audit_base .= '&audit_pt=' . rawurlencode( $filter_pt );
+
+		$sort_url = function( $col ) use ( $audit_base, $orderby, $order ) {
+			$new_order = ( $orderby === $col && 'ASC' === $order ) ? 'desc' : 'asc';
+			return $audit_base . '&orderby=' . rawurlencode( $col ) . '&order=' . $new_order;
+		};
+
+		$sort_indicator = function( $col ) use ( $orderby, $order ) {
+			if ( $orderby !== $col ) return '';
+			return ' <span class="sorting-indicator">' . ( 'ASC' === $order ? '▲' : '▼' ) . '</span>';
+		};
+
+		// ── Count query ───────────────────────────────────────────────────────────
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared
+		$total_posts = (int) $wpdb->get_var(
+			"SELECT COUNT( DISTINCT p.ID )
+			 FROM {$wpdb->posts} p
+			 WHERE p.post_status = 'publish'
+			   AND p.post_type IN ('{$pt_in}')"
+		);
+
+		// ── Main query — stored meta only, no per-row recalculation ──────────────
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared
+		$audit_rows = $wpdb->get_results( $wpdb->prepare(
+			"SELECT p.ID, p.post_title, p.post_type,
+			        COALESCE( cs.meta_value + 0, 0 ) AS content_score,
+			        COALESCE( ts.meta_value + 0, 0 ) AS total_score,
+			        aeo.meta_value                   AS aeo_json
+			 FROM {$wpdb->posts} p
+			 LEFT JOIN {$wpdb->postmeta} cs  ON cs.post_id  = p.ID AND cs.meta_key  = '_wppugmill_content_score'
+			 LEFT JOIN {$wpdb->postmeta} ts  ON ts.post_id  = p.ID AND ts.meta_key  = '_wppugmill_score'
+			 LEFT JOIN {$wpdb->postmeta} aeo ON aeo.post_id = p.ID AND aeo.meta_key = '_wppugmill_aeo'
+			 WHERE p.post_status = 'publish'
+			   AND p.post_type IN ('{$pt_in}')
+			 ORDER BY {$order_clause}
+			 LIMIT %d OFFSET %d",
+			$per_page,
+			$offset
+		) );
+
+		$total_pages = (int) ceil( $total_posts / $per_page );
+
+		// Colour helper — mirrors sidebar grade thresholds.
+		$score_color = function( $score ) {
+			if ( $score >= 90 ) return '#46b450';
+			if ( $score >= 70 ) return '#00a0d2';
+			if ( $score >= 40 ) return '#ffb900';
+			return '#dc3232';
+		};
+		?>
+		<div style="margin-top:24px;">
+			<p style="<?php echo esc_attr( $p_style ); ?>">
+				<?php esc_html_e( 'Review every published post through the lens of AEO. Posts are ordered by content-readiness first — those with strong structure (400+ words, headings, concise opening) but missing AEO fields rise to the top, so you tackle the highest-opportunity content first.', 'wp-pugmill' ); ?>
+			</p>
+
+			<?php if ( ! $is_ai_mode ) : ?>
+			<div style="background:#faf5ff; border:1px solid #e9d5ff; border-radius:6px; padding:12px 16px; margin-bottom:20px; font-size:13px; color:#6b21a8;">
+				✨ <strong><?php esc_html_e( 'Generate All is a Pro feature.', 'wp-pugmill' ); ?></strong>
+				<?php printf(
+					wp_kses( __( '<a href="%s" target="_blank">Upgrade to WP Pugmill Pro</a> to generate Summary, Q&amp;A, Entities and Keywords for any post without leaving this page.', 'wp-pugmill' ), array( 'a' => array( 'href' => array(), 'target' => array() ) ) ),
+					esc_url( 'https://wppugmill.com/pricing' )
+				); ?>
+			</div>
+			<?php endif; ?>
+
+			<?php if ( $show_pt_filter ) : ?>
+			<div style="margin-bottom:12px;">
+				<?php
+				$all_url = $audit_base . ( $orderby !== 'opportunity' ? '&orderby=' . rawurlencode( $orderby ) . '&order=' . strtolower( $order ) : '' );
+				?>
+				<a href="<?php echo esc_url( $all_url ); ?>"
+					class="button<?php echo ! $filter_pt ? ' button-primary' : ''; ?>"
+					style="margin-right:4px;">
+					<?php esc_html_e( 'All', 'wp-pugmill' ); ?>
+				</a>
+				<?php foreach ( $post_types_raw as $pt_slug => $_ ) :
+					$pt_obj  = get_post_type_object( $pt_slug );
+					$pt_label = $pt_obj ? $pt_obj->labels->name : $pt_slug;
+					$pt_url   = admin_url( 'options-general.php?page=wp-pugmill&tab=audit-aeo&audit_pt=' . rawurlencode( $pt_slug ) );
+					if ( $orderby !== 'opportunity' ) $pt_url .= '&orderby=' . rawurlencode( $orderby ) . '&order=' . strtolower( $order );
+				?>
+				<a href="<?php echo esc_url( $pt_url ); ?>"
+					class="button<?php echo $filter_pt === $pt_slug ? ' button-primary' : ''; ?>"
+					style="margin-right:4px;">
+					<?php echo esc_html( $pt_label ); ?>
+				</a>
+				<?php endforeach; ?>
+			</div>
+			<?php endif; ?>
+
+			<?php if ( empty( $audit_rows ) ) : ?>
+				<p style="color:#666;"><?php esc_html_e( 'No published posts found.', 'wp-pugmill' ); ?></p>
+			<?php else : ?>
+
+			<table class="wp-list-table widefat fixed striped" style="margin-top:0;">
+				<thead>
+					<tr>
+						<th style="width:30%;"><?php esc_html_e( 'Title', 'wp-pugmill' ); ?></th>
+						<th style="width:8%;"><?php esc_html_e( 'Type', 'wp-pugmill' ); ?></th>
+						<th style="width:8%; text-align:center;" class="sortable <?php echo 'score' === $orderby ? ( 'ASC' === $order ? 'asc' : 'desc' ) : 'asc'; ?>">
+							<a href="<?php echo esc_url( $sort_url( 'score' ) ); ?>" style="display:block; text-align:center;">
+								<?php esc_html_e( 'Score', 'wp-pugmill' ); ?>
+								<?php echo $sort_indicator( 'score' ); // phpcs:ignore ?>
+							</a>
+						</th>
+						<th><?php esc_html_e( 'Missing AEO Fields', 'wp-pugmill' ); ?></th>
+						<th style="width:16%; text-align:center;">
+							<?php esc_html_e( 'Generate All', 'wp-pugmill' ); ?>
+							<?php if ( ! $is_ai_mode ) : ?>
+								<span style="display:block; font-size:10px; font-weight:400; color:#9ca3af;"><?php esc_html_e( 'Pro feature', 'wp-pugmill' ); ?></span>
+							<?php endif; ?>
+						</th>
+					</tr>
+				</thead>
+				<tbody>
+				<?php foreach ( $audit_rows as $row ) :
+					$aeo        = json_decode( $row->aeo_json ?? '{}', true ) ?: array();
+					$summary    = trim( $aeo['summary'] ?? '' );
+					$questions  = array_filter( $aeo['questions'] ?? array(), function( $q ) { return ! empty( $q['q'] ) && ! empty( $q['a'] ); } );
+					$entities   = array_filter( $aeo['entities'] ?? array(), function( $e ) { return ! empty( $e['name'] ); } );
+					$keywords   = array_filter( $aeo['keywords'] ?? array(), 'strlen' );
+					$missing    = array();
+					if ( empty( $summary ) )            $missing[] = 'Summary';
+					if ( count( $questions ) < 1 )      $missing[] = 'Q&amp;A';
+					if ( count( $entities ) < 1 )       $missing[] = 'Entities';
+					if ( count( $keywords ) < 5 )       $missing[] = 'Keywords';
+					$score      = (int) $row->total_score;
+					$color      = $score_color( $score );
+					$edit_url   = get_edit_post_link( $row->ID );
+				?>
+				<tr data-post-id="<?php echo absint( $row->ID ); ?>">
+					<td>
+						<a href="<?php echo esc_url( $edit_url ); ?>" style="font-weight:600;">
+							<?php echo esc_html( $row->post_title ?: __( '(no title)', 'wp-pugmill' ) ); ?>
+						</a>
+					</td>
+					<td style="color:#666; font-size:12px;"><?php echo esc_html( $row->post_type ); ?></td>
+					<td style="text-align:center;">
+						<span style="display:inline-block; padding:2px 10px; border-radius:999px; background:<?php echo esc_attr( $color ); ?>1a; color:<?php echo esc_attr( $color ); ?>; font-size:12px; font-weight:700;">
+							<?php echo absint( $score ); ?>
+						</span>
+					</td>
+					<td>
+						<?php if ( empty( $missing ) ) : ?>
+							<span style="color:#46b450; font-size:12px;">✓ <?php esc_html_e( 'All AEO fields complete', 'wp-pugmill' ); ?></span>
+						<?php else : ?>
+							<?php foreach ( $missing as $field ) : ?>
+							<span style="display:inline-block; margin:2px 3px 2px 0; padding:1px 8px; border-radius:4px; background:#fee2e2; color:#b91c1c; font-size:11px; font-weight:600;">
+								<?php echo $field; // phpcs:ignore — already escaped above ?>
+							</span>
+							<?php endforeach; ?>
+						<?php endif; ?>
+					</td>
+					<td style="text-align:center;">
+						<?php if ( $is_ai_mode ) : ?>
+						<button type="button"
+							class="button wppugmill-audit-generate"
+							data-post-id="<?php echo absint( $row->ID ); ?>"
+							data-nonce="<?php echo esc_attr( $audit_nonce ); ?>"
+							style="font-size:12px;">
+							✨ <?php esc_html_e( 'Generate All', 'wp-pugmill' ); ?>
+						</button>
+						<span class="wppugmill-audit-status" style="display:block; font-size:11px; margin-top:4px; color:#666;"></span>
+						<?php else : ?>
+						<span style="font-size:12px; color:#d1d5db;" title="<?php esc_attr_e( 'Upgrade to Pro to generate AEO fields from this page', 'wp-pugmill' ); ?>">
+							🔒 <?php esc_html_e( 'Generate All', 'wp-pugmill' ); ?>
+						</span>
+						<?php endif; ?>
+					</td>
+				</tr>
+				<?php endforeach; ?>
+				</tbody>
+			</table>
+
+			<?php if ( $total_pages > 1 ) :
+				// Preserve sort and filter state across pagination.
+				$page_base  = $audit_base;
+				if ( 'opportunity' !== $orderby ) $page_base .= '&orderby=' . rawurlencode( $orderby ) . '&order=' . strtolower( $order );
+				$page_base .= '&audit_page=%#%';
+				echo '<div style="margin-top:16px;">';
+				echo paginate_links( array(
+					'base'      => $page_base,
+					'format'    => '',
+					'current'   => $current_page,
+					'total'     => $total_pages,
+					'prev_text' => '&laquo; ' . __( 'Previous', 'wp-pugmill' ),
+					'next_text' => __( 'Next', 'wp-pugmill' ) . ' &raquo;',
+				) );
+				echo '</div>';
+			endif; ?>
+
+			<?php endif; ?>
+		</div>
+
+		<?php if ( $is_ai_mode ) : ?>
+		<script>
+		( function() {
+			var ajaxUrl = <?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>;
+
+			document.querySelectorAll( '.wppugmill-audit-generate' ).forEach( function( btn ) {
+				btn.addEventListener( 'click', function() {
+					var postId  = btn.dataset.postId;
+					var nonce   = btn.dataset.nonce;
+					var row     = btn.closest( 'tr' );
+					var status  = row.querySelector( '.wppugmill-audit-status' );
+
+					btn.disabled     = true;
+					btn.textContent  = '<?php echo esc_js( __( 'Generating…', 'wp-pugmill' ) ); ?>';
+					status.textContent = '';
+
+					fetch( ajaxUrl, {
+						method:  'POST',
+						headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+						body:    new URLSearchParams( { action: 'wppugmill_generate_aeo', nonce: nonce, post_id: postId } ),
+					} )
+					.then( function( r ) { return r.json(); } )
+					.then( function( res ) {
+						if ( res.success ) {
+							status.textContent = '<?php echo esc_js( __( '✓ Generated — open post to review & save', 'wp-pugmill' ) ); ?>';
+							status.style.color = '#46b450';
+							// Clear the missing tags since fields are now populated.
+							var missingCell = row.cells[3];
+							missingCell.innerHTML = '<span style="color:#46b450;font-size:12px;">✓ <?php echo esc_js( __( 'Generated — save in editor', 'wp-pugmill' ) ); ?></span>';
+						} else {
+							status.textContent = res.data?.message || '<?php echo esc_js( __( 'Generation failed.', 'wp-pugmill' ) ); ?>';
+							status.style.color = '#dc3232';
+						}
+						btn.disabled    = false;
+						btn.textContent = '✨ <?php echo esc_js( __( 'Generate All', 'wp-pugmill' ) ); ?>';
+					} )
+					.catch( function() {
+						status.textContent = '<?php echo esc_js( __( 'Network error — please try again.', 'wp-pugmill' ) ); ?>';
+						status.style.color = '#dc3232';
+						btn.disabled    = false;
+						btn.textContent = '✨ <?php echo esc_js( __( 'Generate All', 'wp-pugmill' ) ); ?>';
+					} );
+				} );
 			} );
 		}() );
 		</script>

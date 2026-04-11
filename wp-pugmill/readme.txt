@@ -4,7 +4,7 @@ Tags: aeo, answer engine optimization, ai, structured data, bot analytics, llms-
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.2.13
+Stable tag: 1.2.14
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -164,6 +164,16 @@ Plus: llms.txt, per-post AEO markdown endpoints, and a bot analytics dashboard s
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.2.14 =
+* **Scoring**: PHP health score rewritten to match JS sidebar scoring exactly — same 12 checks, same point values. Dropped SEO title/meta description; added content structure checks (400+ words, H2/H3, no H1, opening paragraph), keywords in content, and featured image alt text.
+* **Scoring**: Added _wppugmill_content_score meta (0–35) stored on save — tracks content-structure readiness for efficient Audit AEO sorting.
+* **Scoring**: Score now recalculates on save_post (content changes) and featured image changes, in addition to AEO meta changes.
+* **Audit AEO tab**: New tab between Site AEO and Bulk AEO — paginated table of all published posts ordered by content-readiness first.
+* **Audit AEO tab**: Columns: Title, Type, Score pill (same colour scale as sidebar), Missing AEO Fields (Summary/Q&A/Entities/Keywords tags), Generate All.
+* **Audit AEO tab**: Score column sortable asc/desc. Post type filter shown when multiple public post types exist. Sort and filter state preserved across pagination.
+* **Audit AEO tab**: Generate All active for Pro/AI users from the table; locked with upgrade prompt for free users.
+* **Uninstall**: Added _wppugmill_content_score to post meta cleanup.
 
 = 1.2.13 =
 * **Bug fix**: Restored missing useSeoMeta hook in sidebar — its removal in 1.2.11 caused a JS runtime crash that hid the entire Pugmill sidebar panel. SEO panel UI remains removed; the hook is retained for Generate All and meta merge logic.

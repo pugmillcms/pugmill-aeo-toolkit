@@ -78,7 +78,7 @@ foreach ( $users as $user_id ) {
 
 global $wpdb;
 
-$meta_keys = array( '_wppugmill_aeo', '_wppugmill_seo', '_wppugmill_schema', '_wppugmill_score' );
+$meta_keys = array( '_wppugmill_aeo', '_wppugmill_seo', '_wppugmill_schema', '_wppugmill_score', '_wppugmill_content_score' );
 foreach ( $meta_keys as $meta_key ) {
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 	$wpdb->delete( $wpdb->postmeta, array( 'meta_key' => $meta_key ), array( '%s' ) );

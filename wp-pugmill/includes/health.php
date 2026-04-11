@@ -1,21 +1,27 @@
 <?php
 /**
- * SEO + AEO Health — per-post combined score and checklist.
+ * AEO Health — per-post score and checklist.
  *
- * Scores SEO basics and AEO completeness on a 0–100 scale.
- * Displayed as a meta box on the post edit screen (Gutenberg sidebar mirrors this).
+ * Scores content structure and AEO completeness on a 0–100 scale.
+ * This is the server-side mirror of src/scoring.js — both must produce
+ * identical results for the same post. scoring.js is the source of truth;
+ * any change to checks or point values must be applied to both files.
  *
- * Scoring breakdown:
- *   SEO title set          10pts
- *   Meta description set   10pts
- *   Summary present        15pts
- *   Summary length ≥ 50    10pts
- *   Q&A pairs ≥ 1          15pts
- *   Q&A pairs ≥ 3          10pts
- *   Entities ≥ 1           15pts
- *   Keywords ≥ 5           15pts
- *                         ------
- *   Max                   100pts
+ * Scoring breakdown (total 100pts):
+ *   400+ words                    15pts  content
+ *   H2/H3 subheadings present     10pts  content
+ *   No H1 in body                  5pts  content
+ *   Opening paragraph ≤ 80 words   5pts  content
+ *   Summary written               10pts  aeo
+ *   Summary 80+ chars              5pts  aeo
+ *   At least 1 Q&A pair           10pts  aeo
+ *   3+ Q&A pairs                   5pts  aeo
+ *   Named entity tagged           10pts  aeo
+ *   5+ keywords                   10pts  aeo
+ *   Keywords found in content     10pts  aeo
+ *   Featured image has alt text    5pts  aeo
+ *                                ------
+ *   Max                          100pts
  *
  * @package WPPugmill
  */
@@ -25,121 +31,230 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Calculate AEO health score and checklist for a post.
+ * Calculate the content-structure sub-score for a post (0–35).
+ *
+ * These are the four HITL checks that depend on post content alone:
+ *   400+ words (15), H2/H3 present (10), no H1 in body (5), opening ≤80 words (5).
+ *
+ * Stored separately as _wppugmill_content_score so the Audit AEO tab can
+ * sort by content-readiness without re-running the full health check.
+ *
+ * @param  int    $post_id
+ * @param  string $content  Optional pre-fetched post_content (avoids a DB call).
+ * @return int
+ */
+function wppugmill_content_score( $post_id, $content = null ) {
+	if ( null === $content ) {
+		$content = get_post_field( 'post_content', $post_id );
+	}
+
+	$plain = preg_replace( '/<!--[\s\S]*?-->/', ' ', $content );
+	$plain = wp_strip_all_tags( $plain );
+	$plain = trim( preg_replace( '/\s+/', ' ', $plain ) );
+	$words = $plain ? str_word_count( $plain ) : 0;
+
+	preg_match( '/<p[^>]*>([\s\S]*?)<\/p>/i', $content, $m );
+	$opening       = isset( $m[1] ) ? wp_strip_all_tags( $m[1] ) : '';
+	$opening_words = $opening ? str_word_count( $opening ) : 0;
+
+	$score  = 0;
+	if ( $words >= 400 )                                           $score += 15;
+	if ( preg_match( '/<h[23]/i', $content ) )                    $score += 10;
+	if ( ! preg_match( '/<h1/i', $content ) )                     $score += 5;
+	if ( $opening_words > 0 && $opening_words <= 80 )             $score += 5;
+
+	return $score;
+}
+
+/**
+ * Calculate the AEO health score and checklist for a post.
  *
  * @param  int   $post_id
  * @return array{score: int, grade: string, color: string, items: array}
  */
 function wppugmill_health_score( $post_id ) {
-	$aeo   = wppugmill_get_aeo( $post_id );
-	$seo   = wppugmill_get_seo( $post_id );
-	$items = array();
-	$score = 0;
+	$aeo     = wppugmill_get_aeo( $post_id );
+	$content = get_post_field( 'post_content', $post_id );
+	$items   = array();
+	$score   = 0;
 
-	// ── SEO basics ────────────────────────────────────────────────────────
+	// ── Content helpers ───────────────────────────────────────────────────────
+	// Strip block serialisation comments then HTML to get plain text —
+	// mirrors the JS plainText calculation in scoring.js.
+	$plain_text = preg_replace( '/<!--[\s\S]*?-->/', ' ', $content );
+	$plain_text = wp_strip_all_tags( $plain_text );
+	$plain_text = trim( preg_replace( '/\s+/', ' ', $plain_text ) );
+	$word_count = $plain_text ? str_word_count( $plain_text ) : 0;
 
-	// SEO title set (10pts)
-	$has_seo_title = ! empty( trim( $seo['title'] ) );
+	// Opening paragraph — first <p>…</p> in the raw content.
+	preg_match( '/<p[^>]*>([\s\S]*?)<\/p>/i', $content, $first_para );
+	$opening_text       = ! empty( $first_para[1] ) ? wp_strip_all_tags( $first_para[1] ) : '';
+	$opening_word_count = $opening_text ? str_word_count( $opening_text ) : 0;
+
+	// ── Content length ────────────────────────────────────────────────────────
+	$has_enough_words = $word_count >= 400;
 	$items[] = array(
-		'label'    => __( 'SEO title set', 'wp-pugmill' ),
-		'pass'     => $has_seo_title,
-		'points'   => 10,
-		'tip'      => __( 'Add a custom SEO title in the SEO panel to control how this page appears in search results.', 'wp-pugmill' ),
-		'category' => 'seo',
+		'id'       => 'content_length',
+		'label'    => __( '400+ words', 'wp-pugmill' ),
+		'pass'     => $has_enough_words,
+		'points'   => 15,
+		/* translators: %d: current word count */
+		'tip'      => sprintf( __( 'Post has %d word(s) — aim for 400+ for meaningful depth.', 'wp-pugmill' ), $word_count ),
+		'category' => 'content',
 	);
-	if ( $has_seo_title ) $score += 10;
+	if ( $has_enough_words ) $score += 15;
 
-	// Meta description set (10pts)
-	$has_meta_desc = ! empty( trim( $seo['meta_desc'] ) );
+	// ── Subheadings ───────────────────────────────────────────────────────────
+	$has_headings = (bool) preg_match( '/<h[23]/i', $content );
 	$items[] = array(
-		'label'    => __( 'Meta description written', 'wp-pugmill' ),
-		'pass'     => $has_meta_desc,
+		'id'       => 'has_headings',
+		'label'    => __( 'H2/H3 subheadings present', 'wp-pugmill' ),
+		'pass'     => $has_headings,
 		'points'   => 10,
-		'tip'      => __( 'Add a meta description (up to 155 characters) that summarises the page for search results.', 'wp-pugmill' ),
-		'category' => 'seo',
+		'tip'      => __( 'Break up your content with H2 or H3 subheadings.', 'wp-pugmill' ),
+		'category' => 'content',
 	);
-	if ( $has_meta_desc ) $score += 10;
+	if ( $has_headings ) $score += 10;
 
-	// ── AEO fields ────────────────────────────────────────────────────────
+	// ── No H1 in body ─────────────────────────────────────────────────────────
+	$no_h1 = ! preg_match( '/<h1/i', $content );
+	$items[] = array(
+		'id'       => 'no_h1',
+		'label'    => __( 'No H1 in body', 'wp-pugmill' ),
+		'pass'     => $no_h1,
+		'points'   => 5,
+		'tip'      => __( 'Remove any H1 headings — the post title already provides one.', 'wp-pugmill' ),
+		'category' => 'content',
+	);
+	if ( $no_h1 ) $score += 5;
 
-	// Summary present (15pts)
+	// ── Opening paragraph conciseness ─────────────────────────────────────────
+	$opening_concise = $opening_word_count > 0 && $opening_word_count <= 80;
+	$items[] = array(
+		'id'       => 'opening_concise',
+		'label'    => __( 'Opening paragraph ≤ 80 words', 'wp-pugmill' ),
+		'pass'     => $opening_concise,
+		'points'   => 5,
+		'tip'      => __( 'Keep your opening paragraph under 80 words for scannability.', 'wp-pugmill' ),
+		'category' => 'content',
+	);
+	if ( $opening_concise ) $score += 5;
+
+	// ── Summary present ───────────────────────────────────────────────────────
 	$has_summary = ! empty( trim( $aeo['summary'] ) );
 	$items[] = array(
-		'label'    => __( 'AI summary written', 'wp-pugmill' ),
+		'id'       => 'summary_present',
+		'label'    => __( 'Summary written', 'wp-pugmill' ),
 		'pass'     => $has_summary,
-		'points'   => 15,
-		'tip'      => __( 'Add a 2–3 sentence summary that describes this content for AI crawlers.', 'wp-pugmill' ),
-		'category' => 'aeo',
-	);
-	if ( $has_summary ) $score += 15;
-
-	// Summary length (10pts)
-	$summary_long = $has_summary && strlen( $aeo['summary'] ) >= 50;
-	$items[] = array(
-		'label'    => __( 'Summary is descriptive (50+ characters)', 'wp-pugmill' ),
-		'pass'     => $summary_long,
 		'points'   => 10,
-		'tip'      => __( 'Expand your summary to at least 50 characters for better AI discoverability.', 'wp-pugmill' ),
+		'tip'      => __( 'Add a 2–3 sentence summary for AI crawlers.', 'wp-pugmill' ),
 		'category' => 'aeo',
 	);
-	if ( $summary_long ) $score += 10;
+	if ( $has_summary ) $score += 10;
 
-	// At least 1 Q&A pair (15pts)
+	// ── Summary length ────────────────────────────────────────────────────────
+	$summary_long = $has_summary && strlen( $aeo['summary'] ) >= 80;
+	$items[] = array(
+		'id'       => 'summary_length',
+		'label'    => __( 'Summary 80+ chars', 'wp-pugmill' ),
+		'pass'     => $summary_long,
+		'points'   => 5,
+		'tip'      => __( 'Expand your summary to at least 80 characters.', 'wp-pugmill' ),
+		'category' => 'aeo',
+	);
+	if ( $summary_long ) $score += 5;
+
+	// ── Q&A pairs ─────────────────────────────────────────────────────────────
 	$qa_count = count( array_filter( $aeo['questions'], function( $q ) {
 		return ! empty( $q['q'] ) && ! empty( $q['a'] );
 	} ) );
+
 	$has_qa = $qa_count >= 1;
 	$items[] = array(
+		'id'       => 'qa_present',
 		'label'    => __( 'At least 1 Q&A pair', 'wp-pugmill' ),
 		'pass'     => $has_qa,
-		'points'   => 15,
-		'tip'      => __( 'Add a question and answer pair — generates FAQPage schema and helps AI engines cite your content.', 'wp-pugmill' ),
-		'category' => 'aeo',
-	);
-	if ( $has_qa ) $score += 15;
-
-	// At least 3 Q&A pairs (10pts)
-	$has_qa3 = $qa_count >= 3;
-	$items[] = array(
-		'label'    => __( '3 or more Q&A pairs', 'wp-pugmill' ),
-		'pass'     => $has_qa3,
 		'points'   => 10,
-		'tip'      => __( 'Add at least 3 Q&A pairs to cover the main questions readers might ask.', 'wp-pugmill' ),
+		'tip'      => __( 'Add a Q&A pair — generates FAQPage schema.', 'wp-pugmill' ),
 		'category' => 'aeo',
 	);
-	if ( $has_qa3 ) $score += 10;
+	if ( $has_qa ) $score += 10;
 
-	// At least 1 entity (15pts)
-	$entity_count = count( array_filter( $aeo['entities'], function( $e ) {
+	$has_three_qa = $qa_count >= 3;
+	$items[] = array(
+		'id'       => 'qa_coverage',
+		'label'    => __( '3+ Q&A pairs', 'wp-pugmill' ),
+		'pass'     => $has_three_qa,
+		'points'   => 5,
+		'tip'      => __( 'Add at least 3 Q&A pairs for better FAQ coverage.', 'wp-pugmill' ),
+		'category' => 'aeo',
+	);
+	if ( $has_three_qa ) $score += 5;
+
+	// ── Entities ──────────────────────────────────────────────────────────────
+	$has_entities = count( array_filter( $aeo['entities'], function( $e ) {
 		return ! empty( $e['name'] );
-	} ) );
-	$has_entity = $entity_count >= 1;
+	} ) ) >= 1;
 	$items[] = array(
-		'label'    => __( 'Named entities tagged', 'wp-pugmill' ),
-		'pass'     => $has_entity,
-		'points'   => 15,
-		'tip'      => __( 'Tag the key people, organizations, products, or concepts mentioned in this post.', 'wp-pugmill' ),
+		'id'       => 'entities_present',
+		'label'    => __( 'Named entity tagged', 'wp-pugmill' ),
+		'pass'     => $has_entities,
+		'points'   => 10,
+		'tip'      => __( 'Tag key people, orgs, products, or concepts.', 'wp-pugmill' ),
 		'category' => 'aeo',
 	);
-	if ( $has_entity ) $score += 15;
+	if ( $has_entities ) $score += 10;
 
-	// At least 5 keywords (15pts)
-	$keyword_count = count( array_filter( $aeo['keywords'], 'strlen' ) );
-	$has_keywords  = $keyword_count >= 5;
+	// ── Keywords ──────────────────────────────────────────────────────────────
+	$keywords     = array_values( array_filter( $aeo['keywords'], 'strlen' ) );
+	$has_keywords = count( $keywords ) >= 5;
 	$items[] = array(
-		'label'    => __( '5 or more keywords', 'wp-pugmill' ),
+		'id'       => 'keywords_present',
+		'label'    => __( '5+ keywords', 'wp-pugmill' ),
 		'pass'     => $has_keywords,
-		'points'   => 15,
-		'tip'      => __( 'Add at least 5 specific, search-focused keywords.', 'wp-pugmill' ),
+		'points'   => 10,
+		'tip'      => __( 'Add at least 5 search-focused keywords.', 'wp-pugmill' ),
 		'category' => 'aeo',
 	);
-	if ( $has_keywords ) $score += 15;
+	if ( $has_keywords ) $score += 10;
 
-	// Grade
-	if ( $score >= 90 )      { $grade = __( 'Excellent', 'wp-pugmill' ); $color = '#46b450'; }
-	elseif ( $score >= 70 )  { $grade = __( 'Good', 'wp-pugmill' );      $color = '#00a0d2'; }
-	elseif ( $score >= 40 )  { $grade = __( 'Fair', 'wp-pugmill' );      $color = '#ffb900'; }
-	else                     { $grade = __( 'Poor', 'wp-pugmill' );      $color = '#dc3232'; }
+	// ── Keywords in content ───────────────────────────────────────────────────
+	$plain_lower          = mb_strtolower( $plain_text );
+	$keywords_in_content  = ! empty( $keywords ) && count( array_filter( $keywords, function( $k ) use ( $plain_lower ) {
+		return false !== mb_strpos( $plain_lower, mb_strtolower( $k ) );
+	} ) ) > 0;
+	$items[] = array(
+		'id'       => 'keywords_in_content',
+		'label'    => __( 'Keywords found in content', 'wp-pugmill' ),
+		'pass'     => $keywords_in_content,
+		'points'   => 10,
+		'tip'      => __( 'Ensure your AEO keywords appear naturally in the post body.', 'wp-pugmill' ),
+		'category' => 'aeo',
+	);
+	if ( $keywords_in_content ) $score += 10;
+
+	// ── Featured image alt text ───────────────────────────────────────────────
+	$thumb_id      = get_post_thumbnail_id( $post_id );
+	$has_image_alt = false;
+	if ( $thumb_id ) {
+		$alt           = get_post_meta( (int) $thumb_id, '_wp_attachment_image_alt', true );
+		$has_image_alt = ! empty( trim( (string) $alt ) );
+	}
+	$items[] = array(
+		'id'       => 'featured_image_alt',
+		'label'    => __( 'Featured image has alt text', 'wp-pugmill' ),
+		'pass'     => $has_image_alt,
+		'points'   => 5,
+		'tip'      => __( 'Add alt text to your featured image for accessibility and AEO.', 'wp-pugmill' ),
+		'category' => 'aeo',
+	);
+	if ( $has_image_alt ) $score += 5;
+
+	// ── Grade / colour ────────────────────────────────────────────────────────
+	if ( $score >= 90 )     { $grade = __( 'Excellent', 'wp-pugmill' ); $color = '#46b450'; }
+	elseif ( $score >= 70 ) { $grade = __( 'Good', 'wp-pugmill' );      $color = '#00a0d2'; }
+	elseif ( $score >= 40 ) { $grade = __( 'Fair', 'wp-pugmill' );      $color = '#ffb900'; }
+	else                    { $grade = __( 'Poor', 'wp-pugmill' );      $color = '#dc3232'; }
 
 	return array(
 		'score' => $score,
@@ -150,16 +265,14 @@ function wppugmill_health_score( $post_id ) {
 }
 
 /**
- * Register the AEO Health meta box.
+ * Register the AEO Health meta box (classic editor only).
  *
- * Suppressed in the block editor — the Gutenberg sidebar shows the score there.
+ * Suppressed in the block editor — the Gutenberg sidebar shows the score.
  */
 function wppugmill_add_health_meta_box() {
-	// Gutenberg sidebar includes the health score — skip classic meta box.
 	if ( wppugmill_is_block_editor() ) {
 		return;
 	}
-
 	$post_types = get_post_types( array( 'public' => true ) );
 	add_meta_box(
 		'wppugmill_health',
@@ -173,7 +286,7 @@ function wppugmill_add_health_meta_box() {
 add_action( 'add_meta_boxes', 'wppugmill_add_health_meta_box' );
 
 /**
- * Render the AEO Health meta box.
+ * Render the AEO Health meta box (classic editor).
  */
 function wppugmill_render_health_meta_box( $post ) {
 	$health = wppugmill_health_score( $post->ID );
@@ -232,14 +345,12 @@ function wppugmill_render_health_meta_box( $post ) {
 			</p>
 		<?php elseif ( $score < 100 && 'free' === $mode ) : ?>
 			<p style="margin:12px 0 0; font-size:11px; color:#666; text-align:center;">
-				<?php
-				printf(
+				<?php printf(
 					'<a href="%1$s" target="_blank">%2$s</a> %3$s',
 					esc_url( 'https://wppugmill.com/pricing' ),
 					esc_html__( 'Get WP Pugmill Pro', 'wp-pugmill' ),
 					esc_html__( 'to auto-complete these fields.', 'wp-pugmill' )
-				);
-				?>
+				); ?>
 			</p>
 		<?php endif; ?>
 
