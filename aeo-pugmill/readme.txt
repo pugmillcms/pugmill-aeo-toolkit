@@ -4,7 +4,7 @@ Tags: aeo, answer engine optimization, ai, structured data, bot analytics, llms-
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.3.0
+Stable tag: 1.3.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -164,6 +164,12 @@ Plus: llms.txt, per-post AEO markdown endpoints, and a bot analytics dashboard s
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.3.1 =
+* **Audit AEO**: Missing field tags (Summary, Q&A, Entities, Keywords) are now clickable generate buttons for any user with an API key. Generated content is saved directly to post meta — no post editor visit required.
+* **Audit AEO**: Generate All (Pro) also autosaves to post meta immediately. Status text simplified to "✓ Generated".
+* **AI Provider**: Save Changes button is disabled on page load when a key is already stored; re-enables when the user types a new key, changes provider, or changes rate limit — prevents accidental masked-value submission.
+* **Fix**: Doubled "AEO Pugmill" in Pro license strings corrected across settings page and AI content handlers.
 
 = 1.3.0 =
 * **Rename**: Plugin fully renamed from "WP Pugmill" to "AEO Pugmill" — all PHP functions, option keys, AJAX actions, meta keys, and JS constants updated to aeopugmill_ prefix. Clarifies the plugin's exclusive focus on Answer Engine Optimization.
