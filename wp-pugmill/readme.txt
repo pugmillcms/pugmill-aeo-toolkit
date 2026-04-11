@@ -4,7 +4,7 @@ Tags: aeo, answer engine optimization, ai, structured data, bot analytics, llms-
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.2.16
+Stable tag: 1.2.17
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -164,6 +164,9 @@ Plus: llms.txt, per-post AEO markdown endpoints, and a bot analytics dashboard s
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.2.17 =
+* **Bug fix**: Audit AEO tab showed "No published posts found." — ORDER BY clause referenced alias `total_score` but SELECT used `total_score_raw`, causing MySQL to silently return no rows. Fixed alias references in both sort branches.
 
 = 1.2.16 =
 * **Audit AEO tab**: Removed site-wide backfill button and yellow banner — score calculation now runs only for the posts visible on the current page.

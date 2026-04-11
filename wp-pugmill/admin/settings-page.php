@@ -3502,10 +3502,10 @@ function wppugmill_render_settings_page() {
 		// Default "opportunity" sort: content-ready posts first, lowest AEO score within that.
 		// Score sort: order by total AEO score only.
 		if ( 'score' === $orderby ) {
-			$order_clause = "total_score {$order}";
+			$order_clause = "total_score_raw {$order}";
 		} else {
-			// Opportunity: content_score desc (fixed), total_score within that follows $order.
-			$order_clause = "content_score DESC, total_score {$order}";
+			// Opportunity: content_score desc (fixed), total_score_raw within that follows $order.
+			$order_clause = "content_score DESC, total_score_raw {$order}";
 		}
 
 		// ── Base URL for sorting/pagination links ─────────────────────────────────
