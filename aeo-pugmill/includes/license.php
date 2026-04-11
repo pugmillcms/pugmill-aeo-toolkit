@@ -118,7 +118,7 @@ function aeopugmill_validate_license_remote() {
 			'expired'      => __( 'License has expired. Please renew to continue.', 'aeo-pugmill' ),
 			'domain_limit' => sprintf(
 				/* translators: %d: number of allowed sites */
-				__( 'Domain limit reached. This license covers %d sites.', 'aeo-pugmill' ),
+				__( 'You\'ve reached the %d-site limit for this license. Remove it from another site first.', 'aeo-pugmill' ),
 				intval( $body['sites_allowed'] ?? 3 )
 			),
 		);

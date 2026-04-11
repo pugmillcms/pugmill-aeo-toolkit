@@ -4,7 +4,7 @@ Tags: aeo, answer engine optimization, ai, structured data, bot analytics, llms-
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.3.1
+Stable tag: 1.3.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -164,6 +164,10 @@ Plus: llms.txt, per-post AEO markdown endpoints, and a bot analytics dashboard s
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.3.2 =
+* **AI Provider**: Save Changes button is now disabled until a provider is selected (required field). A hint message prompts the user to select a provider first, preventing silent failures from submitting a key with no provider set.
+* **License**: When activating a license on a site that exceeds the plan's site limit, the error now reads "You've reached the X-site limit for this license. Remove it from another site first." instead of the generic "Invalid license key."
 
 = 1.3.1 =
 * **Audit AEO**: Missing field tags (Summary, Q&A, Entities, Keywords) are now clickable generate buttons for any user with an API key. Generated content is saved directly to post meta — no post editor visit required.
