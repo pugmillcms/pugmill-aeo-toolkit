@@ -1380,7 +1380,9 @@ function wppugmill_render_settings_page() {
 					<label style="display:flex; align-items:center; gap:5px; font-size:12px; cursor:pointer; margin:0;">
 						<input type="hidden" name="<?php echo esc_attr( $row['option'] ); ?>" value="0">
 						<input type="checkbox" name="<?php echo esc_attr( $row['option'] ); ?>" value="1"<?php checked( 1, $row['current_val'] ); ?> style="margin:0;">
-						<?php esc_html_e( 'Disable', 'wp-pugmill' ); ?>
+						<?php echo $has_seo_plugin
+							? esc_html( sprintf( /* translators: %s: SEO plugin name e.g. "Yoast SEO" */ __( 'Let %s handle this', 'wp-pugmill' ), wppugmill_seo_plugin_names() ) )
+							: esc_html__( 'Disable', 'wp-pugmill' ); ?>
 					</label>
 				</div>
 			</td>
@@ -2101,6 +2103,24 @@ function wppugmill_render_settings_page() {
 		$donut_top_pct   = ( ! empty( $donut_topbots ) && $donut_top_grand > 0 ) ? (int) round( $donut_topbots[0]['value'] / $donut_top_grand * 100 ) : 0;
 		$donut_top_short = ! empty( $donut_topbots ) ? preg_replace( '/\s*\/.*$/', '', $donut_topbots[0]['label'] ) : '';
 		?>
+
+		<?php if ( 0 === $total ) : ?>
+		<!-- ── Empty state — no bot visits recorded yet ── -->
+		<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:28px 32px; margin:24px 0; display:flex; align-items:flex-start; gap:20px;">
+			<div style="font-size:36px; line-height:1; flex-shrink:0;">👁</div>
+			<div>
+				<h3 style="margin:0 0 8px; font-size:15px; font-weight:600; color:#1d2327;">
+					<?php esc_html_e( 'Waiting for your first bot visit', 'wp-pugmill' ); ?>
+				</h3>
+				<p style="margin:0 0 10px; color:#555; font-size:14px; line-height:1.6;">
+					<?php esc_html_e( 'AI crawlers, search bots, and SEO tools visit most websites within hours to days of going live. As they arrive, WP Pugmill logs each visit and this dashboard will fill with data — which bots showed up, how often, which pages and AEO resources they fetched.', 'wp-pugmill' ); ?>
+				</p>
+				<p style="margin:0; color:#888; font-size:13px; line-height:1.5;">
+					<?php esc_html_e( 'Nothing to configure — tracking is automatic. Check back after your site receives some traffic.', 'wp-pugmill' ); ?>
+				</p>
+			</div>
+		</div>
+		<?php endif; ?>
 
 		<!-- ── 3-column Summary Row: Bot Activity | AEO Content Coverage | AEO Infrastructure ── -->
 		<style>

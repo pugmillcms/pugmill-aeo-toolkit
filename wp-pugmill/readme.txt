@@ -4,7 +4,7 @@ Tags: aeo, answer engine optimization, ai, structured data, bot analytics, llms-
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.2.8
+Stable tag: 1.2.9
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -164,6 +164,11 @@ Plus: llms.txt, per-post AEO markdown endpoints, and a bot analytics dashboard s
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.2.9 =
+* **Posts list (edit.php)**: Fixed Title column collapsing to near-zero width — added min-width floor to prevent AEO Score column from squashing it.
+* **Compatibility tab**: Checkbox label now reads "Let [plugin] handle this" when an SEO plugin is detected, instead of the generic "Disable".
+* **Bot Analytics**: Added empty state banner explaining the dashboard fills with data as bots visit the site.
 
 = 1.2.8 =
 * **Settings — AI Provider**: Test Connection button moved inline to the right of the API Key field for faster access.
