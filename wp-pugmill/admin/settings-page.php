@@ -57,19 +57,19 @@ function wppugmill_get_compatibility_data() {
 	$llms_plugins = array(
 		'llms-txt/llms-txt.php'               => array(
 			'name'        => 'LLMs.txt',
-			'instruction' => __( 'Deactivate the LLMs.txt plugin so WP Pugmill can serve /llms.txt with your full AEO metadata.', 'wp-pugmill' ),
+			'instruction' => __( 'If you want WP Pugmill to serve your AEO-enriched /llms.txt — with summaries, Q&A pairs, and entity data — deactivate the LLMs.txt plugin.', 'wp-pugmill' ),
 		),
 		'llmstxt/llmstxt.php'                 => array(
 			'name'        => 'LLMs.txt',
-			'instruction' => __( 'Deactivate the LLMs.txt plugin so WP Pugmill can serve /llms.txt with your full AEO metadata.', 'wp-pugmill' ),
+			'instruction' => __( 'If you want WP Pugmill to serve your AEO-enriched /llms.txt — with summaries, Q&A pairs, and entity data — deactivate the LLMs.txt plugin.', 'wp-pugmill' ),
 		),
 		'ai-llms-txt/ai-llms-txt.php'         => array(
 			'name'        => 'AI LLMs.txt',
-			'instruction' => __( 'Deactivate the AI LLMs.txt plugin so WP Pugmill can serve /llms.txt with your full AEO metadata.', 'wp-pugmill' ),
+			'instruction' => __( 'If you want WP Pugmill to serve your AEO-enriched /llms.txt — with summaries, Q&A pairs, and entity data — deactivate the AI LLMs.txt plugin.', 'wp-pugmill' ),
 		),
 		'llms-txt-for-wp/llms-txt-for-wp.php' => array(
 			'name'        => 'LLMs.txt for WP',
-			'instruction' => __( 'Deactivate the LLMs.txt for WP plugin so WP Pugmill can serve /llms.txt with your full AEO metadata.', 'wp-pugmill' ),
+			'instruction' => __( 'If you want WP Pugmill to serve your AEO-enriched /llms.txt — with summaries, Q&A pairs, and entity data — deactivate the LLMs.txt for WP plugin.', 'wp-pugmill' ),
 		),
 	);
 	foreach ( $llms_plugins as $slug => $info ) {
@@ -118,7 +118,7 @@ function wppugmill_get_compatibility_data() {
 						/* translators: %s: plugin name */
 						'instruction' => sprintf(
 							/* translators: %s: SEO plugin name */
-							__( '%s is generating /llms.txt, but without your AEO metadata — summaries, Q&A pairs, and entity data. Find the llms.txt option in %s settings and disable it so WP Pugmill can serve the AEO-enriched version.', 'wp-pugmill' ),
+							__( 'If you want WP Pugmill to serve your AEO-enriched /llms.txt — with summaries, Q&A pairs, and entity data — disable the llms.txt feature in %2$s settings. Right now %1$s is generating it without that metadata.', 'wp-pugmill' ),
 							$plugin_name,
 							$plugin_name
 						),
@@ -136,7 +136,7 @@ function wppugmill_get_compatibility_data() {
 	$sitemap_plugins = array(
 		'jetpack/jetpack.php'                         => array(
 			'name'        => 'Jetpack',
-			'instruction' => __( 'Jetpack\'s XML Sitemaps module conflicts with WP Pugmill\'s sitemap. Turn off XML Sitemaps in Jetpack → Settings → Traffic so WP Pugmill can serve /sitemap.xml.', 'wp-pugmill' ),
+			'instruction' => __( 'If you want WP Pugmill to serve /sitemap.xml, turn off XML Sitemaps in Jetpack → Settings → Traffic.', 'wp-pugmill' ),
 			'module_check' => function() {
 				// Only flag Jetpack if its sitemap module is actually active.
 				return class_exists( 'Jetpack' ) && method_exists( 'Jetpack', 'is_module_active' )
@@ -146,27 +146,27 @@ function wppugmill_get_compatibility_data() {
 		),
 		'wordpress-seo/wp-seo.php'                    => array(
 			'name'        => 'Yoast SEO',
-			'instruction' => __( 'Turn off XML Sitemaps in Yoast SEO → Features so WP Pugmill can serve /sitemap.xml.', 'wp-pugmill' ),
+			'instruction' => __( 'If you want WP Pugmill to serve /sitemap.xml, turn off XML Sitemaps in Yoast SEO → Features.', 'wp-pugmill' ),
 		),
 		'seo-by-rank-math/rank-math.php'              => array(
 			'name'        => 'Rank Math SEO',
-			'instruction' => __( 'Disable the Sitemap module in Rank Math → Dashboard → Modules so WP Pugmill can serve /sitemap.xml.', 'wp-pugmill' ),
+			'instruction' => __( 'If you want WP Pugmill to serve /sitemap.xml, disable the Sitemap module in Rank Math → Dashboard → Modules.', 'wp-pugmill' ),
 		),
 		'all-in-one-seo-pack/all_in_one_seo_pack.php' => array(
 			'name'        => 'All in One SEO',
-			'instruction' => __( 'Turn off XML Sitemap in All in One SEO → Sitemaps so WP Pugmill can serve /sitemap.xml.', 'wp-pugmill' ),
+			'instruction' => __( 'If you want WP Pugmill to serve /sitemap.xml, turn off XML Sitemap in All in One SEO → Sitemaps.', 'wp-pugmill' ),
 		),
 		'google-sitemap-generator/sitemap.php'        => array(
 			'name'        => 'Google XML Sitemaps',
-			'instruction' => __( 'Deactivate the Google XML Sitemaps plugin so WP Pugmill can serve /sitemap.xml.', 'wp-pugmill' ),
+			'instruction' => __( 'If you want WP Pugmill to serve /sitemap.xml, deactivate the Google XML Sitemaps plugin.', 'wp-pugmill' ),
 		),
 		'xml-sitemap-feed/xml-sitemap.php'            => array(
 			'name'        => 'XML Sitemap & Google News',
-			'instruction' => __( 'Deactivate the XML Sitemap & Google News plugin so WP Pugmill can serve /sitemap.xml.', 'wp-pugmill' ),
+			'instruction' => __( 'If you want WP Pugmill to serve /sitemap.xml, deactivate the XML Sitemap & Google News plugin.', 'wp-pugmill' ),
 		),
 		'wp-sitemap-page/wp-sitemap-page.php'         => array(
 			'name'        => 'WP Sitemap Page',
-			'instruction' => __( 'Deactivate the WP Sitemap Page plugin so WP Pugmill can serve /sitemap.xml.', 'wp-pugmill' ),
+			'instruction' => __( 'If you want WP Pugmill to serve /sitemap.xml, deactivate the WP Sitemap Page plugin.', 'wp-pugmill' ),
 		),
 	);
 	foreach ( $sitemap_plugins as $slug => $info ) {
@@ -189,7 +189,7 @@ function wppugmill_get_compatibility_data() {
 	$robots_plugins = array(
 		'jetpack/jetpack.php'                         => array(
 			'name'        => 'Jetpack',
-			'instruction' => __( 'Jetpack\'s XML Sitemaps module adds a Sitemap: line to robots.txt, which duplicates WP Pugmill\'s addition. Turn off XML Sitemaps in Jetpack → Settings → Traffic to remove the duplicate.', 'wp-pugmill' ),
+			'instruction' => __( 'If you want WP Pugmill to control the Sitemap: line in robots.txt, turn off XML Sitemaps in Jetpack → Settings → Traffic. If you\'d rather keep Jetpack handling it, disable WP Pugmill\'s robots.txt additions below.', 'wp-pugmill' ),
 			// Only warn when the sitemaps module is actually active — Jetpack itself does not add any robots.txt entries otherwise.
 			'module_check' => function() {
 				return class_exists( 'Jetpack' ) && method_exists( 'Jetpack', 'is_module_active' )
@@ -199,15 +199,15 @@ function wppugmill_get_compatibility_data() {
 		),
 		'wordpress-seo/wp-seo.php'                    => array(
 			'name'        => 'Yoast SEO',
-			'instruction' => __( 'Yoast SEO adds its own Sitemap: directive to robots.txt. Disable WP Pugmill\'s robots.txt additions below to avoid duplicates, or turn off Yoast\'s sitemap feature.', 'wp-pugmill' ),
+			'instruction' => __( 'If you want WP Pugmill to control the Sitemap: line in robots.txt, turn off XML Sitemaps in Yoast SEO → Features. If you\'d rather keep Yoast handling it, disable WP Pugmill\'s robots.txt additions below.', 'wp-pugmill' ),
 		),
 		'seo-by-rank-math/rank-math.php'              => array(
 			'name'        => 'Rank Math SEO',
-			'instruction' => __( 'Rank Math adds its own Sitemap: directive to robots.txt. Disable WP Pugmill\'s robots.txt additions below to avoid duplicates, or turn off Rank Math\'s sitemap module.', 'wp-pugmill' ),
+			'instruction' => __( 'If you want WP Pugmill to control the Sitemap: line in robots.txt, disable the Sitemap module in Rank Math → Dashboard → Modules. If you\'d rather keep Rank Math handling it, disable WP Pugmill\'s robots.txt additions below.', 'wp-pugmill' ),
 		),
 		'all-in-one-seo-pack/all_in_one_seo_pack.php' => array(
 			'name'        => 'All in One SEO',
-			'instruction' => __( 'All in One SEO adds its own directives to robots.txt. Disable WP Pugmill\'s robots.txt additions below to avoid duplicates.', 'wp-pugmill' ),
+			'instruction' => __( 'If you want WP Pugmill to control the Sitemap: line in robots.txt, disable the sitemap feature in All in One SEO → Sitemaps. If you\'d rather keep All in One SEO handling it, disable WP Pugmill\'s robots.txt additions below.', 'wp-pugmill' ),
 		),
 	);
 	foreach ( $robots_plugins as $slug => $info ) {
@@ -651,8 +651,8 @@ function wppugmill_render_settings_page() {
 
 					$section( __( 'Full AI generation — WP Pugmill Pro license required', 'wp-pugmill' ) );
 					$row( __( 'Generate All (one-click, 7 steps)', 'wp-pugmill' ),           false, true );
-					$row( __( 'Generate SEO/AEO Title & Description', 'wp-pugmill' ),            false, true );
-					$row( __( 'Schema AI Type (Article, HowTo, Product, Event, LocalBusiness, VideoObject, Review)', 'wp-pugmill' ), false, true );
+					$row( __( 'Generate SEO Title & Meta Description', 'wp-pugmill' ),           false, true );
+					$row( __( 'AI Schema Type Detection (Article, HowTo, Product, Event & more)', 'wp-pugmill' ), false, true );
 					$row( __( 'Tone Check', 'wp-pugmill' ),                                  false, true );
 					$row( __( 'Topic Focus & Refine', 'wp-pugmill' ),                        false, true );
 					$row( __( 'Internal Links', 'wp-pugmill' ),                              false, true );
@@ -1211,7 +1211,7 @@ function wppugmill_render_settings_page() {
 							placeholder="https://twitter.com/yourhandle&#10;https://linkedin.com/in/yourprofile&#10;https://yoursite.com/about"
 						><?php echo esc_textarea( get_option( 'wppugmill_author_same_as', '' ) ); ?></textarea>
 						<p class="description" style="max-width:600px;">
-							<?php esc_html_e( 'One URL per line. Added to the author\'s Person schema as sameAs — linking your identity across the web helps AI engines establish entity authority.', 'wp-pugmill' ); ?>
+							<?php esc_html_e( 'One URL per line. These URLs are not displayed on your site — they are embedded in your author\'s JSON-LD Person schema as sameAs links. This tells AI engines and search crawlers that the person writing this content is the same entity as the profiles at those URLs, helping establish authorship authority for AEO.', 'wp-pugmill' ); ?>
 						</p>
 					</td>
 				</tr>
@@ -1302,21 +1302,18 @@ function wppugmill_render_settings_page() {
 				'desc'        => __( '<meta name="description">', 'wp-pugmill' ),
 				'option'      => 'wppugmill_disable_seo_meta',
 				'current_val' => $disable_seo_meta,
-				// Both meta desc and OG/Twitter are gated by wppugmill_disable_seo_meta
+				'group_size'  => 3,
 			),
 			array(
-				'label'       => __( 'Open Graph Tags', 'wp-pugmill' ),
-				'desc'        => __( 'og:title, og:description, og:image', 'wp-pugmill' ),
-				'option'      => 'wppugmill_disable_seo_meta',  // same option controls all meta
-				'current_val' => $disable_seo_meta,
-				'linked'      => true, // label-only row, no extra checkbox
+				'label'  => __( 'Open Graph Tags', 'wp-pugmill' ),
+				'desc'   => __( 'og:title, og:description, og:image', 'wp-pugmill' ),
+				'linked' => true,
 			),
 			array(
-				'label'       => __( 'Twitter / X Cards', 'wp-pugmill' ),
-				'desc'        => __( 'twitter:card, twitter:title, twitter:description', 'wp-pugmill' ),
-				'option'      => 'wppugmill_disable_seo_meta',
-				'current_val' => $disable_seo_meta,
-				'linked'      => true,
+				'label'     => __( 'Twitter / X Cards', 'wp-pugmill' ),
+				'desc'      => __( 'twitter:card, twitter:title, twitter:description', 'wp-pugmill' ),
+				'linked'    => true,
+				'group_end' => true,
 			),
 			array(
 				'label'       => __( 'Article JSON-LD', 'wp-pugmill' ),
@@ -1333,30 +1330,31 @@ function wppugmill_render_settings_page() {
 		);
 		?>
 		<?php
-		$first_linked_group = '';
 		foreach ( $overlap_rows as $row ) :
-			$is_linked     = ! empty( $row['linked'] );
-			$is_disabled   = (bool) $row['current_val'];
-			$status_style  = $is_disabled ? 'color:#6b7280; text-decoration:line-through;' : 'color:#111827;';
-			$badge_text    = $is_disabled
+			$is_linked    = ! empty( $row['linked'] );
+			$is_disabled  = ! $is_linked && (bool) $row['current_val'];
+			$status_style = $is_disabled ? 'color:#6b7280; text-decoration:line-through;' : 'color:#111827;';
+			$rowspan      = ! empty( $row['group_size'] ) ? ' rowspan="' . (int) $row['group_size'] . '"' : '';
+			$badge_text   = $is_disabled
 				? esc_html__( 'Suppressed', 'wp-pugmill' )
 				: ( $has_seo_plugin ? esc_html__( 'Active — overlap', 'wp-pugmill' ) : esc_html__( 'Active', 'wp-pugmill' ) );
-			$badge_color   = $is_disabled
+			$badge_color  = $is_disabled
 				? '#6b7280'
 				: ( $has_seo_plugin ? '#d97706' : '#16a34a' );
+			$in_group      = ! empty( $row['group_size'] ) || $is_linked;
+		$close_group   = ! empty( $row['group_end'] );
+		$border_bottom = ( $in_group && ! $close_group ) ? 'border-bottom:none;' : 'border-bottom:1px solid #f3f4f6;';
 		?>
-		<tr style="border-bottom:1px solid #f3f4f6;">
+		<tr style="<?php echo esc_attr( $border_bottom ); ?>">
 			<td style="padding:10px 0;">
 				<div style="font-size:13px; font-weight:600; <?php echo $status_style; // phpcs:ignore ?>"><?php echo esc_html( $row['label'] ); ?></div>
 				<div style="font-size:11px; color:#9ca3af; font-family:monospace;"><?php echo esc_html( $row['desc'] ); ?></div>
 			</td>
-			<td style="padding:10px 0;">
+			<?php if ( ! $is_linked ) : ?>
+			<td style="padding:10px 0; vertical-align:middle;"<?php echo $rowspan; // phpcs:ignore ?>>
 				<?php echo $plugin_badge; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 			</td>
-			<td style="padding:10px 0;">
-				<?php if ( $is_linked ) : ?>
-				<span style="font-size:12px; color:#6b7280; font-style:italic;"><?php esc_html_e( '(same toggle as above)', 'wp-pugmill' ); ?></span>
-				<?php else : ?>
+			<td style="padding:10px 0; vertical-align:middle;"<?php echo $rowspan; // phpcs:ignore ?>>
 				<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
 					<span style="font-size:11px; font-weight:600; color:<?php echo esc_attr( $badge_color ); ?>;"><?php echo $badge_text; // phpcs:ignore ?></span>
 					<label style="display:flex; align-items:center; gap:5px; font-size:12px; cursor:pointer; margin:0;">
@@ -1365,8 +1363,8 @@ function wppugmill_render_settings_page() {
 						<?php esc_html_e( 'Disable', 'wp-pugmill' ); ?>
 					</label>
 				</div>
-				<?php endif; ?>
 			</td>
+			<?php endif; ?>
 		</tr>
 		<?php endforeach; ?>
 		</tbody>
@@ -1755,21 +1753,28 @@ function wppugmill_render_settings_page() {
 				 AND p.post_type IN ('post','page')
 				 AND LENGTH(pm.meta_value) > 10"
 			);
-			$cov_field_summary   = 0;
-			$cov_field_questions = 0;
-			$cov_field_entities  = 0;
-			$cov_field_keywords  = 0;
+			$cov_field_summary      = 0;
+			$cov_field_summary_long = 0;
+			$cov_field_questions    = 0;
+			$cov_field_questions_3  = 0;
+			$cov_field_entities     = 0;
+			$cov_field_keywords     = 0;
 			foreach ( (array) $cov_rows as $cov_row ) {
 				$aeo = json_decode( $cov_row->meta_value, true );
 				if ( ! is_array( $aeo ) ) { continue; }
-				$has_summary   = ! empty( $aeo['summary'] );
-				$has_questions = ! empty( $aeo['questions'] );
-				$has_entities  = ! empty( $aeo['entities'] );
-				$has_keywords  = ! empty( $aeo['keywords'] );
-				if ( $has_summary )   { $cov_field_summary++; }
-				if ( $has_questions ) { $cov_field_questions++; }
-				if ( $has_entities )  { $cov_field_entities++; }
-				if ( $has_keywords )  { $cov_field_keywords++; }
+				$has_summary      = ! empty( $aeo['summary'] );
+				$has_summary_long = $has_summary && strlen( trim( $aeo['summary'] ) ) >= 50;
+				$has_questions    = ! empty( $aeo['questions'] );
+				$qa_count         = $has_questions ? count( array_filter( (array) $aeo['questions'], function( $q ) { return ! empty( $q['q'] ) && ! empty( $q['a'] ); } ) ) : 0;
+				$has_questions_3  = $qa_count >= 3;
+				$has_entities     = ! empty( $aeo['entities'] );
+				$has_keywords     = ! empty( $aeo['keywords'] );
+				if ( $has_summary )      { $cov_field_summary++; }
+				if ( $has_summary_long ) { $cov_field_summary_long++; }
+				if ( $has_questions )    { $cov_field_questions++; }
+				if ( $has_questions_3 )  { $cov_field_questions_3++; }
+				if ( $has_entities )     { $cov_field_entities++; }
+				if ( $has_keywords )     { $cov_field_keywords++; }
 				$fields_set = (int) $has_summary + (int) $has_questions + (int) $has_entities + (int) $has_keywords;
 				if ( 4 === $fields_set ) {
 					$cov_full++;
@@ -1784,6 +1789,28 @@ function wppugmill_render_settings_page() {
 		$cov_full_pct    = $cov_total > 0 ? (int) round( $cov_full    / $cov_total * 100 ) : 0;
 		$cov_partial_pct = $cov_total > 0 ? (int) round( $cov_partial / $cov_total * 100 ) : 0;
 		$cov_none_pct    = $cov_total > 0 ? (int) round( $cov_none    / $cov_total * 100 ) : 0;
+
+		// ── SEO coverage (Tier 2) ──────────────────────────────────────────────────
+		$cov_field_seo_title = 0;
+		$cov_field_seo_desc  = 0;
+		if ( $cov_total > 0 ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$seo_rows = $wpdb->get_results(
+				"SELECT pm.meta_value
+				 FROM {$wpdb->postmeta} pm
+				 INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id
+				 WHERE pm.meta_key = '_wppugmill_seo'
+				 AND p.post_status = 'publish'
+				 AND p.post_type IN ('post','page')
+				 AND LENGTH(pm.meta_value) > 10"
+			);
+			foreach ( (array) $seo_rows as $seo_row ) {
+				$seo = json_decode( $seo_row->meta_value, true );
+				if ( ! is_array( $seo ) ) { continue; }
+				if ( ! empty( trim( $seo['title'] ?? '' ) ) )     { $cov_field_seo_title++; }
+				if ( ! empty( trim( $seo['meta_desc'] ?? '' ) ) ) { $cov_field_seo_desc++; }
+			}
+		}
 
 		// Fetch network averages if opted in and enough sites are contributing
 		$network_avgs          = array();         // bot → total 30-day avg
@@ -2179,18 +2206,33 @@ function wppugmill_render_settings_page() {
 			<!-- Col 2: AEO Content Coverage ─────────────────── -->
 			<div class="pugmill-card">
 				<h3><?php esc_html_e( 'AEO Content Coverage', 'wp-pugmill' ); ?></h3>
-				<p class="card-sub"><?php esc_html_e( 'How thoroughly your posts are enriched with AEO content fields.', 'wp-pugmill' ); ?></p>
-				<div style="display:flex; flex-direction:column; gap:12px; margin-top:4px;">
+				<p class="card-sub"><?php esc_html_e( 'AEO and SEO coverage across your published posts.', 'wp-pugmill' ); ?></p>
+				<div style="display:flex; flex-direction:column; gap:10px; margin-top:4px;">
 					<?php
 					$radar_fields = array(
-						array( 'label' => __( 'AI Summary',     'wp-pugmill' ), 'net_key' => 'summary',   'count' => $cov_field_summary,   'pct' => ( $cov_total > 0 ? (int) round( $cov_field_summary   / $cov_total * 100 ) : 0 ) ),
-						array( 'label' => __( 'Q&A Pairs',      'wp-pugmill' ), 'net_key' => 'questions', 'count' => $cov_field_questions, 'pct' => ( $cov_total > 0 ? (int) round( $cov_field_questions / $cov_total * 100 ) : 0 ) ),
-						array( 'label' => __( 'Named Entities', 'wp-pugmill' ), 'net_key' => 'entities',  'count' => $cov_field_entities,  'pct' => ( $cov_total > 0 ? (int) round( $cov_field_entities  / $cov_total * 100 ) : 0 ) ),
-						array( 'label' => __( 'Keywords',       'wp-pugmill' ), 'net_key' => 'keywords',  'count' => $cov_field_keywords,  'pct' => ( $cov_total > 0 ? (int) round( $cov_field_keywords  / $cov_total * 100 ) : 0 ) ),
+						array( 'section' => __( 'AEO Fields', 'wp-pugmill' ), 'first' => true ),
+						array( 'label' => __( 'AI Summary',          'wp-pugmill' ), 'net_key' => 'summary',   'count' => $cov_field_summary,      'pct' => ( $cov_total > 0 ? (int) round( $cov_field_summary      / $cov_total * 100 ) : 0 ) ),
+						array( 'label' => __( 'Summary quality (50+ chars)', 'wp-pugmill' ), 'net_key' => '', 'count' => $cov_field_summary_long, 'pct' => ( $cov_total > 0 ? (int) round( $cov_field_summary_long / $cov_total * 100 ) : 0 ) ),
+						array( 'label' => __( 'Q&A Pairs (1+)',      'wp-pugmill' ), 'net_key' => 'questions', 'count' => $cov_field_questions,    'pct' => ( $cov_total > 0 ? (int) round( $cov_field_questions    / $cov_total * 100 ) : 0 ) ),
+						array( 'label' => __( 'Q&A Pairs (3+)',      'wp-pugmill' ), 'net_key' => '',          'count' => $cov_field_questions_3,  'pct' => ( $cov_total > 0 ? (int) round( $cov_field_questions_3  / $cov_total * 100 ) : 0 ) ),
+						array( 'label' => __( 'Named Entities',      'wp-pugmill' ), 'net_key' => 'entities',  'count' => $cov_field_entities,     'pct' => ( $cov_total > 0 ? (int) round( $cov_field_entities     / $cov_total * 100 ) : 0 ) ),
+						array( 'label' => __( 'Keywords (5+)',        'wp-pugmill' ), 'net_key' => 'keywords',  'count' => $cov_field_keywords,     'pct' => ( $cov_total > 0 ? (int) round( $cov_field_keywords     / $cov_total * 100 ) : 0 ) ),
+						array( 'section' => __( 'SEO Fields', 'wp-pugmill' ) ),
+						array( 'label' => __( 'SEO Title',           'wp-pugmill' ), 'net_key' => '',          'count' => $cov_field_seo_title,    'pct' => ( $cov_total > 0 ? (int) round( $cov_field_seo_title    / $cov_total * 100 ) : 0 ) ),
+						array( 'label' => __( 'Meta Description',    'wp-pugmill' ), 'net_key' => '',          'count' => $cov_field_seo_desc,     'pct' => ( $cov_total > 0 ? (int) round( $cov_field_seo_desc     / $cov_total * 100 ) : 0 ) ),
 					);
 					foreach ( $radar_fields as $rf ) :
+						if ( isset( $rf['section'] ) ) :
+							$border = empty( $rf['first'] ) ? 'margin-top:4px; padding-top:8px; border-top:1px solid #f0f0f0;' : '';
+							?>
+							<div style="font-size:10px; font-weight:700; color:#7c3aed; text-transform:uppercase; letter-spacing:.06em; <?php echo esc_attr( $border ); ?>">
+								<?php echo esc_html( $rf['section'] ); ?>
+							</div>
+							<?php
+							continue;
+						endif;
 						$rc      = $rf['pct'] >= 75 ? '#16a34a' : ( $rf['pct'] >= 40 ? '#d97706' : '#e11d48' );
-						$net_pct = ( ! empty( $network_coverage['fields'][ $rf['net_key'] ]['pct'] ) ) ? (int) $network_coverage['fields'][ $rf['net_key'] ]['pct'] : null;
+						$net_pct = ( ! empty( $rf['net_key'] ) && ! empty( $network_coverage['fields'][ $rf['net_key'] ]['pct'] ) ) ? (int) $network_coverage['fields'][ $rf['net_key'] ]['pct'] : null;
 					?>
 					<div>
 						<div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11px; margin-bottom:3px;">

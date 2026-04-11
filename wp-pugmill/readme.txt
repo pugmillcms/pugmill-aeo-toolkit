@@ -4,7 +4,7 @@ Tags: aeo, answer engine optimization, ai, structured data, bot analytics, llms-
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.2.5
+Stable tag: 1.2.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -164,6 +164,14 @@ Plus: llms.txt, per-post AEO markdown endpoints, and a bot analytics dashboard s
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.2.6 =
+* **Bot Analytics — AEO Content Coverage**: Expanded from 4 bars to 8 — now includes Summary quality (50+ chars), Q&A Pairs (3+), SEO Title, and Meta Description alongside the existing AEO fields. Grouped into AEO Fields and SEO Fields sections.
+* **Bot Analytics — AEO Content Coverage**: Card subtitle updated to reflect AEO and SEO coverage.
+* **Compatibility tab**: Meta Description, Open Graph Tags, and Twitter / X Cards rows now share a single checkbox with rowspan grouping — visually connected without redundant controls.
+* **Compatibility tab**: All conflict resolution instructions rewritten to lead with intent — "If you want WP Pugmill to serve X, do Y" — and robots.txt conflicts now present both resolution options explicitly.
+* **License tab — What's included**: Fixed "Generate SEO/AEO Title & Description" label to "Generate SEO Title & Meta Description". Tightened "Schema AI Type" row to "AI Schema Type Detection (Article, HowTo, Product, Event & more)".
+* **Author Social Profiles**: Help text rewritten to clarify these URLs are not displayed on the site — they are embedded in JSON-LD Person schema as sameAs links to establish authorship identity for AEO.
 
 = 1.2.5 =
 * **Bug fix**: Network category trend arrows (↑/↓ % network) in the Bot Benchmark quadrant grid were never displaying — the API returns category keys like "AI Answer Engine" but the plugin was looking up "ai". Fixed with a remapping layer.
