@@ -14,6 +14,7 @@ import { useSelect, useDispatch } from '@wordpress/data';
 import { useState, useCallback, useEffect } from '@wordpress/element';
 
 import { useAeoMeta }    from '../hooks';
+import { useSeoMeta }    from '../hooks';
 import { useSchemaData } from '../hooks';
 import { PugmillLogo }     from './Logo';
 import { SectionHeader }   from './SectionHeader';
@@ -143,7 +144,8 @@ function FeaturedImageAlt( { featuredImageId, initialAlt } ) {
 
 export function MainPanel() {
 	const { aeo, updateAeo, postId, meta, setMeta } = useAeoMeta();
-const { schema, updateSchema }                  = useSchemaData();
+	const { seo, updateSeo }                        = useSeoMeta();
+	const { schema, updateSchema }                  = useSchemaData();
 
 	const { resetEditorBlocks, editPost } = useDispatch( 'core/editor' );
 	const draftContent      = useSelect( ( s ) => s( 'core/editor' ).getEditedPostContent(), [] );
