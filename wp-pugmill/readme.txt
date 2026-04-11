@@ -4,7 +4,7 @@ Tags: aeo, answer engine optimization, ai, structured data, bot analytics, llms-
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.2.19
+Stable tag: 1.2.20
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -164,6 +164,9 @@ Plus: llms.txt, per-post AEO markdown endpoints, and a bot analytics dashboard s
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.2.20 =
+* **AI Provider**: Fixed Test Connection returning "invalid key" when the field showed the saved masked value. JS now tracks whether the field is dirty (user typed a new key) and only sends the field value when dirty. When pristine, the AJAX request omits api_key entirely and PHP uses the stored encrypted key directly — no fragile bullet-character detection needed.
 
 = 1.2.19 =
 * **Audit AEO tab**: Stored scores are never rendered in the initial page HTML. Every row always shows a placeholder on load; AJAX calculates all scores fresh using the same PHP logic as the post editor sidebar and replaces the placeholders. Eliminates stale/incorrect scores from previous installs appearing in the UI.

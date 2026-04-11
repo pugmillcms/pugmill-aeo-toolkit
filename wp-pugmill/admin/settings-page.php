@@ -785,9 +785,18 @@ function wppugmill_render_settings_page() {
 		</div><!-- /ai-provider card -->
 		<script>
 		(function() {
-			var btn    = document.getElementById( 'wppugmill-test-api-key' );
-			var status = document.getElementById( 'wppugmill-test-api-key-status' );
+			var btn      = document.getElementById( 'wppugmill-test-api-key' );
+			var status   = document.getElementById( 'wppugmill-test-api-key-status' );
+			var keyField = document.getElementById( 'wppugmill_ai_api_key' );
 			if ( ! btn ) { return; }
+
+			// Track whether the user has typed a new key since page load.
+			// Only send the field value if dirty — otherwise PHP uses the stored
+			// encrypted key directly, avoiding any fragile mask-detection logic.
+			var isDirty = false;
+			if ( keyField ) {
+				keyField.addEventListener( 'input', function() { isDirty = true; } );
+			}
 
 			btn.addEventListener( 'click', function() {
 				btn.disabled       = true;
@@ -798,8 +807,11 @@ function wppugmill_render_settings_page() {
 				var body = new URLSearchParams();
 				body.append( 'action', 'wppugmill_test_api_key' );
 				body.append( 'nonce',  <?php echo wp_json_encode( wp_create_nonce( 'wppugmill_test_api_key' ) ); ?> );
-				var keyField = document.getElementById( 'wppugmill_ai_api_key' );
-				if ( keyField && keyField.value ) {
+
+				// Only send the typed value when the user has actually changed the
+				// field. If pristine (showing the saved mask), omit api_key entirely
+				// so PHP falls back to the stored encrypted key — no mask detection needed.
+				if ( isDirty && keyField && keyField.value ) {
 					body.append( 'api_key', keyField.value );
 				}
 
