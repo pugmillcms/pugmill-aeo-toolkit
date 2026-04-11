@@ -327,51 +327,6 @@ function wppugmill_ajax_calculate_scores() {
 add_action( 'wp_ajax_wppugmill_calculate_scores', 'wppugmill_ajax_calculate_scores' );
 
 /**
- * AJAX — return next batch of up to 50 post IDs that have no stored score.
- *
- * Also returns the total remaining unscored count so the UI can show a counter.
- * The Audit tab calls this repeatedly until the response is empty.
- */
-function wppugmill_ajax_get_unscored_batch() {
-	check_ajax_referer( 'wppugmill_calculate_scores', 'nonce' );
-	if ( ! current_user_can( 'edit_posts' ) ) {
-		wp_send_json_error( array( 'message' => __( 'Insufficient permissions.', 'wp-pugmill' ) ), 403 );
-	}
-
-	global $wpdb;
-	$post_types = get_post_types( array( 'public' => true ), 'names' );
-	unset( $post_types['attachment'] );
-	$pt_in = implode( "','", array_map( 'esc_sql', array_keys( $post_types ) ) );
-
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared
-	$remaining = (int) $wpdb->get_var(
-		"SELECT COUNT( p.ID )
-		 FROM {$wpdb->posts} p
-		 LEFT JOIN {$wpdb->postmeta} ts ON ts.post_id = p.ID AND ts.meta_key = '_wppugmill_score'
-		 WHERE p.post_status = 'publish'
-		   AND p.post_type IN ('{$pt_in}')
-		   AND ts.meta_value IS NULL"
-	);
-
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared
-	$ids = $wpdb->get_col(
-		"SELECT p.ID
-		 FROM {$wpdb->posts} p
-		 LEFT JOIN {$wpdb->postmeta} ts ON ts.post_id = p.ID AND ts.meta_key = '_wppugmill_score'
-		 WHERE p.post_status = 'publish'
-		   AND p.post_type IN ('{$pt_in}')
-		   AND ts.meta_value IS NULL
-		 LIMIT 50"
-	);
-
-	wp_send_json_success( array(
-		'ids'       => array_map( 'absint', $ids ),
-		'remaining' => $remaining,
-	) );
-}
-add_action( 'wp_ajax_wppugmill_get_unscored_batch', 'wppugmill_ajax_get_unscored_batch' );
-
-/**
  * Register the AEO Health meta box (classic editor only).
  *
  * Suppressed in the block editor — the Gutenberg sidebar shows the score.

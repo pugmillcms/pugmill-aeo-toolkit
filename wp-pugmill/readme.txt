@@ -4,7 +4,7 @@ Tags: aeo, answer engine optimization, ai, structured data, bot analytics, llms-
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.2.15
+Stable tag: 1.2.16
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -164,6 +164,10 @@ Plus: llms.txt, per-post AEO markdown endpoints, and a bot analytics dashboard s
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.2.16 =
+* **Audit AEO tab**: Removed site-wide backfill button and yellow banner — score calculation now runs only for the posts visible on the current page.
+* **Scoring**: Removed unused wppugmill_get_unscored_batch AJAX handler.
 
 = 1.2.15 =
 * **Audit AEO tab**: Unscored rows now show pulsing grey placeholders on page load; scores are fetched via AJAX and populated in real time without a page reload.

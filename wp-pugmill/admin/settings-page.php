@@ -3531,17 +3531,6 @@ function wppugmill_render_settings_page() {
 			   AND p.post_type IN ('{$pt_in}')"
 		);
 
-		// ── Unscored count — how many posts site-wide have no stored score ───────
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared
-		$unscored_total = (int) $wpdb->get_var(
-			"SELECT COUNT( p.ID )
-			 FROM {$wpdb->posts} p
-			 LEFT JOIN {$wpdb->postmeta} ts ON ts.post_id = p.ID AND ts.meta_key = '_wppugmill_score'
-			 WHERE p.post_status = 'publish'
-			   AND p.post_type IN ('{$pt_in}')
-			   AND ts.meta_value IS NULL"
-		);
-
 		// ── Main query — stored meta only, no per-row recalculation ──────────────
 		// ts.meta_value kept raw (not COALESCE) so NULL = never scored vs 0 = scored.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared
@@ -3609,22 +3598,6 @@ function wppugmill_render_settings_page() {
 					<?php echo esc_html( $pt_label ); ?>
 				</a>
 				<?php endforeach; ?>
-			</div>
-			<?php endif; ?>
-
-			<?php if ( $unscored_total > 0 ) : ?>
-			<div id="pugmill-backfill-banner" style="display:flex; align-items:center; gap:12px; background:#fffbeb; border:1px solid #fde68a; border-radius:6px; padding:10px 16px; margin-bottom:16px; font-size:13px; color:#92400e;">
-				<span id="pugmill-backfill-msg">
-					<?php printf(
-						/* translators: %d: number of unscored posts */
-						esc_html( _n( '%d post not yet scored.', '%d posts not yet scored.', $unscored_total, 'wp-pugmill' ) ),
-						(int) $unscored_total
-					); ?>
-				</span>
-				<button type="button" id="pugmill-backfill-btn" class="button" style="flex-shrink:0;">
-					<?php esc_html_e( 'Calculate All Scores', 'wp-pugmill' ); ?>
-				</button>
-				<span id="pugmill-backfill-progress" style="font-size:12px; color:#b45309;"></span>
 			</div>
 			<?php endif; ?>
 
@@ -3808,74 +3781,6 @@ function wppugmill_render_settings_page() {
 				} )
 				.catch( function() {
 					if ( pageStatus ) pageStatus.textContent = '';
-				} );
-			}
-
-			// ── 2. Site-wide backfill ───────────────────────────────────────────────
-			var backfillBtn      = document.getElementById( 'pugmill-backfill-btn' );
-			var backfillMsg      = document.getElementById( 'pugmill-backfill-msg' );
-			var backfillProgress = document.getElementById( 'pugmill-backfill-progress' );
-			var backfillBanner   = document.getElementById( 'pugmill-backfill-banner' );
-
-			function runBackfillBatch() {
-				fetch( ajaxUrl, {
-					method:  'POST',
-					headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-					body:    new URLSearchParams( { action: 'wppugmill_get_unscored_batch', nonce: scoreNonce } ),
-				} )
-				.then( function( r ) { return r.json(); } )
-				.then( function( res ) {
-					if ( ! res.success || ! res.data.ids || res.data.ids.length === 0 ) {
-						// All done.
-						if ( backfillBanner ) backfillBanner.style.display = 'none';
-						if ( pageStatus ) {
-							pageStatus.textContent = '<?php echo esc_js( __( '✓ All scores up to date', 'wp-pugmill' ) ); ?>';
-							setTimeout( function() { pageStatus.textContent = ''; }, 3000 );
-						}
-						return;
-					}
-
-					var remaining = res.data.remaining;
-					if ( backfillMsg )      backfillMsg.textContent     = remaining + ' <?php echo esc_js( __( 'posts remaining…', 'wp-pugmill' ) ); ?>';
-					if ( backfillProgress ) backfillProgress.textContent = '<?php echo esc_js( __( 'Processing batch…', 'wp-pugmill' ) ); ?>';
-
-					// Calculate this batch.
-					var batchBody = new URLSearchParams( { action: 'wppugmill_calculate_scores', nonce: scoreNonce } );
-					res.data.ids.forEach( function( id ) { batchBody.append( 'post_ids[]', id ); } );
-
-					fetch( ajaxUrl, {
-						method:  'POST',
-						headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-						body:    batchBody.toString(),
-					} )
-					.then( function( r ) { return r.json(); } )
-					.then( function( calcRes ) {
-						if ( calcRes.success ) {
-							// Update any rows currently visible on this page.
-							Object.keys( calcRes.data ).forEach( function( postId ) {
-								var row = document.querySelector( 'tr[data-post-id="' + postId + '"]' );
-								if ( row ) applyScoreToRow( row, calcRes.data[ postId ] );
-							} );
-						}
-						if ( backfillProgress ) backfillProgress.textContent = '';
-						// Continue until empty.
-						runBackfillBatch();
-					} )
-					.catch( function() {
-						if ( backfillBtn )      backfillBtn.disabled    = false;
-						if ( backfillProgress ) backfillProgress.textContent = '<?php echo esc_js( __( 'Network error — try again.', 'wp-pugmill' ) ); ?>';
-					} );
-				} )
-				.catch( function() {
-					if ( backfillBtn )      backfillBtn.disabled    = false;
-					if ( backfillProgress ) backfillProgress.textContent = '<?php echo esc_js( __( 'Network error — try again.', 'wp-pugmill' ) ); ?>';
-				} );
-			}
-
-			if ( backfillBtn ) {
-				backfillBtn.addEventListener( 'click', function() {
-					backfillBtn.disabled = true;
-					runBackfillBatch();
 				} );
 			}
 
