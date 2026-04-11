@@ -4,7 +4,7 @@ Tags: aeo, answer engine optimization, ai, structured data, bot analytics, llms-
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.2.17
+Stable tag: 1.2.18
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -164,6 +164,12 @@ Plus: llms.txt, per-post AEO markdown endpoints, and a bot analytics dashboard s
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.2.18 =
+* **Audit AEO tab**: Scores now recalculated fresh for every visible row on page load via AJAX — same algorithm as the post editor sidebar, so scores always match.
+* **Audit AEO tab**: Default sort changed to newest-first (post date descending), matching the standard WordPress posts list. Score column remains sortable asc/desc.
+* **Audit AEO tab**: Removed "opportunity" sort — simpler is better; date + score covers the real use cases.
+* **Audit AEO tab**: Simplified query — removed content_score join since it is no longer used for sorting.
 
 = 1.2.17 =
 * **Bug fix**: Audit AEO tab showed "No published posts found." — ORDER BY clause referenced alias `total_score` but SELECT used `total_score_raw`, causing MySQL to silently return no rows. Fixed alias references in both sort branches.

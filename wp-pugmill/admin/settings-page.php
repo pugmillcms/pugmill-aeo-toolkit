@@ -3481,9 +3481,9 @@ function wppugmill_render_settings_page() {
 
 		// ── Sort params ───────────────────────────────────────────────────────────
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$orderby      = isset( $_GET['orderby'] ) && 'score' === $_GET['orderby'] ? 'score' : 'opportunity';
+		$orderby = isset( $_GET['orderby'] ) && 'score' === $_GET['orderby'] ? 'score' : 'date';
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$order        = isset( $_GET['order'] ) && 'desc' === strtolower( $_GET['order'] ) ? 'DESC' : 'ASC';
+		$order   = isset( $_GET['order'] ) && 'asc' === strtolower( $_GET['order'] ) ? 'ASC' : 'DESC';
 
 		// ── Post type filter ──────────────────────────────────────────────────────
 		global $wpdb;
@@ -3499,13 +3499,11 @@ function wppugmill_render_settings_page() {
 		$pt_in          = implode( "','", array_map( 'esc_sql', $active_pt_list ) );
 
 		// ── ORDER BY clause ───────────────────────────────────────────────────────
-		// Default "opportunity" sort: content-ready posts first, lowest AEO score within that.
-		// Score sort: order by total AEO score only.
+		// Default: newest posts first (matches edit.php). Score sort: by stored AEO score.
 		if ( 'score' === $orderby ) {
-			$order_clause = "total_score_raw {$order}";
+			$order_clause = "COALESCE( ts.meta_value + 0, 0 ) {$order}";
 		} else {
-			// Opportunity: content_score desc (fixed), total_score_raw within that follows $order.
-			$order_clause = "content_score DESC, total_score_raw {$order}";
+			$order_clause = "p.post_date {$order}";
 		}
 
 		// ── Base URL for sorting/pagination links ─────────────────────────────────
@@ -3513,13 +3511,13 @@ function wppugmill_render_settings_page() {
 		if ( $filter_pt ) $audit_base .= '&audit_pt=' . rawurlencode( $filter_pt );
 
 		$sort_url = function( $col ) use ( $audit_base, $orderby, $order ) {
-			$new_order = ( $orderby === $col && 'ASC' === $order ) ? 'desc' : 'asc';
+			$new_order = ( $orderby === $col && 'DESC' === $order ) ? 'asc' : 'desc';
 			return $audit_base . '&orderby=' . rawurlencode( $col ) . '&order=' . $new_order;
 		};
 
 		$sort_indicator = function( $col ) use ( $orderby, $order ) {
 			if ( $orderby !== $col ) return '';
-			return ' <span class="sorting-indicator">' . ( 'ASC' === $order ? '▲' : '▼' ) . '</span>';
+			return ' <span class="sorting-indicator">' . ( 'DESC' === $order ? '▼' : '▲' ) . '</span>';
 		};
 
 		// ── Count query ───────────────────────────────────────────────────────────
@@ -3531,16 +3529,15 @@ function wppugmill_render_settings_page() {
 			   AND p.post_type IN ('{$pt_in}')"
 		);
 
-		// ── Main query — stored meta only, no per-row recalculation ──────────────
-		// ts.meta_value kept raw (not COALESCE) so NULL = never scored vs 0 = scored.
+		// ── Main query ────────────────────────────────────────────────────────────
+		// Scores are shown from stored meta on initial render, then immediately
+		// recalculated via AJAX for every visible row so values always stay fresh.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared
 		$audit_rows = $wpdb->get_results( $wpdb->prepare(
 			"SELECT p.ID, p.post_title, p.post_type,
-			        COALESCE( cs.meta_value + 0, 0 ) AS content_score,
-			        ts.meta_value                    AS total_score_raw,
-			        aeo.meta_value                   AS aeo_json
+			        ts.meta_value  AS total_score_raw,
+			        aeo.meta_value AS aeo_json
 			 FROM {$wpdb->posts} p
-			 LEFT JOIN {$wpdb->postmeta} cs  ON cs.post_id  = p.ID AND cs.meta_key  = '_wppugmill_content_score'
 			 LEFT JOIN {$wpdb->postmeta} ts  ON ts.post_id  = p.ID AND ts.meta_key  = '_wppugmill_score'
 			 LEFT JOIN {$wpdb->postmeta} aeo ON aeo.post_id = p.ID AND aeo.meta_key = '_wppugmill_aeo'
 			 WHERE p.post_status = 'publish'
@@ -3563,7 +3560,7 @@ function wppugmill_render_settings_page() {
 		?>
 		<div style="margin-top:24px;">
 			<p style="<?php echo esc_attr( $p_style ); ?>">
-				<?php esc_html_e( 'Review every published post through the lens of AEO. Posts are ordered by content-readiness first — those with strong structure (400+ words, headings, concise opening) but missing AEO fields rise to the top, so you tackle the highest-opportunity content first.', 'wp-pugmill' ); ?>
+				<?php esc_html_e( 'Review every published post through the lens of AEO. Scores are calculated fresh on each page load — the same way the post editor sidebar calculates them — so what you see here always matches what you see when editing a post.', 'wp-pugmill' ); ?>
 			</p>
 
 			<?php if ( ! $is_ai_mode ) : ?>
@@ -3579,7 +3576,7 @@ function wppugmill_render_settings_page() {
 			<?php if ( $show_pt_filter ) : ?>
 			<div style="margin-bottom:12px;">
 				<?php
-				$all_url = $audit_base . ( $orderby !== 'opportunity' ? '&orderby=' . rawurlencode( $orderby ) . '&order=' . strtolower( $order ) : '' );
+				$all_url = $audit_base . ( 'score' === $orderby ? '&orderby=score&order=' . strtolower( $order ) : '' );
 				?>
 				<a href="<?php echo esc_url( $all_url ); ?>"
 					class="button<?php echo ! $filter_pt ? ' button-primary' : ''; ?>"
@@ -3590,7 +3587,7 @@ function wppugmill_render_settings_page() {
 					$pt_obj  = get_post_type_object( $pt_slug );
 					$pt_label = $pt_obj ? $pt_obj->labels->name : $pt_slug;
 					$pt_url   = admin_url( 'options-general.php?page=wp-pugmill&tab=audit-aeo&audit_pt=' . rawurlencode( $pt_slug ) );
-					if ( $orderby !== 'opportunity' ) $pt_url .= '&orderby=' . rawurlencode( $orderby ) . '&order=' . strtolower( $order );
+					if ( 'score' === $orderby ) $pt_url .= '&orderby=score&order=' . strtolower( $order );
 				?>
 				<a href="<?php echo esc_url( $pt_url ); ?>"
 					class="button<?php echo $filter_pt === $pt_slug ? ' button-primary' : ''; ?>"
@@ -3697,7 +3694,7 @@ function wppugmill_render_settings_page() {
 			<?php if ( $total_pages > 1 ) :
 				// Preserve sort and filter state across pagination.
 				$page_base  = $audit_base;
-				if ( 'opportunity' !== $orderby ) $page_base .= '&orderby=' . rawurlencode( $orderby ) . '&order=' . strtolower( $order );
+				if ( 'score' === $orderby ) $page_base .= '&orderby=score&order=' . strtolower( $order );
 				$page_base .= '&audit_page=%#%';
 				echo '<div style="margin-top:16px;">';
 				echo paginate_links( array(
@@ -3753,16 +3750,17 @@ function wppugmill_render_settings_page() {
 				row.removeAttribute( 'data-unscored' );
 			}
 
-			// ── 1. Live update unscored rows on the current page ────────────────────
-			var unscoredRows = Array.from( document.querySelectorAll( 'tr[data-unscored]' ) );
-			var pageStatus   = document.getElementById( 'pugmill-page-score-status' );
+			// ── 1. Recalculate scores for all visible rows on page load ────────────
+			// Mirrors the sidebar calculation — scores here always match the post editor.
+			var allRows    = Array.from( document.querySelectorAll( 'tr[data-post-id]' ) );
+			var pageStatus = document.getElementById( 'pugmill-page-score-status' );
 
-			if ( unscoredRows.length > 0 ) {
-				var unscoredIds = unscoredRows.map( function( r ) { return r.dataset.postId; } );
+			if ( allRows.length > 0 ) {
+				var allIds = allRows.map( function( r ) { return r.dataset.postId; } );
 				if ( pageStatus ) pageStatus.textContent = '<?php echo esc_js( __( 'Calculating scores…', 'wp-pugmill' ) ); ?>';
 
 				var body = new URLSearchParams( { action: 'wppugmill_calculate_scores', nonce: scoreNonce } );
-				unscoredIds.forEach( function( id ) { body.append( 'post_ids[]', id ); } );
+				allIds.forEach( function( id ) { body.append( 'post_ids[]', id ); } );
 
 				fetch( ajaxUrl, {
 					method:  'POST',
