@@ -779,25 +779,34 @@ function aeopugmill_render_settings_page() {
 				</tr>
 			</table>
 			<p style="margin-top:4px;">
-				<?php submit_button( null, 'primary', 'submit', false ); ?>
+				<?php submit_button( null, 'primary', 'submit', false, $api_key ? array( 'id' => 'aeopugmill-ai-save-btn', 'disabled' => 'disabled' ) : array( 'id' => 'aeopugmill-ai-save-btn' ) ); ?>
 			</p>
 		</form>
 		</div><!-- /ai-provider card -->
 		<script>
 		(function() {
-			var status   = document.getElementById( 'aeopugmill-test-api-key-status' );
-			var keyField = document.getElementById( 'aeopugmill_ai_api_key' );
+			var status     = document.getElementById( 'aeopugmill-test-api-key-status' );
+			var keyField   = document.getElementById( 'aeopugmill_ai_api_key' );
+			var saveBtn    = document.getElementById( 'aeopugmill-ai-save-btn' );
+			var flagField  = document.getElementById( 'aeopugmill_api_key_changed' );
+			var providerSel = document.getElementById( 'aeopugmill_ai_provider' );
+			var rateSelect  = document.getElementById( 'aeopugmill_ai_rate_limit' );
 			if ( ! keyField || ! status ) { return; }
 
 			var ajaxUrl    = <?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>;
 			var nonce      = <?php echo wp_json_encode( wp_create_nonce( 'aeopugmill_test_api_key' ) ); ?>;
-			var flagField  = document.getElementById( 'aeopugmill_api_key_changed' );
 
 			// Track whether the user has actually typed a new key since page load.
 			var isDirty   = false;
 			var isTesting = false;
 
+			// Enable the Save button whenever any field on this form changes.
+			function enableSave() {
+				if ( saveBtn ) { saveBtn.disabled = false; }
+			}
+
 			keyField.addEventListener( 'input', function() {
+				enableSave();
 				if ( ! isDirty ) {
 					isDirty = true;
 					// Tell PHP a new key was typed — used by the sanitize callback
@@ -807,6 +816,9 @@ function aeopugmill_render_settings_page() {
 					status.innerHTML = '';
 				}
 			} );
+
+			if ( providerSel ) { providerSel.addEventListener( 'change', enableSave ); }
+			if ( rateSelect )  { rateSelect.addEventListener( 'change', enableSave ); }
 
 			// Run a validation test against the AI provider.
 			// Only sends the typed value when dirty; omits it when pristine so
@@ -855,7 +867,6 @@ function aeopugmill_render_settings_page() {
 			keyField.addEventListener( 'blur', function() {
 				if ( isDirty ) { runTest(); }
 			} );
-
 
 		}());
 		</script>
