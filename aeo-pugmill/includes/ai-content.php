@@ -84,7 +84,7 @@ function aeopugmill_ajax_tone_check() {
 	$mode = aeopugmill_mode();
 	if ( 'free' === $mode ) {
 		wp_send_json_error( array(
-			'message' => __( 'Tone Check requires a AEO Pugmill AEO Pugmill Pro license. <a href="https://aeopugmill.com/pricing" target="_blank">Get your license →</a>', 'aeo-pugmill' ),
+			'message' => __( 'Tone Check requires a AEO Pugmill Pro license. <a href="https://aeopugmill.com/pricing" target="_blank">Get your license →</a>', 'aeo-pugmill' ),
 		), 403 );
 	}
 
@@ -461,7 +461,7 @@ function aeopugmill_ajax_generate_image_alt() {
 	$mode = aeopugmill_mode();
 	if ( 'free' === $mode ) {
 		wp_send_json_error( array(
-			'message' => __( 'AI alt text generation requires a AEO Pugmill AEO Pugmill Pro license. <a href="https://aeopugmill.com/pricing" target="_blank">Get your license →</a>', 'aeo-pugmill' ),
+			'message' => __( 'AI alt text generation requires a AEO Pugmill Pro license. <a href="https://aeopugmill.com/pricing" target="_blank">Get your license →</a>', 'aeo-pugmill' ),
 		), 403 );
 	}
 	if ( 'pro' === $mode ) {

@@ -175,7 +175,7 @@ function aeopugmill_ajax_suggest_schema() {
 	$mode = aeopugmill_mode();
 	if ( 'free' === $mode ) {
 		wp_send_json_error( array(
-			'message' => __( 'Schema suggestions require a AEO Pugmill AEO Pugmill Pro license.', 'aeo-pugmill' ),
+			'message' => __( 'Schema suggestions require a AEO Pugmill Pro license.', 'aeo-pugmill' ),
 		), 403 );
 	}
 

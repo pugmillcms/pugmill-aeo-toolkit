@@ -558,7 +558,7 @@ function aeopugmill_render_settings_page() {
 						<?php endif; ?>
 						<p class="description">
 							<?php
-							echo esc_html__( 'Enter your AEO Pugmill AEO Pugmill Pro license key.', 'aeo-pugmill' );
+							echo esc_html__( 'Enter your AEO Pugmill Pro license key.', 'aeo-pugmill' );
 							echo ' ';
 							printf( '<a href="%s" target="_blank">%s</a>', esc_url( 'https://aeopugmill.com/pricing' ), esc_html__( 'Get a license →', 'aeo-pugmill' ) );
 							?>
