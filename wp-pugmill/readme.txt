@@ -4,7 +4,7 @@ Tags: aeo, answer engine optimization, ai, structured data, bot analytics, llms-
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.2.7
+Stable tag: 1.2.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -164,6 +164,11 @@ Plus: llms.txt, per-post AEO markdown endpoints, and a bot analytics dashboard s
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.2.8 =
+* **Settings — AI Provider**: Test Connection button moved inline to the right of the API Key field for faster access.
+* **Settings — AI Provider**: Test Connection now tests the key currently typed in the field — no need to save first.
+* **Settings**: Third-party admin notice banners (e.g. AIOSEO's MonsterInsights upsell) are now suppressed on WP Pugmill's settings page.
 
 = 1.2.7 =
 * **Uninstall**: Fixed incomplete cleanup — added 5 missing options (disable_breadcrumbs, disable_robots_append, disable_sitemap, industry, signal_db_version), 3 missing transients (llms_txt_conflict_check, ai_analytics_insights, intel_site_meta), 1 missing post meta key (_wppugmill_score), and the wppugmill_signal_daily custom table. Plugin deletion now removes all plugin data from the WordPress database.

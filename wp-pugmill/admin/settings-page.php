@@ -348,6 +348,20 @@ function wppugmill_preview_robots_additions() {
 	return implode( "\n", $lines );
 }
 
+/**
+ * Remove third-party admin notices from WP Pugmill's own settings page.
+ * Some plugins (e.g. AIOSEO) inject upsell banners into every admin page via
+ * admin_notices / all_admin_notices. Strip them so they don't appear on ours.
+ */
+function wppugmill_suppress_foreign_notices() {
+	$screen = get_current_screen();
+	if ( $screen && $screen->id === 'settings_page_wp-pugmill' ) {
+		remove_all_actions( 'admin_notices' );
+		remove_all_actions( 'all_admin_notices' );
+	}
+}
+add_action( 'admin_head', 'wppugmill_suppress_foreign_notices', 1 );
+
 function wppugmill_add_settings_page() {
 	add_options_page(
 		__( 'WP Pugmill Settings', 'wp-pugmill' ),
@@ -734,12 +748,18 @@ function wppugmill_render_settings_page() {
 				<tr>
 					<th><label for="wppugmill_ai_api_key"><?php esc_html_e( 'API Key', 'wp-pugmill' ); ?></label></th>
 					<td>
-						<input type="password"
-							id="wppugmill_ai_api_key"
-							name="wppugmill_ai_api_key"
-							value="<?php echo esc_attr( wppugmill_mask_secret( $api_key ) ); ?>"
-							style="width:420px;"
-							placeholder="sk-...">
+						<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+							<input type="password"
+								id="wppugmill_ai_api_key"
+								name="wppugmill_ai_api_key"
+								value="<?php echo esc_attr( wppugmill_mask_secret( $api_key ) ); ?>"
+								style="width:360px;"
+								placeholder="sk-...">
+							<button type="button" id="wppugmill-test-api-key" class="button">
+								<?php esc_html_e( 'Test Connection', 'wp-pugmill' ); ?>
+							</button>
+							<span id="wppugmill-test-api-key-status" style="font-size:13px;"></span>
+						</div>
 						<p class="description"><?php esc_html_e( 'Paste the API key from your chosen provider above. The key is encrypted before storage.', 'wp-pugmill' ); ?></p>
 					</td>
 				</tr>
@@ -759,10 +779,6 @@ function wppugmill_render_settings_page() {
 			</table>
 			<p style="margin-top:4px;">
 				<?php submit_button( null, 'primary', 'submit', false ); ?>
-				<button type="button" id="wppugmill-test-api-key" class="button" style="margin-left:8px;">
-					<?php esc_html_e( 'Test Connection', 'wp-pugmill' ); ?>
-				</button>
-				<span id="wppugmill-test-api-key-status" style="margin-left:10px; font-size:13px;"></span>
 			</p>
 		</form>
 		</div><!-- /ai-provider card -->
@@ -781,6 +797,10 @@ function wppugmill_render_settings_page() {
 				var body = new URLSearchParams();
 				body.append( 'action', 'wppugmill_test_api_key' );
 				body.append( 'nonce',  <?php echo wp_json_encode( wp_create_nonce( 'wppugmill_test_api_key' ) ); ?> );
+				var keyField = document.getElementById( 'wppugmill_ai_api_key' );
+				if ( keyField && keyField.value ) {
+					body.append( 'api_key', keyField.value );
+				}
 
 				fetch( <?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>, {
 					method:      'POST',
@@ -3432,7 +3452,7 @@ function wppugmill_render_settings_page() {
 		     ════════════════════════════════════════════════════════════ -->
 		<div style="margin-top:24px;">
 			<p style="<?php echo esc_attr( $p_style ); ?>">
-				<?php esc_html_e( 'Generate a summary, Q&amp;A pairs, entities, and keywords for every published post and page using your connected AI provider.', 'wp-pugmill' ); ?>
+				<?php esc_html_e( 'Generate a summary, Q&A pairs, entities, and keywords for every published post and page. These four fields are bot-facing — they live in JSON-LD schema and /llms.txt, not on the page itself — which is why they can be safely generated in bulk. Human-facing elements like SEO titles, meta descriptions, and excerpts require a human in the loop to review before publishing, so those are only available from the individual post editor.', 'wp-pugmill' ); ?>
 			</p>
 			<div style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:6px; padding:12px 16px; margin-bottom:16px; font-size:12px; color:#6b7280; line-height:1.6;">
 				<strong style="color:#374151;"><?php esc_html_e( 'How it works:', 'wp-pugmill' ); ?></strong>

@@ -221,7 +221,15 @@ function wppugmill_ajax_test_api_key() {
 	}
 
 	$provider = get_option( 'wppugmill_ai_provider', 'anthropic' );
-	$api_key  = wppugmill_get_encrypted_option( 'wppugmill_ai_api_key', '' );
+
+	// Prefer the key typed in the field (not yet saved) over the stored value.
+	// Reject masked placeholders — they are display-only and not real keys.
+	$posted_key = isset( $_POST['api_key'] ) ? sanitize_text_field( wp_unslash( $_POST['api_key'] ) ) : '';
+	if ( ! empty( $posted_key ) && strpos( $posted_key, '••••' ) === false ) {
+		$api_key = $posted_key;
+	} else {
+		$api_key = wppugmill_get_encrypted_option( 'wppugmill_ai_api_key', '' );
+	}
 
 	if ( empty( $api_key ) ) {
 		wp_send_json_error( array( 'message' => __( 'No API key saved yet.', 'wp-pugmill' ) ), 400 );
