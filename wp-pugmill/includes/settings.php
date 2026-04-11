@@ -92,23 +92,25 @@ function wppugmill_register_settings() {
 	// AI API key — encrypted at rest
 	register_setting( 'wppugmill_settings', 'wppugmill_ai_api_key', array(
 		'sanitize_callback' => function( $value ) {
+			// If the hidden flag isn't set to '1' the user did not type a new key —
+			// the field contains the masked display value. Keep the existing encrypted
+			// value without touching it. This is deterministic and requires no
+			// bullet-character detection or encoding assumptions.
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing
+			$key_changed = isset( $_POST['wppugmill_api_key_changed'] ) && '1' === $_POST['wppugmill_api_key_changed'];
+			if ( ! $key_changed ) {
+				return get_option( 'wppugmill_ai_api_key', '' );
+			}
+
 			$value = sanitize_text_field( $value );
 			if ( empty( $value ) ) {
-				// Field not submitted (different tab's form) — preserve existing value.
-				// If the field was intentionally cleared, $_POST will have the key present but empty.
-				if ( ! isset( $_POST['wppugmill_ai_api_key'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
-					return get_option( 'wppugmill_ai_api_key', '' );
-				}
+				// Intentionally cleared — wipe the stored key.
 				return '';
 			}
-			// Validate minimum length
+			// Validate minimum length.
 			if ( strlen( $value ) < 20 ) {
 				add_settings_error( 'wppugmill_ai_api_key', 'invalid_key', __( 'API key appears too short. Please check and try again.', 'wp-pugmill' ) );
 				return get_option( 'wppugmill_ai_api_key', '' ); // keep existing
-			}
-			// If the submitted value is a masked display value, don't re-encrypt
-			if ( strpos( $value, '•' ) !== false ) {
-				return get_option( 'wppugmill_ai_api_key', '' ); // keep existing encrypted value
 			}
 			return wppugmill_encrypt( $value );
 		},

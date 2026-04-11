@@ -4,7 +4,7 @@ Tags: aeo, answer engine optimization, ai, structured data, bot analytics, llms-
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.2.21
+Stable tag: 1.2.22
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -164,6 +164,10 @@ Plus: llms.txt, per-post AEO markdown endpoints, and a bot analytics dashboard s
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.2.22 =
+* **AI Provider**: Replaced all bullet-character detection with a hidden field flag (wppugmill_api_key_changed). JS sets it to "1" only when the user actually types a new key; PHP sanitize callback skips key processing entirely when the flag is absent, guaranteeing the stored encrypted key is never accidentally overwritten with a garbled masked value.
+* **AI Provider**: Field now shows a persistent "✓ Key saved" indicator on page load when a key exists. Indicator clears the moment the user starts typing, making the field state unambiguous.
 
 = 1.2.21 =
 * **AI Provider**: Removed the "Test Connection" button. API key is now validated automatically on blur (when the user leaves the field) and shows a status indicator before saving. Validation is also triggered on form submit when the key is dirty. Cleaner UX with no extra button to click.

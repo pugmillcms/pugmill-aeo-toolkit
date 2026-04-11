@@ -755,8 +755,13 @@ function wppugmill_render_settings_page() {
 							value="<?php echo esc_attr( wppugmill_mask_secret( $api_key ) ); ?>"
 							style="width:360px;"
 							placeholder="sk-...">
-						<span id="wppugmill-test-api-key-status" style="display:block; margin-top:6px; font-size:13px; min-height:18px;"></span>
-						<p class="description"><?php esc_html_e( 'Paste your API key above. It is validated automatically when you leave the field or save. The key is encrypted before storage.', 'wp-pugmill' ); ?></p>
+						<input type="hidden" name="wppugmill_api_key_changed" id="wppugmill_api_key_changed" value="0">
+						<span id="wppugmill-test-api-key-status" style="display:block; margin-top:6px; font-size:13px; min-height:18px;">
+							<?php if ( $api_key ) : ?>
+							<span style="color:#46b450;">✓ <?php esc_html_e( 'Key saved', 'wp-pugmill' ); ?></span>
+							<?php endif; ?>
+						</span>
+						<p class="description"><?php esc_html_e( 'Paste your API key above. It is validated automatically when you leave the field. The key is encrypted before storage.', 'wp-pugmill' ); ?></p>
 					</td>
 				</tr>
 				<tr>
@@ -782,16 +787,26 @@ function wppugmill_render_settings_page() {
 		(function() {
 			var status   = document.getElementById( 'wppugmill-test-api-key-status' );
 			var keyField = document.getElementById( 'wppugmill_ai_api_key' );
-			var form     = keyField ? keyField.closest( 'form' ) : null;
 			if ( ! keyField || ! status ) { return; }
 
-			var ajaxUrl  = <?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>;
-			var nonce    = <?php echo wp_json_encode( wp_create_nonce( 'wppugmill_test_api_key' ) ); ?>;
+			var ajaxUrl    = <?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>;
+			var nonce      = <?php echo wp_json_encode( wp_create_nonce( 'wppugmill_test_api_key' ) ); ?>;
+			var flagField  = document.getElementById( 'wppugmill_api_key_changed' );
 
 			// Track whether the user has actually typed a new key since page load.
-			var isDirty  = false;
+			var isDirty   = false;
 			var isTesting = false;
-			keyField.addEventListener( 'input', function() { isDirty = true; } );
+
+			keyField.addEventListener( 'input', function() {
+				if ( ! isDirty ) {
+					isDirty = true;
+					// Tell PHP a new key was typed — used by the sanitize callback
+					// instead of fragile bullet-character detection.
+					if ( flagField ) { flagField.value = '1'; }
+					// Clear the "Key saved" indicator while the user is editing.
+					status.innerHTML = '';
+				}
+			} );
 
 			// Run a validation test against the AI provider.
 			// Only sends the typed value when dirty; omits it when pristine so
@@ -841,17 +856,6 @@ function wppugmill_render_settings_page() {
 				if ( isDirty ) { runTest(); }
 			} );
 
-			// Validate on save — if the key is dirty, test before letting the
-			// form submit. We warn but never block — a temporarily rate-limited
-			// key shouldn't prevent saving.
-			if ( form ) {
-				form.addEventListener( 'submit', function( e ) {
-					if ( ! isDirty || isTesting ) { return; }
-					// Show a quick "validating" state; form submits normally after.
-					status.textContent = '<?php echo esc_js( __( 'Validating key\u2026', 'wp-pugmill' ) ); ?>';
-					status.style.color = '#888';
-				} );
-			}
 
 		}());
 		</script>
