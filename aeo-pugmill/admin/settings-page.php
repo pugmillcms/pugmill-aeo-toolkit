@@ -2062,21 +2062,7 @@ function aeopugmill_render_settings_page() {
 			'search'   => '#bae6fd',
 			'seo'      => '#fde68a',
 		);
-		$inner_ring = array();
-		$outer_ring = array();
 		$total_visits = $ai_total_30 + $training_total_30 + $search_total_30 + $seo_total_30;
-		foreach ( array( 'ai' => $ai_bots, 'training' => $training_bots, 'search' => $search_bots, 'seo' => $seo_bots ) as $cat => $cat_bots ) {
-			$cat_total = array_sum( array_map( function( $k ) use ( $summary ) { return $summary[ $k ] ?? 0; }, array_keys( $cat_bots ) ) );
-			if ( $cat_total > 0 ) {
-				$inner_ring[] = array( 'label' => $cat, 'value' => $cat_total, 'color' => $cat_colors[ $cat ] );
-				foreach ( $cat_bots as $bot_key => $_ ) {
-					$bv = $summary[ $bot_key ] ?? 0;
-					if ( $bv > 0 ) {
-						$outer_ring[] = array( 'label' => $bot_key, 'value' => $bv, 'cat' => $cat, 'color' => $cat_light[ $cat ] );
-					}
-				}
-			}
-		}
 
 		// ── Semi-gauge: AEO infrastructure completeness ──────────────────────────
 		$seo_plugins_g    = aeopugmill_detected_seo_plugins();
@@ -2230,19 +2216,24 @@ function aeopugmill_render_settings_page() {
 
 		<div class="pugmill-summary-row">
 
-			<!-- Col 1: Bot Activity ─────────────────────────────── -->
+			<!-- Col 1: Bot Activity ─────────────────────── -->
 			<div class="pugmill-card">
 				<h3><?php esc_html_e( 'Bot Activity', 'aeo-pugmill' ); ?></h3>
-				<p class="card-sub"><?php esc_html_e( 'Inner ring: crawler categories. Outer ring: individual bots.', 'aeo-pugmill' ); ?></p>
-				<div style="display:flex; justify-content:center; margin-bottom:14px;">
-					<canvas id="pugmill-tworingdonut" width="200" height="200" style="width:200px; height:200px;"></canvas>
-				</div>
+				<p class="card-sub"><?php esc_html_e( 'Crawler traffic share across the 4 categories.', 'aeo-pugmill' ); ?></p>
+
 				<?php
+				$cat_order_c1  = array( 'ai', 'search', 'seo', 'training' );
 				$cat_labels_c1 = array(
-					'ai'       => __( 'AI Answer Engines',      'aeo-pugmill' ),
+					'ai'       => __( 'AI Answer Engines',    'aeo-pugmill' ),
 					'training' => __( 'AI Training Crawlers', 'aeo-pugmill' ),
-					'search'   => __( 'Search Engines',    'aeo-pugmill' ),
-					'seo'      => __( 'SEO Tools',         'aeo-pugmill' ),
+					'search'   => __( 'Search Engines',       'aeo-pugmill' ),
+					'seo'      => __( 'SEO Tools',            'aeo-pugmill' ),
+				);
+				$cat_short_c1  = array(
+					'ai'       => __( 'AI Answer',  'aeo-pugmill' ),
+					'training' => __( 'Training',   'aeo-pugmill' ),
+					'search'   => __( 'Search',     'aeo-pugmill' ),
+					'seo'      => __( 'SEO Tools',  'aeo-pugmill' ),
 				);
 				$cat_bots_c1 = array(
 					'ai'       => $ai_bots,
@@ -2250,37 +2241,88 @@ function aeopugmill_render_settings_page() {
 					'search'   => $search_bots,
 					'seo'      => $seo_bots,
 				);
-				foreach ( array( 'ai', 'training', 'search', 'seo' ) as $cat_k ) :
-					$cat_tot_c1 = 0;
-					foreach ( $cat_bots_c1[ $cat_k ] as $bk => $_ ) {
-						$cat_tot_c1 += (int) ( $summary[ $bk ] ?? 0 );
-					}
-					if ( $cat_tot_c1 === 0 ) continue;
+				$cat_bg_c1 = array(
+					'ai'       => '#faf7ff',
+					'training' => '#f0fdff',
+					'search'   => '#f0f9ff',
+					'seo'      => '#f9fafb',
+				);
+				$cat_border_c1 = array(
+					'ai'       => '#d4c8f0',
+					'training' => '#a5f3fc',
+					'search'   => '#bae0fd',
+					'seo'      => '#e5e7eb',
+				);
+				$cat_totals_c1 = array();
+				foreach ( $cat_order_c1 as $ck ) {
+					$t = 0;
+					foreach ( $cat_bots_c1[ $ck ] as $bk => $_ ) { $t += (int) ( $summary[ $bk ] ?? 0 ); }
+					$cat_totals_c1[ $ck ] = $t;
+				}
+				$grand_total_c1 = max( 1, array_sum( $cat_totals_c1 ) );
 				?>
-				<div style="margin-bottom:9px;">
-					<div style="display:flex; align-items:center; gap:6px; margin-bottom:3px;">
-						<span style="width:9px; height:9px; border-radius:50%; background:<?php echo esc_attr( $cat_colors[ $cat_k ] ); ?>; flex-shrink:0;"></span>
-						<span style="font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:<?php echo esc_attr( $cat_colors[ $cat_k ] ); ?>; flex:1;"><?php echo esc_html( $cat_labels_c1[ $cat_k ] ); ?></span>
-						<span style="font-size:10px; color:#9ca3af;"><?php echo esc_html( number_format_i18n( $cat_tot_c1 ) ); ?></span>
+
+				<!-- Proportional bubble row: area encodes traffic share -->
+				<div style="display:flex; align-items:flex-end; justify-content:space-around; padding:8px 4px 2px; margin-bottom:12px;">
+				<?php
+				$bubble_max_d = 60;
+				$bubble_min_d = 14;
+				foreach ( $cat_order_c1 as $ck ) :
+					$share       = $cat_totals_c1[ $ck ] / $grand_total_c1;
+					$share_pct_b = round( $share * 100, 1 );
+					$diam        = $share > 0
+						? max( $bubble_min_d, (int) round( sqrt( $share ) * $bubble_max_d ) )
+						: $bubble_min_d;
+					$is_zero_b      = ( $cat_totals_c1[ $ck ] === 0 );
+					$show_inner_lbl = ( $diam >= 26 );
+				?>
+				<div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
+					<div style="width:<?php echo (int) $diam; ?>px; height:<?php echo (int) $diam; ?>px; border-radius:50%; <?php if ( $is_zero_b ) : ?>background:transparent; border:2px dashed <?php echo esc_attr( $cat_colors[ $ck ] ); ?>;<?php else : ?>background:<?php echo esc_attr( $cat_colors[ $ck ] ); ?>;<?php endif; ?> display:flex; align-items:center; justify-content:center;">
+						<?php if ( $show_inner_lbl ) : ?>
+						<span style="font-size:<?php echo $diam >= 44 ? 11 : 9; ?>px; font-weight:700; color:<?php echo $is_zero_b ? esc_attr( $cat_colors[ $ck ] ) : 'white'; ?>; line-height:1;"><?php echo esc_html( $share_pct_b ); ?>%</span>
+						<?php endif; ?>
 					</div>
-					<?php
-					$bots_c1 = array();
-					foreach ( $cat_bots_c1[ $cat_k ] as $bk => $_ ) {
-						$bots_c1[ $bk ] = (int) ( $summary[ $bk ] ?? 0 );
-					}
-					arsort( $bots_c1 );
-					foreach ( $bots_c1 as $bk => $bv ) :
-						if ( $bv === 0 ) continue;
-						$binfo_c1 = $cat_bots_c1[ $cat_k ][ $bk ];
-					?>
-					<div style="display:flex; align-items:center; gap:6px; padding:1px 0 1px 14px; font-size:11px;">
-						<span style="width:7px; height:7px; border-radius:50%; background:<?php echo esc_attr( $cat_light[ $cat_k ] ); ?>; border:1px solid <?php echo esc_attr( $cat_colors[ $cat_k ] ); ?>; flex-shrink:0;"></span>
-						<span style="flex:1; color:#374151; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><?php echo esc_html( $binfo_c1['label'] ); ?></span>
-						<span style="color:#9ca3af; white-space:nowrap; font-size:10px;"><?php echo esc_html( number_format_i18n( $bv ) ); ?></span>
-					</div>
-					<?php endforeach; ?>
+					<span style="font-size:8px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; color:<?php echo esc_attr( $cat_colors[ $ck ] ); ?>; text-align:center; line-height:1.2; max-width:<?php echo max( 44, $diam + 10 ); ?>px;"><?php echo esc_html( $cat_short_c1[ $ck ] ); ?></span>
 				</div>
 				<?php endforeach; ?>
+				</div>
+
+				<!-- 2x2 quadrant grid: category name + big % + top bots -->
+				<div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+				<?php foreach ( $cat_order_c1 as $ck ) :
+					$share_pct_q = round( $cat_totals_c1[ $ck ] / $grand_total_c1 * 100, 1 );
+					$is_zero_q   = ( $cat_totals_c1[ $ck ] === 0 );
+					$pct_font_q  = ( $share_pct_q >= 10 ) ? '26' : '22';
+					$bots_q      = array();
+					foreach ( $cat_bots_c1[ $ck ] as $bk => $_ ) {
+						$bots_q[ $bk ] = (int) ( $summary[ $bk ] ?? 0 );
+					}
+					arsort( $bots_q );
+				?>
+				<div style="background:<?php echo esc_attr( $cat_bg_c1[ $ck ] ); ?>; border:1px solid <?php echo esc_attr( $cat_border_c1[ $ck ] ); ?>; border-radius:6px; padding:7px 6px 6px; text-align:center;">
+					<div style="font-size:8px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:<?php echo esc_attr( $cat_colors[ $ck ] ); ?>; line-height:1.2; margin-bottom:3px;"><?php echo esc_html( $cat_labels_c1[ $ck ] ); ?></div>
+					<div style="font-size:<?php echo esc_attr( $pct_font_q ); ?>px; font-weight:800; color:<?php echo $is_zero_q ? '#d1d5db' : esc_attr( $cat_colors[ $ck ] ); ?>; line-height:1; margin-bottom:6px;"><?php echo esc_html( $share_pct_q ); ?>%</div>
+					<?php
+					$shown_q = 0;
+					foreach ( $bots_q as $bk => $bv ) :
+						if ( $bv === 0 ) continue;
+						if ( $shown_q >= 3 ) break;
+						$shown_q++;
+						$bi_q = $cat_bots_c1[ $ck ][ $bk ];
+					?>
+					<div style="display:flex; align-items:center; gap:3px; font-size:9px; color:#6b7280; text-align:left; margin-bottom:2px;">
+						<span style="width:5px; height:5px; border-radius:50%; background:<?php echo esc_attr( $bi_q['color'] ); ?>; flex-shrink:0;"></span>
+						<span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><?php echo esc_html( $bi_q['label'] ); ?></span>
+						<span style="font-weight:600; color:<?php echo esc_attr( $cat_colors[ $ck ] ); ?>; flex-shrink:0;"><?php echo esc_html( number_format_i18n( $bv ) ); ?></span>
+					</div>
+					<?php endforeach; ?>
+					<?php if ( $is_zero_q ) : ?>
+					<div style="font-size:9px; color:#d1d5db; font-style:italic; margin-top:2px;"><?php esc_html_e( 'none yet', 'aeo-pugmill' ); ?></div>
+					<?php endif; ?>
+				</div>
+				<?php endforeach; ?>
+				</div>
+
 				<div style="margin-top:6px; padding-top:7px; border-top:1px solid #f0f0f0; font-size:10px; color:#9ca3af;">
 					<?php echo esc_html( number_format_i18n( $total_visits ) . ' ' . __( 'total visits (30 days)', 'aeo-pugmill' ) ); ?>
 				</div>
@@ -2463,61 +2505,6 @@ function aeopugmill_render_settings_page() {
 				return ctx;
 			}
 
-			// ── 2. Two-ring donut ─────────────────────────────────────────────
-			(function () {
-				var SIZE = 200;
-				var ctx  = setupCanvas( 'pugmill-tworingdonut', SIZE, SIZE );
-				if ( !ctx ) return;
-
-				var inner = <?php echo wp_json_encode( $inner_ring ); ?>;
-				var outer = <?php echo wp_json_encode( $outer_ring ); ?>;
-				var total = <?php echo (int) $total_visits; ?>;
-
-				var cx = SIZE / 2, cy = SIZE / 2;
-
-				if ( total === 0 ) {
-					ctx.beginPath();
-					ctx.arc( cx, cy, Math.round( SIZE * 0.43 ), 0, Math.PI * 2 );
-					ctx.arc( cx, cy, Math.round( SIZE * 0.155 ), 0, Math.PI * 2, true );
-					ctx.fillStyle = '#e5e7eb';
-					ctx.fill();
-					return;
-				}
-
-				// cx/cy already defined above
-				var PI2 = Math.PI * 2;
-				var GAP = 0.04;
-
-				function drawRing( segs, outerR, innerR ) {
-					var sum   = segs.reduce( function(s,g){ return s + g.value; }, 0 );
-					var avail = PI2 - segs.length * GAP;
-					var start = -Math.PI / 2;
-					segs.forEach( function( sg ) {
-						var sweep = ( sg.value / sum ) * avail;
-						ctx.beginPath();
-						ctx.arc( cx, cy, outerR, start, start + sweep );
-						ctx.arc( cx, cy, innerR, start + sweep, start, true );
-						ctx.closePath();
-						ctx.fillStyle = sg.color;
-						ctx.fill();
-						start += sweep + GAP;
-					});
-				}
-
-				drawRing( inner, 66, 40 ); // inner ring: categories
-				drawRing( outer, 88, 69 ); // outer ring: individual bots
-
-				// Center label
-				ctx.textAlign    = 'center';
-				ctx.textBaseline = 'middle';
-				ctx.fillStyle    = '#1d2327';
-				ctx.font         = 'bold 12px sans-serif';
-				ctx.fillText( <?php echo wp_json_encode( number_format_i18n( $total_visits ) ); ?>, cx, cy - 6 );
-				ctx.fillStyle = '#9ca3af';
-				ctx.font      = '9px sans-serif';
-				ctx.fillText( <?php echo wp_json_encode( __( 'visits', 'aeo-pugmill' ) ); ?>, cx, cy + 7 );
-			}());
-
 			// ── 3. Semi-circular gauge ────────────────────────────────────────
 			(function () {
 				var W = 140, H = 80;
@@ -2576,131 +2563,55 @@ function aeopugmill_render_settings_page() {
 		</script>
 		<?php endif; ?>
 
-		<!-- ── Bot Benchmark Grid ──────────────────────────────────────── -->
+
+		<!-- ── Bot Benchmark List ──────────────────────────────────── -->
 		<?php
-		$quadrant_defs = array(
+		$benchmark_cats = array(
 			'ai'       => array(
-				'label'     => __( 'AI Answer Engines', 'aeo-pugmill' ),
-				'bots'      => $ai_bots,
-				'total'     => $ai_total_30,
-				'accent'    => '#7c3aed',
-				'bg'        => '#faf7ff',
-				'border'    => '#d4c8f0',
-				'empty_msg' => __( 'No AI crawler visits detected yet.', 'aeo-pugmill' ),
+				'label'    => __( 'AI Answer Engines', 'aeo-pugmill' ),
+				'bots'     => $ai_bots,
+				'accent'   => '#7c3aed',
+				'bg'       => '#faf7ff',
+				'border'   => '#d4c8f0',
+				'zone_lo'  => '#f3effd',
+				'zone_mid' => '#ede8fb',
+				'zone_hi'  => '#e0d8f8',
 			),
 			'search'   => array(
-				'label'     => __( 'Search Engines', 'aeo-pugmill' ),
-				'bots'      => $search_bots,
-				'total'     => $search_total_30,
-				'accent'    => '#0369a1',
-				'bg'        => '#f0f9ff',
-				'border'    => '#bae0fd',
-				'empty_msg' => __( 'No search engine visits detected yet.', 'aeo-pugmill' ),
-			),
-			'seo'      => array(
-				'label'     => __( 'SEO Tools', 'aeo-pugmill' ),
-				'bots'      => $seo_bots,
-				'total'     => $seo_total_30,
-				'accent'    => '#374151',
-				'bg'        => '#f9fafb',
-				'border'    => '#e5e7eb',
-				'empty_msg' => __( 'No SEO bot visits detected yet.', 'aeo-pugmill' ),
+				'label'    => __( 'Search Engines', 'aeo-pugmill' ),
+				'bots'     => $search_bots,
+				'accent'   => '#0369a1',
+				'bg'       => '#f0f9ff',
+				'border'   => '#bae0fd',
+				'zone_lo'  => '#e8f5fe',
+				'zone_mid' => '#d4ecfc',
+				'zone_hi'  => '#bde0fa',
 			),
 			'training' => array(
-				'label'     => __( 'AI Training Crawlers', 'aeo-pugmill' ),
-				'bots'      => $training_bots,
-				'total'     => $training_total_30,
-				'accent'    => '#0891b2',
-				'bg'        => '#f0fdff',
-				'border'    => '#a5f3fc',
-				'empty_msg' => __( 'No training crawler visits detected yet.', 'aeo-pugmill' ),
+				'label'    => __( 'AI Training Crawlers', 'aeo-pugmill' ),
+				'bots'     => $training_bots,
+				'accent'   => '#0891b2',
+				'bg'       => '#f0fdff',
+				'border'   => '#a5f3fc',
+				'zone_lo'  => '#e0faff',
+				'zone_mid' => '#ccf6fd',
+				'zone_hi'  => '#b0eefa',
+			),
+			'seo'      => array(
+				'label'    => __( 'SEO Tools', 'aeo-pugmill' ),
+				'bots'     => $seo_bots,
+				'accent'   => '#374151',
+				'bg'       => '#f9fafb',
+				'border'   => '#e5e7eb',
+				'zone_lo'  => '#f3f4f6',
+				'zone_mid' => '#eaebee',
+				'zone_hi'  => '#e0e2e6',
 			),
 		);
 		?>
-		<style>
-		.aeopugmill-quadrant-grid {
-			display: grid;
-			grid-template-columns: 1fr 1fr;
-			gap: 12px;
-			margin: 20px 0 6px;
-		}
-		@media (max-width: 782px) {
-			.aeopugmill-quadrant-grid { grid-template-columns: 1fr; }
-		}
-		.aeopugmill-qcard {
-			background: var(--qbg);
-			border: 1px solid var(--qborder);
-			border-radius: 8px;
-			padding: 12px 14px;
-		}
-		.aeopugmill-qcard-header {
-			display: flex;
-			align-items: center;
-			justify-content: space-between;
-			margin-bottom: 10px;
-			paddding-bottom: 6px;
-			border-bottom: 1px solid var(--qborder);
-		}
-		.aeopugmill-qcard-label {
-			font-size: 11px;
-			font-weight: 700;
-			text-transform: uppercase;
-			letter-spacing: .06em;
-			color: var(--qaccent);
-		}
-		.aeopugmill-qcard-trend {
-			font-size: 11px;
-			font-weight: 600;
-			white-space: nowrap;
-		}
-		.aeopugmill-qcard-trend .trend-label {
-			font-size: 9px;
-			font-weight: 400;
-			color: #9ca3af;
-			margin-left: 2px;
-		}
-		.aeopugmill-bot-row { margin-bottom: 7px; }
-		.aeopugmill-bot-row:last-child { margin-bottom: 0; }
-		.aeopugmill-bot-name-row {
-			display: flex;
-			align-items: center;
-			gap: 6px;
-			margin-bottom: 3px;
-			font-size: 11px;
-			color: #374151;
-		}
-		.aeopugmill-bot-count {
-			margin-left: auto;
-			font-size: 11px;
-			font-weight: 600;
-			color: var(--qaccent);
-			flex-shrink: 0;
-		}
-		.aeopugmill-bar-row {
-			display: flex;
-			align-items: center;
-			gap: 5px;
-			margin-bottom: 2px;
-		}
-		.aeopugmill-bar-row:last-child { margin-bottom: 0; }
-		.aeopugmill-bar-lbl {
-			font-size: 9px;
-			color: #9ca3af;
-			width: 18px;
-			flex-shrink: 0;
-		}
-		.aeopugmill-bar-track {
-			flex: 1;
-			background: #e5e7eb;
-			border-radius: 2px;
-			height: 5px;
-			overflow: hidden;
-		}
-		.aeopugmill-bar-fill { height: 100%; border-radius: 2px; }
-		</style>
 
 		<?php if ( ! empty( $network_avgs ) || $total_visits > 0 ) : ?>
-		<p style="font-size:12px; font-weight:600; color:#1d2327; margin:20px 0 0;">
+		<p style="font-size:12px; font-weight:600; color:#1d2327; margin:20px 0 8px;">
 			<?php esc_html_e( 'Your site vs. network average', 'aeo-pugmill' ); ?>
 			<?php if ( $network_sites > 0 ) : ?>
 			<span style="font-size:11px; font-weight:400; color:#9ca3af; margin-left:6px;">
@@ -2710,28 +2621,36 @@ function aeopugmill_render_settings_page() {
 		</p>
 		<?php endif; ?>
 
-		<div class="aeopugmill-quadrant-grid">
-		<?php foreach ( $quadrant_defs as $cat_key => $q ) :
+		<div style="border:1px solid #e5e7eb; border-radius:8px; overflow:hidden; margin-bottom:8px;">
+		<?php
+		$_bm_first = true;
+		foreach ( $benchmark_cats as $cat_key => $q ) :
 
-			// Sort bots by local visit count desc
+			// Collect per-bot counts, sort descending
 			$q_sorted = array();
 			foreach ( $q['bots'] as $bot_key => $_ ) {
 				$q_sorted[ $bot_key ] = (int) ( $summary[ $bot_key ] ?? 0 );
 			}
 			arsort( $q_sorted );
 
-			// Scale max: raw peak across your counts + network avgs, then round up to nearest nice number
+			// Skip categories with no local data and no network averages
+			$_bm_has_any = false;
+			foreach ( $q_sorted as $bot_key => $cnt ) {
+				if ( $cnt > 0 || isset( $network_avgs[ $bot_key ] ) ) { $_bm_has_any = true; break; }
+			}
+			if ( ! $_bm_has_any ) continue;
+
+			// Category-relative scale (nice-number rounding)
 			$q_max = 1;
 			foreach ( $q_sorted as $bot_key => $cnt ) {
 				$q_max = max( $q_max, $cnt, (int) ( $network_avgs[ $bot_key ] ?? 0 ) );
 			}
-			// Round up to 1/2/5/10 × magnitude for intuitive axis breaks
 			$_qmag = (int) pow( 10, (int) floor( log10( max( $q_max, 1 ) ) ) );
 			foreach ( array( 1, 2, 5, 10 ) as $_f ) {
 				if ( $_f * $_qmag >= $q_max ) { $q_max = $_f * $_qmag; break; }
 			}
 
-			// Network trend
+			// Network trend arrow
 			$nc        = $network_categories[ $cat_key ] ?? null;
 			$nc_change = ( $nc && isset( $nc['change_pct'] ) && null !== $nc['change_pct'] ) ? (int) $nc['change_pct'] : null;
 			$nc_arrow  = '';
@@ -2742,63 +2661,73 @@ function aeopugmill_render_settings_page() {
 				else                      { $nc_arrow = '&#8212;'; $nc_col = '#9ca3af'; }
 			}
 
-			$has_data = array_sum( $q_sorted ) > 0;
+			// Category visit total (your site)
+			$cat_visit_total = array_sum( $q_sorted );
 		?>
-		<div class="aeopugmill-qcard" style="--qbg:<?php echo esc_attr( $q['bg'] ); ?>; --qborder:<?php echo esc_attr( $q['border'] ); ?>; --qaccent:<?php echo esc_attr( $q['accent'] ); ?>;">
+		<div style="<?php echo $_bm_first ? '' : 'border-top:1px solid #e5e7eb;'; ?> background:<?php echo esc_attr( $q['bg'] ); ?>;">
 
-			<div class="aeopugmill-qcard-header">
-				<span class="aeopugmill-qcard-label"><?php echo esc_html( $q['label'] ); ?></span>
+			<!-- Category header -->
+			<div style="display:flex; align-items:center; gap:7px; padding:8px 12px 7px; border-bottom:1px solid <?php echo esc_attr( $q['border'] ); ?>;">
+				<span style="width:8px; height:8px; border-radius:50%; background:<?php echo esc_attr( $q['accent'] ); ?>; flex-shrink:0;"></span>
+				<span style="font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:<?php echo esc_attr( $q['accent'] ); ?>; flex:1;"><?php echo esc_html( $q['label'] ); ?></span>
+				<?php if ( $cat_visit_total > 0 ) : ?>
+				<span style="font-size:10px; color:#9ca3af;"><?php echo esc_html( number_format_i18n( $cat_visit_total ) ); ?></span>
+				<?php endif; ?>
 				<?php if ( null !== $nc_change ) : ?>
-				<span class="aeopugmill-qcard-trend" style="color:<?php echo esc_attr( $nc_col ); ?>;">
+				<span style="font-size:10px; font-weight:600; color:<?php echo esc_attr( $nc_col ); ?>; white-space:nowrap; padding-left:6px; border-left:1px solid <?php echo esc_attr( $q['border'] ); ?>;">
 					<?php echo wp_kses_post( $nc_arrow ); ?>&thinsp;<?php echo esc_html( abs( $nc_change ) ); ?>%
-					<span class="trend-label"><?php esc_html_e( 'network', 'aeo-pugmill' ); ?></span>
+					<span style="font-size:9px; font-weight:400; color:#9ca3af; margin-left:2px;"><?php esc_html_e( 'network', 'aeo-pugmill' ); ?></span>
 				</span>
 				<?php endif; ?>
 			</div>
 
-			<?php if ( ! $has_data ) : ?>
-			<p style="font-size:11px; color:#9ca3af; margin:0;"><?php echo esc_html( $q['empty_msg'] ); ?></p>
-			<?php else : ?>
-			<?php foreach ( $q_sorted as $bot_key => $count ) :
+			<!-- Bot bullet-graph rows -->
+			<div style="padding:7px 12px 4px;">
+			<?php
+			foreach ( $q_sorted as $bot_key => $count ) :
 				if ( $count === 0 && ! isset( $network_avgs[ $bot_key ] ) ) continue;
 				$bot_info = $q['bots'][ $bot_key ];
 				$net_avg  = isset( $network_avgs[ $bot_key ] ) ? (int) $network_avgs[ $bot_key ] : null;
-				$my_pct   = (int) round( $count   / $q_max * 100 );
-				$avg_pct  = ( null !== $net_avg ) ? (int) round( $net_avg / $q_max * 100 ) : 0;
+				$my_pct   = min( 100, (int) round( $count / $q_max * 100 ) );
+				$avg_pct  = ( null !== $net_avg ) ? min( 100, (int) round( $net_avg / $q_max * 100 ) ) : null;
 			?>
-			<div class="aeopugmill-bot-row">
-				<div class="aeopugmill-bot-name-row">
+			<div style="margin-bottom:8px;">
+				<!-- Bot name + visit count -->
+				<div style="display:flex; align-items:center; gap:6px; margin-bottom:3px; font-size:11px; color:#374151;">
 					<span style="width:7px; height:7px; border-radius:50%; background:<?php echo esc_attr( $bot_info['color'] ); ?>; flex-shrink:0;"></span>
-					<span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;"><?php echo esc_html( $bot_info['label'] ); ?></span>
-					<span class="aeopugmill-bot-count"><?php echo esc_html( number_format_i18n( $count ) ); ?></span>
+					<span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><?php echo esc_html( $bot_info['label'] ); ?></span>
+					<span style="font-weight:600; color:<?php echo esc_attr( $q['accent'] ); ?>; flex-shrink:0;"><?php echo esc_html( number_format_i18n( $count ) ); ?></span>
 				</div>
-				<div class="aeopugmill-bar-row">
-					<span class="aeopugmill-bar-lbl" aria-label="<?php esc_attr_e( 'you', 'aeo-pugmill' ); ?>"><?php esc_html_e( 'you', 'aeo-pugmill' ); ?></span>
-					<div class="aeopugmill-bar-track" role="meter" aria-valuenow="<?php echo (int) $my_pct; ?>" aria-valuemin="0" aria-valuemax="100">
-						<div class="aeopugmill-bar-fill" style="width:<?php echo (int) $my_pct; ?>%; background:<?php echo esc_attr( $bot_info['color'] ); ?>;"></div>
-					</div>
+				<!-- Bullet graph: qualitative zones + your bar + network avg tick -->
+				<div style="position:relative; height:12px; border-radius:3px; overflow:hidden; background:#f3f4f6;">
+					<div style="position:absolute;top:0;left:0;width:40%;height:100%;background:<?php echo esc_attr( $q['zone_lo'] ); ?>;"></div>
+					<div style="position:absolute;top:0;left:40%;width:35%;height:100%;background:<?php echo esc_attr( $q['zone_mid'] ); ?>;"></div>
+					<div style="position:absolute;top:0;left:75%;width:25%;height:100%;background:<?php echo esc_attr( $q['zone_hi'] ); ?>;"></div>
+					<div style="position:absolute;top:50%;transform:translateY(-50%);left:0;width:<?php echo (int) $my_pct; ?>%;height:6px;background:<?php echo esc_attr( $bot_info['color'] ); ?>;border-radius:2px;"></div>
+					<?php if ( null !== $avg_pct ) : ?>
+					<div style="position:absolute;top:0;left:<?php echo (int) $avg_pct; ?>%;width:2px;height:100%;background:rgba(55,65,81,0.7);transform:translateX(-50%);"></div>
+					<?php endif; ?>
 				</div>
-				<?php if ( null !== $net_avg ) : ?>
-				<div class="aeopugmill-bar-row">
-					<span class="aeopugmill-bar-lbl" style="color:#7c3aed;" aria-label="<?php esc_attr_e( 'network average', 'aeo-pugmill' ); ?>"><?php esc_html_e( 'avg', 'aeo-pugmill' ); ?></span>
-					<div class="aeopugmill-bar-track" role="meter" aria-valuenow="<?php echo (int) $avg_pct; ?>" aria-valuemin="0" aria-valuemax="100">
-						<div class="aeopugmill-bar-fill" style="width:<?php echo (int) $avg_pct; ?>%; background:#7c3aed;"></div>
-					</div>
+				<?php if ( null !== $avg_pct && null !== $net_avg ) : ?>
+				<div style="position:relative; height:13px; margin-top:1px;">
+					<span style="position:absolute; left:<?php echo (int) $avg_pct; ?>%; transform:translateX(-50%); font-size:9px; color:#6b7280; white-space:nowrap;"><?php echo esc_html( number_format_i18n( $net_avg ) ); ?></span>
 				</div>
 				<?php endif; ?>
 			</div>
 			<?php endforeach; ?>
-			<?php endif; ?>
+			</div>
 
 		</div>
-		<?php endforeach; ?>
+		<?php $_bm_first = false; endforeach; ?>
 		</div>
-		<p style="font-size:11px; color:#9ca3af; margin:6px 0 24px;">
+		<p style="font-size:11px; color:#9ca3af; margin:4px 0 24px;">
 			<?php esc_html_e( 'Last 30 days', 'aeo-pugmill' ); ?>
 			<?php if ( ! empty( $network_avgs ) ) : ?>
-			&nbsp;&middot;&nbsp; <?php esc_html_e( 'Purple', 'aeo-pugmill' ); ?> <span style="color:#7c3aed; font-weight:700; font-family:monospace;">&ldquo;avg&rdquo;</span> <?php esc_html_e( 'bar', 'aeo-pugmill' ); ?> = <?php esc_html_e( 'network average', 'aeo-pugmill' ); ?>
+			&nbsp;&middot;&nbsp; <?php esc_html_e( 'Bar = your site · Tick = network avg (per-category scale)', 'aeo-pugmill' ); ?>
 			<?php endif; ?>
 		</p>
+
+		
 
 		<!-- 30-day trend chart -->
 		<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px 24px; margin-bottom:24px;">
