@@ -414,11 +414,11 @@ function aeopugmill_render_settings_page() {
 	$license_key    = aeopugmill_get_encrypted_option( 'aeopugmill_license_key', '' );
 	$api_key        = aeopugmill_get_encrypted_option( 'aeopugmill_ai_api_key', '' );
 
-	// Detect active tab — default is 'license'
-	$allowed_tabs = array( 'license', 'ai-provider', 'site-aeo', 'audit-aeo', 'bulk-aeo', 'author-voice', 'compatibility', 'analytics' );
+	// Detect active tab — default is 'dashboard'
+	$allowed_tabs = array( 'dashboard', 'site-aeo', 'audit-aeo', 'bulk-aeo', 'compatibility' );
 	$active_tab   = isset( $_GET['tab'] ) && in_array( sanitize_key( $_GET['tab'] ), $allowed_tabs, true ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		? sanitize_key( $_GET['tab'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		: 'license';
+		: 'dashboard';
 
 	// Shared styles
 	$h2_style      = 'font-size:14px; font-weight:600; color:#1d2327; padding-bottom:10px; border-bottom:1px solid #ddd; margin:28px 0 16px;';
@@ -429,7 +429,7 @@ function aeopugmill_render_settings_page() {
 	// Helper: tab URL
 	$tab_url = function( $tab ) {
 		$base = admin_url( 'options-general.php?page=aeo-pugmill' );
-		return 'license' === $tab ? $base : $base . '&tab=' . rawurlencode( $tab );
+		return 'dashboard' === $tab ? $base : $base . '&tab=' . rawurlencode( $tab );
 	};
 	?>
 	<div class="wrap">
@@ -443,8 +443,8 @@ function aeopugmill_render_settings_page() {
 			<h1 style="margin:0; padding:0; line-height:1;"><?php esc_html_e( 'AEO Pugmill Settings', 'aeo-pugmill' ); ?> <span style="font-size:13px; font-weight:normal; color:#666;">v<?php echo esc_html( AEOPUGMILL_VERSION ); ?></span></h1>
 		</div>
 
-		<!-- ── License status notice (license tab only) ─────────────── -->
-		<?php if ( 'license' === $active_tab ) : ?>
+		<!-- ── License status notice (dashboard tab) ─────────────── -->
+		<?php if ( 'dashboard' === $active_tab ) : ?>
 		<?php if ( 'ai' === $mode ) : ?>
 			<div class="notice notice-success inline" style="margin-top:12px;">
 				<p>
@@ -480,7 +480,7 @@ function aeopugmill_render_settings_page() {
 					<?php else : ?>
 						<?php printf(
 							wp_kses( __( 'Manual AEO tools active. <a href="%1$s">Add an API key</a> to enable basic AI generation for free, or <a href="%2$s" target="_blank">upgrade to AEO Pugmill Pro</a> for the full feature set.', 'aeo-pugmill' ), array( 'a' => array( 'href' => array(), 'target' => array() ) ) ),
-							esc_url( admin_url( 'options-general.php?page=aeo-pugmill&tab=ai-provider' ) ),
+							esc_url( admin_url( 'options-general.php?page=aeo-pugmill' ) ),
 							esc_url( 'https://aeopugmill.com/pricing' )
 						); ?>
 					<?php endif; ?>
@@ -493,14 +493,11 @@ function aeopugmill_render_settings_page() {
 		<nav class="nav-tab-wrapper" style="margin-top:16px;">
 			<?php
 			$tabs = array(
-				'license'       => __( 'License', 'aeo-pugmill' ),
-				'ai-provider'   => __( 'AI Provider', 'aeo-pugmill' ),
+				'dashboard'     => __( 'Dashboard', 'aeo-pugmill' ),
 				'site-aeo'      => __( 'Site AEO', 'aeo-pugmill' ),
 				'audit-aeo'     => __( 'Audit AEO', 'aeo-pugmill' ),
 				'bulk-aeo'      => __( 'Bulk AEO', 'aeo-pugmill' ),
-				'author-voice'  => __( 'Author Voice', 'aeo-pugmill' ),
 				'compatibility' => __( 'Compatibility', 'aeo-pugmill' ),
-				'analytics'     => __( 'Bot Analytics', 'aeo-pugmill' ),
 			);
 			foreach ( $tabs as $tab_id => $tab_label ) :
 			?>
@@ -511,1224 +508,169 @@ function aeopugmill_render_settings_page() {
 			<?php endforeach; ?>
 		</nav>
 
-		<?php if ( 'license' === $active_tab ) : ?>
+		<?php if ( 'dashboard' === $active_tab ) : ?>
 		<!-- ════════════════════════════════════════════════════════════
-		     LICENSE TAB
+		     DASHBOARD TAB
 		     ════════════════════════════════════════════════════════════ -->
-		<div style="display:grid; grid-template-columns:1fr 280px; gap:28px; align-items:start; margin-top:24px;">
-		<div><!-- left column -->
-		<ol style="<?php echo esc_attr( $p_style ); ?> margin:0 0 0 18px; padding:0; line-height:2;">
-			<li><?php esc_html_e( 'Add a Pro License Key below to unlock the full feature set (optional).', 'aeo-pugmill' ); ?></li>
-			<li><?php printf(
-				/* translators: %s: link to AI Provider tab */
-				esc_html__( 'Add an AI Provider key on the %s tab — Anthropic, OpenAI, or Google. Your key is encrypted on your server; usage is billed by your provider.', 'aeo-pugmill' ),
-				'<a href="' . esc_url( admin_url( 'admin.php?page=aeo-pugmill&tab=ai-provider' ) ) . '">' . esc_html__( 'AI Provider', 'aeo-pugmill' ) . '</a>'
-			); ?></li>
-			<li><?php printf(
-				/* translators: %s: link to Author Voice tab */
-				esc_html__( 'Set your writing style on the %s tab so AI-refined content matches your voice.', 'aeo-pugmill' ),
-				'<a href="' . esc_url( admin_url( 'admin.php?page=aeo-pugmill&tab=author-voice' ) ) . '">' . esc_html__( 'Author Voice', 'aeo-pugmill' ) . '</a>'
-			); ?></li>
-			<li><?php printf(
-				/* translators: %s: link to Bot Analytics tab */
-				esc_html__( 'Opt in to the Pugmill AEO Intelligence Network on the %s tab to contribute bot activity and see how they are consuming your content.', 'aeo-pugmill' ),
-				'<a href="' . esc_url( admin_url( 'admin.php?page=aeo-pugmill&tab=analytics' ) ) . '">' . esc_html__( 'Bot Analytics', 'aeo-pugmill' ) . '</a>'
-			); ?></li>
-		</ol>
-		<h3 style="font-size:13px; font-weight:700; color:#1d2327; margin:20px 0 6px;"><?php esc_html_e( 'Upgrade to AEO Pugmill Pro', 'aeo-pugmill' ); ?></h3>
-		<p style="<?php echo esc_attr( $p_style ); ?>">
-			<?php esc_html_e( 'Upgrading to AEO Pugmill Pro unlocks the full feature set: Generate All AEO, SEO Generation, Tone Check, Topic Focus, Social Media Draftss, and more (see below).', 'aeo-pugmill' ); ?>
-		</p>
-		<form method="post" action="options.php" style="margin-top:16px;">
-			<?php settings_fields( 'aeopugmill_settings' ); ?>
-			<table class="form-table">
-				<tr>
-					<th><label for="aeopugmill_license_key"><?php esc_html_e( 'AEO Pugmill Pro License Key', 'aeo-pugmill' ); ?></label></th>
-					<td>
-						<input type="text"
-							id="aeopugmill_license_key"
-							name="aeopugmill_license_key"
-							value="<?php echo esc_attr( aeopugmill_mask_secret( $license_key ) ); ?>"
-							style="width:420px;"
-							placeholder="XXXX-XXXX-XXXX-XXXX">
-						<?php if ( 'ai' === $mode ) : ?>
-							<span style="color:#46b450; margin-left:8px;">&#10003; <?php esc_html_e( 'Active', 'aeo-pugmill' ); ?></span>
-						<?php elseif ( ! empty( $license_key ) ) : ?>
-							<span style="color:#cc1818; margin-left:8px;">&#10007; <?php esc_html_e( 'Invalid', 'aeo-pugmill' ); ?></span>
-						<?php endif; ?>
-						<p class="description">
-							<?php
-							echo esc_html__( 'Enter your AEO Pugmill Pro license key.', 'aeo-pugmill' );
-							echo ' ';
-							printf( '<a href="%s" target="_blank">%s</a>', esc_url( 'https://aeopugmill.com/pricing' ), esc_html__( 'Get a license →', 'aeo-pugmill' ) );
-							?>
-						</p>
-					</td>
-				</tr>
-			</table>
-			<?php submit_button(); ?>
-		</form>
-		</div><!-- /left column -->
 
-		<div><!-- right column — current plan -->
-			<?php if ( 'ai' === $mode ) : ?>
-			<div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:18px 20px;">
-				<p style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#16a34a; margin:0 0 6px;"><?php esc_html_e( 'Current Plan', 'aeo-pugmill' ); ?></p>
-				<p style="font-size:17px; font-weight:700; color:#1d2327; margin:0 0 10px;"><?php esc_html_e( 'AEO Pugmill Pro', 'aeo-pugmill' ); ?></p>
-				<ul style="font-size:12px; color:#374151; margin:0; padding-left:16px; line-height:1.9;">
-					<li><?php esc_html_e( 'All AI generation features', 'aeo-pugmill' ); ?></li>
-					<li><?php esc_html_e( 'Generate All (one-click)', 'aeo-pugmill' ); ?></li>
-					<li><?php esc_html_e( 'Tone Check &amp; editorial suite', 'aeo-pugmill' ); ?></li>
-					<li><?php esc_html_e( 'Social Media Drafts', 'aeo-pugmill' ); ?></li>
-				</ul>
-			</div>
-			<?php elseif ( ! empty( $api_key ) ) : ?>
-			<div style="background:#fefce8; border:1px solid #fde68a; border-radius:8px; padding:18px 20px;">
-				<p style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#d97706; margin:0 0 6px;"><?php esc_html_e( 'Current Plan', 'aeo-pugmill' ); ?></p>
-				<p style="font-size:17px; font-weight:700; color:#1d2327; margin:0 0 10px;"><?php esc_html_e( 'Free + AI Provider', 'aeo-pugmill' ); ?></p>
-				<ul style="font-size:12px; color:#374151; margin:0 0 14px; padding-left:16px; line-height:1.9;">
-					<li><?php esc_html_e( 'Core AEO generators', 'aeo-pugmill' ); ?></li>
-					<li><?php esc_html_e( 'Manual schema &amp; SEO', 'aeo-pugmill' ); ?></li>
-					<li><?php esc_html_e( 'Bot Analytics', 'aeo-pugmill' ); ?></li>
-				</ul>
-				<a href="<?php echo esc_url( 'https://aeopugmill.com/pricing' ); ?>" target="_blank" class="button button-primary" style="width:100%; text-align:center; box-sizing:border-box;"><?php esc_html_e( 'Upgrade to AEO Pugmill Pro', 'aeo-pugmill' ); ?></a>
-			</div>
-			<?php else : ?>
-			<div style="background:#f6f7f7; border:1px solid #ddd; border-radius:8px; padding:18px 20px;">
-				<p style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#9ca3af; margin:0 0 6px;"><?php esc_html_e( 'Current Plan', 'aeo-pugmill' ); ?></p>
-				<p style="font-size:17px; font-weight:700; color:#1d2327; margin:0 0 10px;"><?php esc_html_e( 'Free', 'aeo-pugmill' ); ?></p>
-				<ul style="font-size:12px; color:#374151; margin:0 0 14px; padding-left:16px; line-height:1.9;">
-					<li><?php esc_html_e( 'Manual AEO editing', 'aeo-pugmill' ); ?></li>
-					<li><?php esc_html_e( 'Manual schema &amp; SEO', 'aeo-pugmill' ); ?></li>
-					<li><?php esc_html_e( 'Bot Analytics', 'aeo-pugmill' ); ?></li>
-				</ul>
-				<a href="<?php echo esc_url( admin_url( 'options-general.php?page=aeo-pugmill&tab=ai-provider' ) ); ?>" class="button" style="width:100%; text-align:center; box-sizing:border-box; margin-bottom:8px;"><?php esc_html_e( 'Connect API Key →', 'aeo-pugmill' ); ?></a>
-				<a href="<?php echo esc_url( 'https://aeopugmill.com/pricing' ); ?>" target="_blank" class="button button-primary" style="width:100%; text-align:center; box-sizing:border-box;"><?php esc_html_e( 'Get AEO Pugmill Pro →', 'aeo-pugmill' ); ?></a>
-			</div>
-			<?php endif; ?>
-		</div><!-- /right column -->
-		</div><!-- /two-column grid -->
+		<!-- ── Setup Cards ─────────────────────────────────────── -->
+		<?php
+		$saved_provider  = ! empty( $api_key ) ? get_option( 'aeopugmill_ai_provider', '' ) : '';
+		$provider_labels = array( 'anthropic' => 'Anthropic (Claude)', 'openai' => 'OpenAI (GPT)', 'gemini' => 'Google Gemini' );
+		$provider_name   = $provider_labels[ $saved_provider ] ?? '';
+		$has_voice       = (bool) get_option( 'aeopugmill_author_voice', '' );
+		$voice_text      = get_option( 'aeopugmill_author_voice', '' );
+		$social_lines    = array_filter( array_map( 'trim', explode( "\n", get_option( 'aeopugmill_author_same_as', '' ) ) ) );
+		$social_count    = count( $social_lines );
+		?>
+		<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-top:24px;">
 
-		<!-- ── Feature comparison table ─────────────────────────────────── -->
-		<div style="margin-top:32px; background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px 24px;">
-			<p style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#9ca3af; margin:0 0 16px;">
-				<?php esc_html_e( 'What\'s included', 'aeo-pugmill' ); ?>
-			</p>
-			<table class="widefat" style="font-size:13px;">
-				<thead style="background:#f6f7f7;">
-					<tr>
-						<th style="padding:10px 16px; color:#1d2327; font-weight:600; width:58%;"><?php esc_html_e( 'Feature', 'aeo-pugmill' ); ?></th>
-						<th style="text-align:center; padding:10px 16px; color:#1d2327; font-weight:600; width:21%;"><?php esc_html_e( 'Free', 'aeo-pugmill' ); ?></th>
-						<th style="text-align:center; padding:10px 16px; color:#7c3aed; font-weight:600; width:21%;"><?php esc_html_e( 'AEO Pugmill Pro', 'aeo-pugmill' ); ?></th>
-					</tr>
-				</thead>
-				<tbody>
-					<?php
-					$row = function( $label, $free, $paid, $note = '' ) {
-						$tick  = '<span style="color:#46b450; font-weight:700;">&#10003;</span>';
-						$dash  = '<span style="color:#ccc;">&#8212;</span>';
-						$free_cell = $free  ? $tick : $dash;
-						$paid_cell = $paid  ? $tick : $dash;
-						static $alt = false;
-						$alt = !$alt;
-						$bg = $alt ? 'background:#fff;' : 'background:#f9fafb;';
-						echo '<tr style="' . esc_attr( $bg ) . '">';
-						echo '<td style="padding:10px 16px; color:#374151;">' . esc_html( $label );
-						if ( $note ) {
-							echo ' <span style="font-size:11px; color:#9ca3af;">' . esc_html( $note ) . '</span>';
-						}
-						echo '</td>';
-						echo '<td style="text-align:center; padding:10px 16px;">' . wp_kses_post( $free_cell ) . '</td>';
-						echo '<td style="text-align:center; padding:10px 16px;">' . wp_kses_post( $paid_cell ) . '</td>';
-						echo '</tr>';
-					};
-					$section = function( $label ) {
-						echo '<tr style="background:#faf7ff;"><td colspan="3" style="padding:10px 16px 8px; font-size:11px; font-weight:700; color:#7c3aed; text-transform:uppercase; letter-spacing:.06em; border-top:1px solid #ede9fb;">' . esc_html( $label ) . '</td></tr>';
-					};
-
-					$section( __( 'Core tools', 'aeo-pugmill' ) );
-					$row( __( 'Manual AEO editing (Summary, Q&A, Entities, Keywords)', 'aeo-pugmill' ),  true, true );
-					$row( __( 'Manual SEO editing (Title, Meta, Canonical, OG…)', 'aeo-pugmill' ),      true, true );
-					$row( __( 'Manual Schema markup (Article, HowTo, Product, Event…)', 'aeo-pugmill' ), true, true );
-					$row( __( 'AEO Health score', 'aeo-pugmill' ),                                       true, true );
-					$row( __( '/llms.txt, XML Sitemap & IndexNow', 'aeo-pugmill' ),                      true, true );
-					$row( __( 'Bot Analytics', 'aeo-pugmill' ),                                          true, true );
-					$row( __( 'Plugin Compatibility checker', 'aeo-pugmill' ),                           true, true );
-
-					$section( __( 'Basic AI generation — free with your own API key', 'aeo-pugmill' ) );
-					$row( __( 'Connect Anthropic, OpenAI, or Google Gemini key', 'aeo-pugmill' ),        true, true );
-					$row( __( 'Generate AEO Summary', 'aeo-pugmill' ),                                   true, true );
-					$row( __( 'Generate Q&A Pairs', 'aeo-pugmill' ),                                     true, true );
-					$row( __( 'Generate Entities', 'aeo-pugmill' ),                                      true, true );
-					$row( __( 'Generate Keywords', 'aeo-pugmill' ),                                      true, true );
-					$row( __( 'Draft Site Summary with AI (Settings)', 'aeo-pugmill' ),                  true, true );
-					$row( __( 'AI llms.txt Improvement Tips (Settings)', 'aeo-pugmill' ),                true, true );
-
-					$section( __( 'Full AI generation — AEO Pugmill Pro license required', 'aeo-pugmill' ) );
-					$row( __( 'Generate All (one-click, 7 steps)', 'aeo-pugmill' ),           false, true );
-					$row( __( 'Generate SEO Title & Meta Description', 'aeo-pugmill' ),           false, true );
-					$row( __( 'AI Schema Type Detection (Article, HowTo, Product, Event & more)', 'aeo-pugmill' ), false, true );
-					$row( __( 'Tone Check', 'aeo-pugmill' ),                                  false, true );
-					$row( __( 'Topic Focus & Refine', 'aeo-pugmill' ),                        false, true );
-					$row( __( 'Internal Links', 'aeo-pugmill' ),                              false, true );
-					$row( __( 'Reading Level', 'aeo-pugmill' ),                               false, true );
-										$row( __( 'Excerpt Generator', 'aeo-pugmill' ),                           false, true );
-					$row( __( 'Social Media Drafts', 'aeo-pugmill' ),                          false, true );
-					$row( __( 'Bulk AEO Generator (all posts in one run)', 'aeo-pugmill' ),   false, true );
-					?>
-				</tbody>
-			</table>
-			<?php if ( 'free' === $mode ) : ?>
-			<p style="margin-top:16px; font-size:13px;">
-				<?php if ( empty( $api_key ) ) : ?>
-					<a href="<?php echo esc_url( admin_url( 'options-general.php?page=aeo-pugmill&tab=ai-provider' ) ); ?>" class="button"><?php esc_html_e( 'Connect API Key — free →', 'aeo-pugmill' ); ?></a>
-					&nbsp;
-				<?php endif; ?>
-				<a href="<?php echo esc_url( 'https://aeopugmill.com/pricing' ); ?>" target="_blank" class="button button-primary"><?php esc_html_e( 'Get AEO Pugmill Pro →', 'aeo-pugmill' ); ?></a>
-			</p>
-			<?php endif; ?>
-		</div>
-
-		<?php elseif ( 'ai-provider' === $active_tab ) : ?>
-		<!-- ════════════════════════════════════════════════════════════
-		     AI PROVIDER TAB
-		     ════════════════════════════════════════════════════════════ -->
-		<?php if ( in_array( $mode, array( 'ai', 'free' ), true ) ) : ?>
-		<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px 24px; margin-top:24px;">
-		<p style="<?php echo esc_attr( $p_style ); ?>">
-			<?php esc_html_e( 'AEO Pugmill uses a bring-your-own-key model — you connect directly to Anthropic, OpenAI, or Google Gemini using your own API account. Your key is encrypted and stored server-side only, never exposed to visitors or transmitted through our servers. Usage is billed directly by your chosen AI provider.', 'aeo-pugmill' ); ?>
-		</p>
-
-		<div style="margin:20px 0 4px;">
-			<p style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#9ca3af; margin:0 0 10px;">
-				<?php esc_html_e( 'How to connect', 'aeo-pugmill' ); ?>
-			</p>
-			<ol style="font-size:13px; color:#444; margin:0 0 20px; padding-left:20px; line-height:1.8;">
-				<li><?php esc_html_e( 'Choose a provider and create a free account (you only pay for what you use).', 'aeo-pugmill' ); ?></li>
-				<li><?php esc_html_e( 'Generate an API key in your provider\'s console (links below).', 'aeo-pugmill' ); ?></li>
-				<li><?php esc_html_e( 'Paste the key in the form and click Save Settings.', 'aeo-pugmill' ); ?></li>
-			</ol>
-
-			<div style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px;">
-				<div style="padding:18px 20px; background:#f9f6ff; border:1px solid #e8d5fd; border-radius:8px; border-top:3px solid #7c3aed; display:flex; flex-direction:column;">
-					<p style="font-size:13px; font-weight:700; color:#1e1e1e; margin:0 0 6px;">Anthropic — Claude</p>
-					<p style="font-size:12px; color:#555; margin:0 0 12px; line-height:1.6; flex:1;"><?php esc_html_e( 'Excellent reasoning and long-form writing. Recommended for AEO and editorial tasks.', 'aeo-pugmill' ); ?></p>
-					<a href="<?php echo esc_url( 'https://console.anthropic.com/settings/keys' ); ?>" target="_blank" style="font-size:12px; font-weight:600; color:#7c3aed; text-decoration:none;"><?php esc_html_e( 'Get API key →', 'aeo-pugmill' ); ?></a>
+			<!-- Card 1 — AI Provider -->
+			<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:16px 18px; position:relative;">
+				<?php if ( $api_key ) : ?>
+				<div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
+					<span style="color:#16a34a; font-size:14px;">&#10003;</span>
+					<span style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#16a34a;"><?php esc_html_e( 'Connected', 'aeo-pugmill' ); ?></span>
 				</div>
-				<div style="padding:18px 20px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; border-top:3px solid #16a34a; display:flex; flex-direction:column;">
-					<p style="font-size:13px; font-weight:700; color:#1e1e1e; margin:0 0 6px;">OpenAI — GPT</p>
-					<p style="font-size:12px; color:#555; margin:0 0 12px; line-height:1.6; flex:1;"><?php esc_html_e( 'Widely used and reliable. Strong across summarization, SEO, and structured output.', 'aeo-pugmill' ); ?></p>
-					<a href="<?php echo esc_url( 'https://platform.openai.com/api-keys' ); ?>" target="_blank" style="font-size:12px; font-weight:600; color:#16a34a; text-decoration:none;"><?php esc_html_e( 'Get API key →', 'aeo-pugmill' ); ?></a>
-				</div>
-				<div style="padding:18px 20px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; border-top:3px solid #2563eb; display:flex; flex-direction:column;">
-					<p style="font-size:13px; font-weight:700; color:#1e1e1e; margin:0 0 6px;">Google — Gemini</p>
-					<p style="font-size:12px; color:#555; margin:0 0 12px; line-height:1.6; flex:1;"><?php esc_html_e( 'Google\'s multimodal model. Well-suited for search-aware content and entity recognition.', 'aeo-pugmill' ); ?></p>
-					<a href="<?php echo esc_url( 'https://aistudio.google.com/apikey' ); ?>" target="_blank" style="font-size:12px; font-weight:600; color:#2563eb; text-decoration:none;"><?php esc_html_e( 'Get API key →', 'aeo-pugmill' ); ?></a>
-				</div>
-			</div>
-		</div>
-
-		<form method="post" action="options.php" style="margin-top:24px;">
-			<?php settings_fields( 'aeopugmill_settings' ); ?>
-			<table class="form-table">
-				<tr>
-					<th><label for="aeopugmill_ai_provider"><?php esc_html_e( 'Provider', 'aeo-pugmill' ); ?> <span style="color:#dc3232;">*</span></label></th>
-					<td>
-						<select id="aeopugmill_ai_provider" name="aeopugmill_ai_provider">
-							<option value=""><?php esc_html_e( '— Select provider —', 'aeo-pugmill' ); ?></option>
-							<?php
-							// Only preselect the saved provider when an API key is actually stored.
-							$saved_provider = ! empty( $api_key ) ? get_option( 'aeopugmill_ai_provider', '' ) : '';
-							foreach ( array( 'anthropic' => 'Anthropic (Claude)', 'openai' => 'OpenAI (GPT)', 'gemini' => 'Google Gemini' ) as $val => $label ) :
-							?>
+				<p style="font-size:13px; font-weight:600; color:#1d2327; margin:0 0 4px;"><?php esc_html_e( 'AI Provider', 'aeo-pugmill' ); ?></p>
+				<p style="font-size:12px; color:#6b7280; margin:0 0 8px;"><?php echo esc_html( $provider_name ); ?></p>
+				<details style="font-size:12px;">
+					<summary style="cursor:pointer; color:#7c3aed; font-weight:600; font-size:11px;"><?php esc_html_e( 'Change provider or key', 'aeo-pugmill' ); ?></summary>
+					<div style="margin-top:12px;">
+						<form method="post" action="options.php">
+							<?php settings_fields( 'aeopugmill_settings' ); ?>
+							<label style="display:block; font-size:11px; font-weight:600; color:#374151; margin-bottom:4px;"><?php esc_html_e( 'Provider', 'aeo-pugmill' ); ?></label>
+							<select id="aeopugmill_ai_provider" name="aeopugmill_ai_provider" style="width:100%; margin-bottom:8px;">
+								<option value=""><?php esc_html_e( '— Select —', 'aeo-pugmill' ); ?></option>
+								<?php foreach ( array( 'anthropic' => 'Anthropic (Claude)', 'openai' => 'OpenAI (GPT)', 'gemini' => 'Google Gemini' ) as $val => $label ) : ?>
 								<option value="<?php echo esc_attr( $val ); ?>" <?php selected( $saved_provider, $val ); ?>><?php echo esc_html( $label ); ?></option>
-							<?php endforeach; ?>
-						</select>
-						<span id="aeopugmill-provider-hint" style="display:<?php echo empty( $saved_provider ) ? 'inline' : 'none'; ?>; margin-left:8px; font-size:12px; color:#dc3232;"><?php esc_html_e( 'Please select a provider before saving.', 'aeo-pugmill' ); ?></span>
-					</td>
-				</tr>
-				<tr>
-					<th><label for="aeopugmill_ai_api_key"><?php esc_html_e( 'API Key', 'aeo-pugmill' ); ?></label></th>
-					<td>
-						<input type="password"
-							id="aeopugmill_ai_api_key"
-							name="aeopugmill_ai_api_key"
-							value="<?php echo esc_attr( aeopugmill_mask_secret( $api_key ) ); ?>"
-							style="width:360px;"
-							placeholder="sk-...">
-						<input type="hidden" name="aeopugmill_api_key_changed" id="aeopugmill_api_key_changed" value="0">
-						<span id="aeopugmill-test-api-key-status" style="display:block; margin-top:6px; font-size:13px; min-height:18px;">
-							<?php if ( $api_key ) : ?>
-							<span style="color:#46b450;">✓ <?php esc_html_e( 'Key saved', 'aeo-pugmill' ); ?></span>
-							<?php endif; ?>
-						</span>
-						<p class="description"><?php esc_html_e( 'Paste your API key above. It is validated automatically when you leave the field. The key is encrypted before storage.', 'aeo-pugmill' ); ?></p>
-					</td>
-				</tr>
-				<tr>
-					<th><label for="aeopugmill_ai_rate_limit"><?php esc_html_e( 'Hourly Call Limit', 'aeo-pugmill' ); ?></label></th>
-					<td>
-						<select id="aeopugmill_ai_rate_limit" name="aeopugmill_ai_rate_limit">
-							<?php foreach ( array( 50, 100, 200 ) as $limit_option ) : ?>
-								<option value="<?php echo esc_attr( $limit_option ); ?>" <?php selected( (int) get_option( 'aeopugmill_ai_rate_limit', 50 ), $limit_option ); ?>><?php echo esc_html( $limit_option ); ?></option>
-							<?php endforeach; ?>
-						</select>
-						<p class="description">
-							<?php esc_html_e( 'Maximum number of AI generations any editor can make per hour. Lower values help keep your API spend predictable — each generation calls your provider\'s API and is billed to your account. Resets automatically after 60 minutes.', 'aeo-pugmill' ); ?>
-						</p>
-					</td>
-				</tr>
-			</table>
-			<p style="margin-top:4px;">
-				<?php
-			$btn_disabled = ( $api_key || empty( $saved_provider ) );
-			submit_button( null, 'primary', 'submit', false, $btn_disabled ? array( 'id' => 'aeopugmill-ai-save-btn', 'disabled' => 'disabled' ) : array( 'id' => 'aeopugmill-ai-save-btn' ) );
-			?>
-			</p>
-		</form>
-		</div><!-- /ai-provider card -->
-		<script>
-		(function() {
-			var status       = document.getElementById( 'aeopugmill-test-api-key-status' );
-			var keyField     = document.getElementById( 'aeopugmill_ai_api_key' );
-			var saveBtn      = document.getElementById( 'aeopugmill-ai-save-btn' );
-			var flagField    = document.getElementById( 'aeopugmill_api_key_changed' );
-			var providerSel  = document.getElementById( 'aeopugmill_ai_provider' );
-			var rateSelect   = document.getElementById( 'aeopugmill_ai_rate_limit' );
-			var providerHint = document.getElementById( 'aeopugmill-provider-hint' );
-			if ( ! keyField || ! status ) { return; }
-
-			var ajaxUrl    = <?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>;
-			var nonce      = <?php echo wp_json_encode( wp_create_nonce( 'aeopugmill_test_api_key' ) ); ?>;
-
-			// Track whether the user has actually typed a new key since page load.
-			var isDirty   = false;
-			var isTesting = false;
-
-			// Enable Save only when a provider is selected — provider is required.
-			// If the provider dropdown is blank the hint is shown and Save stays disabled.
-			function checkCanSave() {
-				var providerEmpty = providerSel && providerSel.value === '';
-				if ( providerHint ) { providerHint.style.display = providerEmpty ? 'inline' : 'none'; }
-				if ( saveBtn ) { saveBtn.disabled = providerEmpty; }
-			}
-
-			keyField.addEventListener( 'input', function() {
-				if ( ! isDirty ) {
-					isDirty = true;
-					// Tell PHP a new key was typed — used by the sanitize callback
-					// instead of fragile bullet-character detection.
-					if ( flagField ) { flagField.value = '1'; }
-					// Clear the "Key saved" indicator while the user is editing.
-					status.innerHTML = '';
-				}
-				checkCanSave();
-			} );
-
-			if ( providerSel ) { providerSel.addEventListener( 'change', checkCanSave ); }
-			if ( rateSelect )  { rateSelect.addEventListener( 'change', checkCanSave ); }
-
-			// Run a validation test against the AI provider.
-			// Only sends the typed value when dirty; omits it when pristine so
-			// PHP uses the stored encrypted key — no mask-character detection needed.
-			function runTest( afterTest ) {
-				if ( isTesting ) { return; }
-				isTesting = true;
-				status.textContent = '<?php echo esc_js( __( 'Validating\u2026', 'aeo-pugmill' ) ); ?>';
-				status.style.color = '#888';
-
-				var body = new URLSearchParams();
-				body.append( 'action', 'aeopugmill_test_api_key' );
-				body.append( 'nonce',  nonce );
-				if ( isDirty && keyField.value ) {
-					body.append( 'api_key', keyField.value );
-				}
-
-				fetch( ajaxUrl, {
-					method:      'POST',
-					credentials: 'same-origin',
-					headers:     { 'Content-Type': 'application/x-www-form-urlencoded' },
-					body:        body.toString(),
-				} )
-				.then( function( r ) { return r.json(); } )
-				.then( function( res ) {
-					if ( res.success ) {
-						status.textContent = '\u2713 ' + res.data.message;
-						status.style.color = '#46b450';
-					} else {
-						var msg = ( res.data && res.data.message ) ? res.data.message : '<?php echo esc_js( __( 'Validation failed.', 'aeo-pugmill' ) ); ?>';
-						status.textContent = '\u2717 ' + msg;
-						status.style.color = '#dc3232';
-					}
-				} )
-				.catch( function() {
-					status.textContent = '<?php echo esc_js( __( 'Network error \u2014 could not reach provider.', 'aeo-pugmill' ) ); ?>';
-					status.style.color = '#dc3232';
-				} )
-				.finally( function() {
-					isTesting = false;
-					if ( typeof afterTest === 'function' ) { afterTest(); }
-				} );
-			}
-
-			// Validate on blur — immediate feedback when the user leaves the field.
-			keyField.addEventListener( 'blur', function() {
-				if ( isDirty ) { runTest(); }
-			} );
-
-		}());
-		</script>
-		<?php else : ?>
-		<div style="margin-top:24px; background:#f6f7f7; border:1px solid #ddd; border-radius:4px; padding:16px; max-width:600px;">
-			<strong><?php esc_html_e( 'AI generation is available with an AEO Pugmill Pro license.', 'aeo-pugmill' ); ?></strong><br>
-			<span style="color:#666;"><?php esc_html_e( 'Connect Claude, GPT-4, or Gemini to auto-generate your AEO metadata with one click.', 'aeo-pugmill' ); ?></span><br><br>
-			<a href="<?php echo esc_url( 'https://aeopugmill.com/pricing' ); ?>" target="_blank" class="button button-primary"><?php esc_html_e( 'Get AEO Pugmill Pro License →', 'aeo-pugmill' ); ?></a>
-		</div>
-		<?php endif; ?>
-
-		<?php elseif ( 'site-aeo' === $active_tab ) : ?>
-		<!-- ════════════════════════════════════════════════════════════
-		     SITE AEO TAB
-		     ════════════════════════════════════════════════════════════ -->
-		<?php
-		// Pre-fill org name from blog name when never set
-		$org_name_saved   = get_option( 'aeopugmill_org_name', '' );
-		$org_name_display = $org_name_saved !== '' ? $org_name_saved : get_bloginfo( 'name' );
-		// Site summary generation is free with BYOK — only requires an API key.
-		$ai_available     = ! empty( aeopugmill_get_encrypted_option( 'aeopugmill_ai_api_key', '' ) );
-		?>
-		<p style="<?php echo esc_attr( $p_style ); ?> margin-top:24px;">
-			<?php esc_html_e( 'Site AEO metadata describes your organization to AI crawlers at a site-wide level. The summary and organization details are published in your /llms.txt file and embedded in Organization schema in every page header. Setting these accurately gives AI answer engines — ChatGPT, Perplexity, Gemini — a reliable source of truth about who you are and what your site covers.', 'aeo-pugmill' ); ?>
-		</p>
-		<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px 24px; margin-top:16px;">
-		<form method="post" action="options.php">
-			<?php settings_fields( 'aeopugmill_settings' ); ?>
-			<table class="form-table">
-				<tr>
-					<th style="vertical-align:top; padding-top:12px;"><label for="aeopugmill_site_summary"><?php esc_html_e( 'Site Summary', 'aeo-pugmill' ); ?></label></th>
-					<td>
-						<textarea id="aeopugmill_site_summary" name="aeopugmill_site_summary" rows="7" style="width:100%; max-width:600px; font-family:monospace; font-size:13px;"><?php echo esc_textarea( get_option( 'aeopugmill_site_summary', '' ) ); ?></textarea>
-						<p class="description"><?php esc_html_e( 'Used in /llms.txt and Organization schema. Describe your site for AI crawlers.', 'aeo-pugmill' ); ?></p>
-						<?php if ( $ai_available ) : ?>
-						<p style="margin-top:8px;">
-							<button type="button" id="aeopugmill-gen-site-summary" style="display:inline-flex; align-items:center; gap:6px; padding:7px 16px; font-size:12px; font-weight:600; background:#7c3aed; color:#fff; border:none; border-radius:4px; cursor:pointer; white-space:nowrap;">
-								✨ <?php esc_html_e( 'Draft with AI', 'aeo-pugmill' ); ?>
-							</button>
-							<span id="aeopugmill-site-summary-status" style="margin-left:10px; font-size:13px; color:#666;"></span>
-						</p>
-						<?php else : ?>
-						<p style="margin-top:6px; font-size:12px; color:#9ca3af;">
-							<?php printf(
-								wp_kses( __( 'Add an <a href="%s">API key</a> to draft this with AI.', 'aeo-pugmill' ), array( 'a' => array( 'href' => array() ) ) ),
-								esc_url( admin_url( 'options-general.php?page=aeo-pugmill&tab=ai-provider' ) )
-							); ?>
-						</p>
-						<?php endif; ?>
-					</td>
-				</tr>
-				<tr>
-					<th><label for="aeopugmill_org_name"><?php esc_html_e( 'Organization Name', 'aeo-pugmill' ); ?></label></th>
-					<td>
-						<input type="text" id="aeopugmill_org_name" name="aeopugmill_org_name"
-							value="<?php echo esc_attr( $org_name_display ); ?>"
-							style="width:300px;">
-						<?php if ( $org_name_saved === '' ) : ?>
-						<p class="description"><?php esc_html_e( 'Pre-filled from your site title — save to confirm.', 'aeo-pugmill' ); ?></p>
-						<?php endif; ?>
-					</td>
-				</tr>
-				<tr>
-					<th><label for="aeopugmill_org_type"><?php esc_html_e( 'Organization Type', 'aeo-pugmill' ); ?></label></th>
-					<td>
-						<select id="aeopugmill_org_type" name="aeopugmill_org_type">
-							<?php foreach ( array( 'Person', 'Organization', 'Corporation', 'LocalBusiness', 'EducationalOrganization', 'NGO' ) as $type ) : ?>
-								<option value="<?php echo esc_attr( $type ); ?>" <?php selected( get_option( 'aeopugmill_org_type', 'Organization' ), $type ); ?>><?php echo esc_html( $type ); ?></option>
-							<?php endforeach; ?>
-						</select>
-					</td>
-				</tr>
-			</table>
-			<?php submit_button(); ?>
-		</form>
-		</div><!-- /site-aeo card -->
-
-		<?php if ( $ai_available ) : ?>
-		<script>
-		(function() {
-			var btn     = document.getElementById( 'aeopugmill-gen-site-summary' );
-			var textarea = document.getElementById( 'aeopugmill_site_summary' );
-			var status  = document.getElementById( 'aeopugmill-site-summary-status' );
-			if ( ! btn || ! textarea ) { return; }
-
-			btn.addEventListener( 'click', function() {
-				btn.disabled  = true;
-				btn.classList.add( 'aeopugmill-loading' );
-				btn.innerHTML = '<?php echo esc_js( __( 'Drafting…', 'aeo-pugmill' ) ); ?>';
-				status.textContent = '';
-				status.style.color = '';
-
-				var body = new URLSearchParams();
-				body.append( 'action', 'aeopugmill_generate_site_summary' );
-				body.append( 'nonce',  <?php echo wp_json_encode( wp_create_nonce( 'aeopugmill_generate_site_summary' ) ); ?> );
-
-				fetch( <?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>, {
-					method:      'POST',
-					credentials: 'same-origin',
-					headers:     { 'Content-Type': 'application/x-www-form-urlencoded' },
-					body:        body.toString(),
-				} )
-				.then( function( r ) { return r.json(); } )
-				.then( function( res ) {
-					if ( res.success && res.data && res.data.summary ) {
-						textarea.value     = res.data.summary;
-						status.textContent = '<?php echo esc_js( __( '✓ Drafted — review and save.', 'aeo-pugmill' ) ); ?>';
-						status.style.color = '#46b450';
-					} else {
-						var msg = res.data && res.data.message ? res.data.message : '<?php echo esc_js( __( 'Generation failed. Please try again.', 'aeo-pugmill' ) ); ?>';
-						status.innerHTML   = msg;
-						status.style.color = '#dc3232';
-					}
-				} )
-				.catch( function() {
-					status.textContent = '<?php echo esc_js( __( 'Network error. Please try again.', 'aeo-pugmill' ) ); ?>';
-					status.style.color = '#dc3232';
-				} )
-				.finally( function() {
-					btn.disabled  = false;
-					btn.classList.remove( 'aeopugmill-loading' );
-					btn.innerHTML = '✨ <?php echo esc_js( __( 'Draft with AI', 'aeo-pugmill' ) ); ?>';
-				} );
-			} );
-		}());
-		</script>
-		<?php endif; ?>
-
-		<?php
-		// ── llms.txt Completeness Score ───────────────────────────────────────
-		global $wpdb;
-
-		$post_ids = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-			"SELECT ID FROM {$wpdb->posts}
-			 WHERE post_status = 'publish'
-			 AND post_type IN ('post', 'page')
-			 ORDER BY post_modified DESC
-			 LIMIT 500"
-		);
-		$total = count( $post_ids );
-
-		$with_summary  = 0;
-		$with_qa       = 0;
-		$with_keywords = 0;
-		$with_entities = 0;
-
-		if ( $total > 0 ) {
-			// Single query for all AEO meta — avoids N+1 per-post reads.
-			$ids_in = implode( ',', array_map( 'intval', $post_ids ) );
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared
-			$rows = $wpdb->get_results(
-				"SELECT meta_value FROM {$wpdb->postmeta}
-				 WHERE meta_key = '_aeopugmill_aeo'
-				 AND post_id IN ({$ids_in})"
-			);
-			foreach ( (array) $rows as $row ) {
-				$aeo = json_decode( $row->meta_value, true );
-				if ( ! is_array( $aeo ) ) { continue; }
-				if ( ! empty( $aeo['summary'] ) )   { $with_summary++; }
-				if ( ! empty( $aeo['questions'] ) )  { $with_qa++; }
-				if ( ! empty( $aeo['keywords'] ) )   { $with_keywords++; }
-				if ( ! empty( $aeo['entities'] ) )   { $with_entities++; }
-			}
-		}
-
-		$has_site_summary = '' !== get_option( 'aeopugmill_site_summary', '' );
-		$has_org_name     = '' !== get_option( 'aeopugmill_org_name', '' );
-		$summary_pct      = $total > 0 ? round( $with_summary  / $total * 100 ) : 0;
-		$qa_pct           = $total > 0 ? round( $with_qa       / $total * 100 ) : 0;
-		$keywords_pct     = $total > 0 ? round( $with_keywords / $total * 100 ) : 0;
-		$entities_pct     = $total > 0 ? round( $with_entities / $total * 100 ) : 0;
-
-		$score  = 0;
-		$score += $has_site_summary ? 20 : 0;
-		$score += $has_org_name     ? 5  : 0;
-		$score += (int) round( $summary_pct  / 100 * 30 );
-		$score += (int) round( $qa_pct       / 100 * 20 );
-		$score += (int) round( $keywords_pct / 100 * 15 );
-		$score += (int) round( $entities_pct / 100 * 10 );
-
-		$score_color = $score >= 80 ? '#46b450' : ( $score >= 50 ? '#d97706' : '#cc1818' );
-		$score_label = $score >= 80
-			? __( 'Strong', 'aeo-pugmill' )
-			: ( $score >= 50 ? __( 'Developing', 'aeo-pugmill' ) : __( 'Needs Work', 'aeo-pugmill' ) );
-
-		/**
-		 * Render one coverage bar row.
-		 *
-		 * @param string $label   Human label.
-		 * @param int    $pct     Percentage filled (0–100).
-		 * @param int    $count   Posts with this field set.
-		 * @param int    $total   Total published posts.
-		 */
-		$coverage_row = function( $label, $pct, $count, $total ) {
-			$bar_color = $pct >= 70 ? '#7c3aed' : ( $pct >= 40 ? '#d97706' : '#cc1818' );
-			?>
-			<div style="margin:10px 0;">
-				<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
-					<span style="font-size:12px; color:#374151;"><?php echo esc_html( $label ); ?></span>
-					<span style="font-size:12px; color:#6b7280;"><?php echo esc_html( $count . '/' . $total . ' (' . $pct . '%)' ); ?></span>
+								<?php endforeach; ?>
+							</select>
+							<label style="display:block; font-size:11px; font-weight:600; color:#374151; margin-bottom:4px;"><?php esc_html_e( 'API Key', 'aeo-pugmill' ); ?></label>
+							<input type="password" id="aeopugmill_ai_api_key" name="aeopugmill_ai_api_key" value="<?php echo esc_attr( aeopugmill_mask_secret( $api_key ) ); ?>" style="width:100%; margin-bottom:4px;" placeholder="sk-...">
+							<input type="hidden" name="aeopugmill_api_key_changed" id="aeopugmill_api_key_changed" value="0">
+							<?php submit_button( __( 'Save', 'aeo-pugmill' ), 'small', 'submit', false ); ?>
+						</form>
+					</div>
+				</details>
+				<?php else : ?>
+				<div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
+					<span style="color:#d97706; font-size:14px;">&#9675;</span>
+					<span style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#d97706;"><?php esc_html_e( 'Not Connected', 'aeo-pugmill' ); ?></span>
 				</div>
-				<div style="height:6px; background:#e5e7eb; border-radius:9999px; overflow:hidden;">
-					<div style="height:100%; width:<?php echo esc_attr( $pct ); ?>%; background:<?php echo esc_attr( $bar_color ); ?>; border-radius:9999px;"></div>
-				</div>
-			</div>
-			<?php
-		};
-		?>
-
-		<div style="background:#faf7ff; border:1px solid #d4c8f0; border-radius:8px; padding:20px 24px; margin:24px 0 0;">
-			<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;">
-				<div>
-					<h3 style="margin:0 0 4px; font-size:14px; font-weight:600; color:#1d2327;">
-						<?php esc_html_e( 'llms.txt Quality Score', 'aeo-pugmill' ); ?>
-					</h3>
-					<p style="margin:0; font-size:12px; color:#6b7280;">
-						<?php
-						printf(
-							/* translators: %d: number of posts analyzed */
-							esc_html__( 'Based on %d published posts. Higher scores mean richer content for AI crawlers.', 'aeo-pugmill' ),
-							(int) $total
-						);
-						?>
-					</p>
-				</div>
-				<div style="text-align:right; flex-shrink:0;">
-					<span style="font-size:28px; font-weight:700; color:<?php echo esc_attr( $score_color ); ?>; line-height:1;"><?php echo (int) $score; ?></span>
-					<span style="font-size:14px; color:#9ca3af;">/100</span>
-					<p style="margin:2px 0 0; font-size:11px; font-weight:600; color:<?php echo esc_attr( $score_color ); ?>; text-transform:uppercase; letter-spacing:.05em;">
-						<?php echo esc_html( $score_label ); ?>
-					</p>
-				</div>
-			</div>
-
-			<div style="margin-top:16px; padding-top:16px; border-top:1px solid #e8e0f7; display:grid; grid-template-columns:1fr 1fr 3fr; gap:0 24px;">
-				<div>
-					<p style="font-size:11px; font-weight:700; color:#7c3aed; text-transform:uppercase; letter-spacing:.06em; margin:0 0 8px;">
-						<?php esc_html_e( 'Site Level', 'aeo-pugmill' ); ?>
-					</p>
-					<p style="font-size:12px; margin:4px 0; color:#374151;">
-						<?php echo $has_site_summary ? '✓' : '✗'; ?>
-						<?php esc_html_e( 'Site summary', 'aeo-pugmill' ); ?>
-					</p>
-					<p style="font-size:12px; margin:4px 0; color:#374151;">
-						<?php echo $has_org_name ? '✓' : '✗'; ?>
-						<?php esc_html_e( 'Organization name', 'aeo-pugmill' ); ?>
-					</p>
-				</div>
-				<div>
-					<p style="font-size:11px; font-weight:700; color:#7c3aed; text-transform:uppercase; letter-spacing:.06em; margin:0 0 8px;">
-						<?php esc_html_e( 'How this is scored', 'aeo-pugmill' ); ?>
-					</p>
-					<ul style="margin:0; padding:0; list-style:none; font-size:11px; color:#6b7280;">
-						<li style="padding:2px 0;"><?php esc_html_e( 'Site summary — 20 pts', 'aeo-pugmill' ); ?></li>
-						<li style="padding:2px 0;"><?php esc_html_e( 'Post summaries — up to 30 pts', 'aeo-pugmill' ); ?></li>
-						<li style="padding:2px 0;"><?php esc_html_e( 'Organization name — 5 pts', 'aeo-pugmill' ); ?></li>
-						<li style="padding:2px 0;"><?php esc_html_e( 'Q&A pairs — up to 20 pts', 'aeo-pugmill' ); ?></li>
-						<li style="padding:2px 0;"><?php esc_html_e( 'Keywords — up to 15 pts', 'aeo-pugmill' ); ?></li>
-						<li style="padding:2px 0;"><?php esc_html_e( 'Entities — up to 10 pts', 'aeo-pugmill' ); ?></li>
-					</ul>
-				</div>
-				<div>
-					<p style="font-size:11px; font-weight:700; color:#7c3aed; text-transform:uppercase; letter-spacing:.06em; margin:0 0 6px;">
-						<?php esc_html_e( 'Post Coverage', 'aeo-pugmill' ); ?>
-					</p>
-					<?php if ( $total > 0 ) : ?>
-					<?php $coverage_row( __( 'Summaries', 'aeo-pugmill' ),  $summary_pct,  $with_summary,  $total ); ?>
-					<?php $coverage_row( __( 'Q&A pairs', 'aeo-pugmill' ),  $qa_pct,       $with_qa,       $total ); ?>
-					<?php $coverage_row( __( 'Keywords',  'aeo-pugmill' ),  $keywords_pct, $with_keywords, $total ); ?>
-					<?php $coverage_row( __( 'Entities',  'aeo-pugmill' ),  $entities_pct, $with_entities, $total ); ?>
-					<?php else : ?>
-					<p style="font-size:12px; color:#9ca3af;"><?php esc_html_e( 'No published posts yet.', 'aeo-pugmill' ); ?></p>
-					<?php endif; ?>
-				</div>
-			</div>
-
-			<div style="margin-top:16px; padding-top:16px; border-top:1px solid #e8e0f7;">
-				<p style="font-size:12px; color:#6b7280; margin:0 0 12px; line-height:1.5;">
-					<?php esc_html_e( 'AI answer engines read /llms.txt to understand your site. Richer metadata means more accurate AI-generated answers and summaries that attribute content back to you.', 'aeo-pugmill' ); ?>
-				</p>
-				<?php if ( $ai_available ) : ?>
-				<button id="aeopugmill-improve-llms-btn" type="button"
-					data-score="<?php echo esc_attr( (int) $score ); ?>"
-					data-total="<?php echo esc_attr( (int) $total ); ?>"
-					data-has-summary="<?php echo esc_attr( $has_site_summary ? '1' : '0' ); ?>"
-					data-has-org="<?php echo esc_attr( $has_org_name ? '1' : '0' ); ?>"
-					data-summary-pct="<?php echo esc_attr( (int) $summary_pct ); ?>"
-					data-qa-pct="<?php echo esc_attr( (int) $qa_pct ); ?>"
-					data-keywords-pct="<?php echo esc_attr( (int) $keywords_pct ); ?>"
-					data-entities-pct="<?php echo esc_attr( (int) $entities_pct ); ?>"
-					style="display:inline-flex; align-items:center; gap:6px; padding:7px 16px; font-size:12px; font-weight:600; background:#7c3aed; color:#fff; border:none; border-radius:4px; cursor:pointer; white-space:nowrap;">
-					✨ <?php esc_html_e( 'Get AI Improvement Tips', 'aeo-pugmill' ); ?>
-				</button>
+				<p style="font-size:13px; font-weight:600; color:#1d2327; margin:0 0 4px;"><?php esc_html_e( 'AI Provider', 'aeo-pugmill' ); ?></p>
+				<p style="font-size:12px; color:#6b7280; margin:0 0 10px;"><?php esc_html_e( 'Connect Anthropic, OpenAI, or Google Gemini to enable AI generation.', 'aeo-pugmill' ); ?></p>
+				<form method="post" action="options.php">
+					<?php settings_fields( 'aeopugmill_settings' ); ?>
+					<label style="display:block; font-size:11px; font-weight:600; color:#374151; margin-bottom:4px;"><?php esc_html_e( 'Provider', 'aeo-pugmill' ); ?></label>
+					<select id="aeopugmill_ai_provider" name="aeopugmill_ai_provider" style="width:100%; margin-bottom:8px;">
+						<option value=""><?php esc_html_e( '— Select —', 'aeo-pugmill' ); ?></option>
+						<?php foreach ( array( 'anthropic' => 'Anthropic (Claude)', 'openai' => 'OpenAI (GPT)', 'gemini' => 'Google Gemini' ) as $val => $label ) : ?>
+						<option value="<?php echo esc_attr( $val ); ?>" <?php selected( $saved_provider, $val ); ?>><?php echo esc_html( $label ); ?></option>
+						<?php endforeach; ?>
+					</select>
+					<label style="display:block; font-size:11px; font-weight:600; color:#374151; margin-bottom:4px;"><?php esc_html_e( 'API Key', 'aeo-pugmill' ); ?></label>
+					<input type="password" id="aeopugmill_ai_api_key" name="aeopugmill_ai_api_key" value="" style="width:100%; margin-bottom:4px;" placeholder="sk-...">
+					<input type="hidden" name="aeopugmill_api_key_changed" id="aeopugmill_api_key_changed" value="0">
+					<div style="display:flex; gap:8px; align-items:center; margin-top:6px;">
+						<?php submit_button( __( 'Save', 'aeo-pugmill' ), 'small', 'submit', false ); ?>
+						<a href="https://console.anthropic.com/settings/keys" target="_blank" style="font-size:11px; color:#7c3aed;"><?php esc_html_e( 'Get a key →', 'aeo-pugmill' ); ?></a>
+					</div>
+				</form>
 				<?php endif; ?>
 			</div>
-		</div>
 
-		<?php if ( $ai_available ) : ?>
-		<div id="aeopugmill-improve-llms-output" style="display:none; margin-top:12px; padding:16px 20px; background:#f9f6ff; border:1px solid #d4c8f0; border-radius:8px;">
-			<p style="font-size:11px; font-weight:700; color:#7c3aed; text-transform:uppercase; letter-spacing:.06em; margin:0 0 10px;">
-				<?php esc_html_e( 'AI Improvement Tips', 'aeo-pugmill' ); ?>
-			</p>
-			<div id="aeopugmill-improve-llms-text" style="font-size:13px; color:#1d2327; line-height:1.6;"></div>
-		</div>
-		<script>
-		(function() {
-			var btn    = document.getElementById( 'aeopugmill-improve-llms-btn' );
-			var output = document.getElementById( 'aeopugmill-improve-llms-output' );
-			var text   = document.getElementById( 'aeopugmill-improve-llms-text' );
-			if ( ! btn || ! output || ! text ) { return; }
-
-			btn.addEventListener( 'click', function() {
-				btn.disabled  = true;
-				btn.classList.add( 'aeopugmill-loading' );
-				btn.innerHTML = '<?php echo esc_js( __( 'Analyzing…', 'aeo-pugmill' ) ); ?>';
-				output.style.display = 'block';
-				text.innerHTML = '<span style="color:#9ca3af;font-size:13px;"><?php echo esc_js( __( 'Asking AI to review your score…', 'aeo-pugmill' ) ); ?></span>';
-
-				var body = new URLSearchParams( {
-					action:       'aeopugmill_improve_llms_score',
-					nonce:        <?php echo wp_json_encode( wp_create_nonce( 'aeopugmill_improve_llms_score' ) ); ?>,
-					score:        btn.dataset.score,
-					total:        btn.dataset.total,
-					has_summary:  btn.dataset.hasSummary,
-					has_org:      btn.dataset.hasOrg,
-					summary_pct:  btn.dataset.summaryPct,
-					qa_pct:       btn.dataset.qaPct,
-					keywords_pct: btn.dataset.keywordsPct,
-					entities_pct: btn.dataset.entitiesPct,
-				} );
-
-				fetch( <?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>, {
-					method:      'POST',
-					credentials: 'same-origin',
-					headers:     { 'Content-Type': 'application/x-www-form-urlencoded' },
-					body:        body.toString(),
-				} )
-				.then( function( r ) { return r.json(); } )
-				.then( function( data ) {
-					if ( data.success && data.data && data.data.text ) {
-						var tips = data.data.text.split( /\n\n+/ ).filter( Boolean );
-						text.innerHTML = tips.map( function( t, i ) {
-							return '<p style="margin:' + ( i === 0 ? '0' : '10px' ) + ' 0 0; font-size:13px; color:#1d2327; line-height:1.6;"><strong>' + ( i + 1 ) + '.</strong> ' + t.trim().replace( /</g, '&lt;' ).replace( />/g, '&gt;' ) + '</p>';
-						} ).join( '' );
-					} else {
-						text.innerHTML = '<span style="color:#dc3232;font-size:13px;">' + ( ( data.data && data.data.message ) || '<?php echo esc_js( __( 'Something went wrong. Please try again.', 'aeo-pugmill' ) ); ?>' ) + '</span>';
-					}
-				} )
-				.catch( function() {
-					text.innerHTML = '<span style="color:#dc3232;font-size:13px;"><?php echo esc_js( __( 'Request failed. Please try again.', 'aeo-pugmill' ) ); ?></span>';
-				} )
-				.finally( function() {
-					btn.disabled  = false;
-					btn.classList.remove( 'aeopugmill-loading' );
-					btn.innerHTML = '✨ <?php echo esc_js( __( 'Get AI Improvement Tips', 'aeo-pugmill' ) ); ?>';
-				} );
-			} );
-		}());
-		</script>
-		<?php endif; ?>
-
-		<?php elseif ( 'author-voice' === $active_tab ) : ?>
-		<!-- ════════════════════════════════════════════════════════════
-		     AUTHOR VOICE TAB
-		     ════════════════════════════════════════════════════════════ -->
-		<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px 24px; margin-top:24px;">
-		<form method="post" action="options.php">
-			<?php settings_fields( 'aeopugmill_settings' ); ?>
-			<p style="<?php echo esc_attr( $p_style ); ?>"><?php esc_html_e( 'Describe your writing style, tone, and audience in plain language. When AI generation is active, this guide is injected into every prompt so the AI matches your voice rather than using a generic default.', 'aeo-pugmill' ); ?></p>
-			<table class="form-table">
-				<tr>
-					<th style="vertical-align:top; padding-top:12px;"><label for="aeopugmill_author_voice"><?php esc_html_e( 'Voice Guide', 'aeo-pugmill' ); ?></label></th>
-					<td>
-						<textarea
-							id="aeopugmill_author_voice"
-							name="aeopugmill_author_voice"
-							rows="7"
-							style="width:100%; max-width:600px; font-family:monospace; font-size:13px;"
-							placeholder="<?php echo esc_attr__( 'Example: Write in a conversational but authoritative tone. Use short paragraphs. Avoid jargon — my audience is non-technical small business owners. Prefer active voice and concrete real-world examples. Never use bullet-point listicles. End posts with a clear call to action.', 'aeo-pugmill' ); ?>"
-						><?php echo esc_textarea( get_option( 'aeopugmill_author_voice', '' ) ); ?></textarea>
-						<p class="description" style="max-width:600px;">
-							<?php esc_html_e( "Describe your tone, audience, style preferences, and things to avoid. The AI uses this verbatim as a style constraint. You can be as specific as you like — the more detail, the better the match. Leave blank to use the AI provider's default tone.", 'aeo-pugmill' ); ?>
-						</p>
-						<?php if ( get_option( 'aeopugmill_author_voice', '' ) ) : ?>
-							<p style="color:#46b450; font-size:12px; margin-top:4px;">&#10003; <?php esc_html_e( 'Voice guide active — used in all AI generation.', 'aeo-pugmill' ); ?></p>
-						<?php endif; ?>
-					</td>
-				</tr>
-				<tr>
-					<th style="vertical-align:top; padding-top:12px;"><label for="aeopugmill_author_same_as"><?php esc_html_e( 'Author Social Profiles', 'aeo-pugmill' ); ?></label></th>
-					<td>
-						<textarea
-							id="aeopugmill_author_same_as"
-							name="aeopugmill_author_same_as"
-							rows="4"
-							style="width:100%; max-width:600px; font-family:monospace; font-size:13px;"
-							placeholder="https://twitter.com/yourhandle&#10;https://linkedin.com/in/yourprofile&#10;https://yoursite.com/about"
-						><?php echo esc_textarea( get_option( 'aeopugmill_author_same_as', '' ) ); ?></textarea>
-						<p class="description" style="max-width:600px;">
-							<?php esc_html_e( 'One URL per line. These URLs are not displayed on your site — they are embedded in your author\'s JSON-LD Person schema as sameAs links. This tells AI engines and search crawlers that the person writing this content is the same entity as the profiles at those URLs, helping establish authorship authority for AEO.', 'aeo-pugmill' ); ?>
-						</p>
-					</td>
-				</tr>
-			</table>
-			<?php submit_button(); ?>
-		</form>
-		</div><!-- /author-voice card -->
-
-		<?php elseif ( 'compatibility' === $active_tab ) : ?>
-		<!-- ════════════════════════════════════════════════════════════
-		     COMPATIBILITY TAB — AEO-centric layout
-		     ════════════════════════════════════════════════════════════ -->
-		<?php
-		$compat               = aeopugmill_get_compatibility_data();
-		$detected_seo         = aeopugmill_detected_seo_plugins();
-		$has_seo_plugin       = ! empty( $detected_seo );
-		$disable_robots       = (int) get_option( 'aeopugmill_disable_robots_append', 0 );
-		$disable_json_ld      = (int) get_option( 'aeopugmill_disable_json_ld', 0 );
-		$disable_seo_meta     = (int) get_option( 'aeopugmill_disable_seo_meta', 0 );
-		$disable_breadcrumbs  = (int) get_option( 'aeopugmill_disable_breadcrumbs', 0 );
-		?>
-
-		<!-- ── SEO Plugin Status ─────────────────────────────────────── -->
-		<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px 24px; margin-top:24px;">
-		<h2 style="<?php echo esc_attr( $h2_style ); ?> margin-top:0;"><?php esc_html_e( 'SEO Plugin Status', 'aeo-pugmill' ); ?></h2>
-
-		<?php if ( $has_seo_plugin ) : ?>
-		<div style="background:#fef9ec; border-left:4px solid #ffb900; padding:12px 16px; border-radius:0 4px 4px 0; margin-bottom:16px;">
-			<strong style="font-size:13px;">⚠ <?php esc_html_e( 'SEO Plugin Detected', 'aeo-pugmill' ); ?></strong><br>
-			<span style="color:#555; font-size:13px;">
-			<?php printf(
-				esc_html__( '%s is active. AEO Pugmill focuses on AEO — the AI layer that SEO plugins don\'t cover. Review the settings below to avoid duplicate output.', 'aeo-pugmill' ),
-				esc_html( aeopugmill_seo_plugin_names() )
-			); ?>
-			</span>
-		</div>
-		<div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:0;">
-			<?php foreach ( $detected_seo as $slug => $display_name ) : ?>
-			<span style="display:inline-flex; align-items:center; gap:6px; background:#f0f6ff; border:1px solid #b3d1f5; border-radius:4px; padding:5px 12px; font-size:12px; font-weight:600; color:#2271b1;">
-				&#10003; <?php echo esc_html( $display_name ); ?>
-			</span>
-			<?php endforeach; ?>
-		</div>
-		<?php else : ?>
-		<div style="display:flex; align-items:center; gap:10px; padding:12px 16px; background:#f0faf0; border:1px solid #46b450; border-radius:4px;">
-			<span style="color:#46b450; font-size:18px;">&#10003;</span>
-			<span style="font-size:13px; color:#1e6e2e; font-weight:600;"><?php esc_html_e( 'No conflicts — no other SEO plugin detected. AEO Pugmill is managing all outputs.', 'aeo-pugmill' ); ?></span>
-		</div>
-		<?php endif; ?>
-		</div><!-- /seo plugin status card -->
-
-		<!-- ── Overlapping SEO Outputs ────────────────────────────────── -->
-		<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px 24px; margin-top:16px;">
-		<h2 style="<?php echo esc_attr( $h2_style ); ?> margin-top:0;"><?php esc_html_e( 'Overlapping SEO Outputs', 'aeo-pugmill' ); ?></h2>
-		<p style="<?php echo esc_attr( $p_style ); ?> margin-top:0;">
-			<?php if ( $has_seo_plugin ) : ?>
-			<?php printf(
-				esc_html__( 'The outputs below are also generated by %s. Disable AEO Pugmill\'s versions to avoid duplicate tags in your page source. Your AEO content is always saved — only the &lt;head&gt; output changes.', 'aeo-pugmill' ),
-				esc_html( aeopugmill_seo_plugin_names() )
-			); ?>
-			<?php else : ?>
-			<?php esc_html_e( 'AEO Pugmill is the only plugin managing these outputs. No conflicts detected.', 'aeo-pugmill' ); ?>
-			<?php endif; ?>
-		</p>
-		<p style="<?php echo esc_attr( $p_style ); ?> margin-top:0; color:#666;">
-			<?php esc_html_e( 'AEO Pugmill automatically detects: Yoast SEO, Rank Math, All in One SEO, The SEO Framework, and SEOPress. If you use a different SEO plugin, manage these outputs manually.', 'aeo-pugmill' ); ?>
-		</p>
-
-		<form method="post" action="options.php" style="margin:0;">
-		<?php settings_fields( 'aeopugmill_settings' ); ?>
-
-		<table style="width:100%; border-collapse:collapse;">
-		<thead>
-			<tr style="border-bottom:2px solid #e5e7eb;">
-				<th style="text-align:left; padding:8px 0; font-size:12px; color:#6b7280; font-weight:600; width:40%;"><?php esc_html_e( 'Output', 'aeo-pugmill' ); ?></th>
-				<th style="text-align:left; padding:8px 0; font-size:12px; color:#6b7280; font-weight:600; width:30%;"><?php esc_html_e( 'Handled by', 'aeo-pugmill' ); ?></th>
-				<th style="text-align:left; padding:8px 0; font-size:12px; color:#6b7280; font-weight:600; width:30%;"><?php esc_html_e( 'AEO Pugmill', 'aeo-pugmill' ); ?></th>
-			</tr>
-		</thead>
-		<tbody>
-		<?php
-		$seo_plugin_label = $has_seo_plugin ? esc_html( aeopugmill_seo_plugin_names() ) : '<span style="color:#6b7280">' . esc_html__( 'No plugin', 'aeo-pugmill' ) . '</span>';
-		$plugin_badge     = $has_seo_plugin ? '<span style="background:#f0f6ff; border:1px solid #b3d1f5; border-radius:3px; padding:2px 8px; font-size:11px; font-weight:600; color:#2271b1;">' . esc_html( aeopugmill_seo_plugin_names() ) . '</span>' : '<span style="color:#6b7280; font-size:12px;">' . esc_html__( 'None active', 'aeo-pugmill' ) . '</span>';
-
-		$overlap_rows = array(
-			array(
-				'label'       => __( 'Meta Description', 'aeo-pugmill' ),
-				'desc'        => __( '<meta name="description">', 'aeo-pugmill' ),
-				'option'      => 'aeopugmill_disable_seo_meta',
-				'current_val' => $disable_seo_meta,
-				'group_size'  => 3,
-			),
-			array(
-				'label'  => __( 'Open Graph Tags', 'aeo-pugmill' ),
-				'desc'   => __( 'og:title, og:description, og:image', 'aeo-pugmill' ),
-				'linked' => true,
-			),
-			array(
-				'label'     => __( 'Twitter / X Cards', 'aeo-pugmill' ),
-				'desc'      => __( 'twitter:card, twitter:title, twitter:description', 'aeo-pugmill' ),
-				'linked'    => true,
-				'group_end' => true,
-			),
-			array(
-				'label'       => __( 'Article JSON-LD', 'aeo-pugmill' ),
-				'desc'        => __( 'BlogPosting / WebPage schema node', 'aeo-pugmill' ),
-				'option'      => 'aeopugmill_disable_json_ld',
-				'current_val' => $disable_json_ld,
-			),
-			array(
-				'label'       => __( 'Breadcrumb Schema', 'aeo-pugmill' ),
-				'desc'        => __( 'BreadcrumbList JSON-LD', 'aeo-pugmill' ),
-				'option'      => 'aeopugmill_disable_breadcrumbs',
-				'current_val' => $disable_breadcrumbs,
-			),
-		);
-		?>
-		<?php
-		foreach ( $overlap_rows as $row ) :
-			$is_linked    = ! empty( $row['linked'] );
-			$is_disabled  = ! $is_linked && (bool) $row['current_val'];
-			$status_style = $is_disabled ? 'color:#6b7280; text-decoration:line-through;' : 'color:#111827;';
-			$rowspan      = ! empty( $row['group_size'] ) ? ' rowspan="' . (int) $row['group_size'] . '"' : '';
-			$badge_text   = $is_disabled
-				? esc_html__( 'Suppressed', 'aeo-pugmill' )
-				: ( $has_seo_plugin ? esc_html__( 'Active — overlap', 'aeo-pugmill' ) : esc_html__( 'Active', 'aeo-pugmill' ) );
-			$badge_color  = $is_disabled
-				? '#6b7280'
-				: ( $has_seo_plugin ? '#d97706' : '#16a34a' );
-			$in_group      = ! empty( $row['group_size'] ) || $is_linked;
-		$close_group   = ! empty( $row['group_end'] );
-		$border_bottom = ( $in_group && ! $close_group ) ? 'border-bottom:none;' : 'border-bottom:1px solid #f3f4f6;';
-		?>
-		<tr style="<?php echo esc_attr( $border_bottom ); ?>">
-			<td style="padding:10px 0;">
-				<div style="font-size:13px; font-weight:600; <?php echo $status_style; // phpcs:ignore ?>"><?php echo esc_html( $row['label'] ); ?></div>
-				<div style="font-size:11px; color:#9ca3af; font-family:monospace;"><?php echo esc_html( $row['desc'] ); ?></div>
-			</td>
-			<?php if ( ! $is_linked ) : ?>
-			<td style="padding:10px 0; vertical-align:middle;"<?php echo $rowspan; // phpcs:ignore ?>>
-				<?php echo $plugin_badge; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-			</td>
-			<td style="padding:10px 0; vertical-align:middle;"<?php echo $rowspan; // phpcs:ignore ?>>
-				<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-					<span style="font-size:11px; font-weight:600; color:<?php echo esc_attr( $badge_color ); ?>;"><?php echo $badge_text; // phpcs:ignore ?></span>
-					<label style="display:flex; align-items:center; gap:5px; font-size:12px; cursor:pointer; margin:0;">
-						<input type="hidden" name="<?php echo esc_attr( $row['option'] ); ?>" value="0">
-						<input type="checkbox" name="<?php echo esc_attr( $row['option'] ); ?>" value="1"<?php checked( 1, $row['current_val'] ); ?> style="margin:0;">
-						<?php echo $has_seo_plugin
-							? esc_html( sprintf( /* translators: %s: SEO plugin name e.g. "Yoast SEO" */ __( 'Let %s handle this', 'aeo-pugmill' ), aeopugmill_seo_plugin_names() ) )
-							: esc_html__( 'Disable', 'aeo-pugmill' ); ?>
-					</label>
+			<!-- Card 2 — Author Voice -->
+			<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:16px 18px; position:relative;">
+				<?php if ( $has_voice ) : ?>
+				<div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
+					<span style="color:#16a34a; font-size:14px;">&#10003;</span>
+					<span style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#16a34a;"><?php esc_html_e( 'Configured', 'aeo-pugmill' ); ?></span>
 				</div>
-			</td>
-			<?php endif; ?>
-		</tr>
-		<?php endforeach; ?>
-		</tbody>
-		</table>
-
-		<?php if ( $has_seo_plugin ) : ?>
-		<div style="margin-top:14px; padding:10px 14px; background:#f0faf0; border:1px solid #c3e6c3; border-radius:4px; font-size:12px; color:#1e6e2e;">
-			&#128161; <?php printf(
-				esc_html__( 'Recommended: Disable Meta Description, Open Graph Tags, Twitter Cards, Article JSON-LD, and Breadcrumb Schema — let %s handle them. AEO Pugmill will still output its unique AEO additions (FAQPage, entity graph, citations) alongside it.', 'aeo-pugmill' ),
-				esc_html( aeopugmill_seo_plugin_names() )
-			); ?>
-		</div>
-		<?php endif; ?>
-
-		<?php submit_button( __( 'Save Changes', 'aeo-pugmill' ) ); ?>
-		</form>
-		</div><!-- /overlapping outputs card -->
-
-		<!-- ── OUTPUT FILES ─────────────────────────────────────────── -->
-		<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px 24px; margin-top:16px;">
-		<h2 style="<?php echo esc_attr( $h2_style ); ?> margin-top:0;"><?php esc_html_e( 'Output Files', 'aeo-pugmill' ); ?></h2>
-		<p style="<?php echo esc_attr( $p_style ); ?> margin-top:0;"><?php esc_html_e( 'AEO Pugmill generates three key crawl files: an XML sitemap, a robots.txt, and an llms.txt. View live file previews and resolve conflicts if another plugin is already handling one of these files.', 'aeo-pugmill' ); ?></p>
-
-		<style>
-		.aeopugmill-col-preview {
-			margin: 0;
-			padding: 10px 14px;
-			font-size: 11px;
-			line-height: 1.5;
-			max-height: 180px;
-			overflow: auto;
-			background: #fff;
-			white-space: pre;
-			overflow-x: auto;
-			font-family: Consolas, 'Courier New', monospace;
-			color: #333;
-			border-top: 1px solid #eee;
-		}
-		.aeopugmill-file-row {
-			margin-bottom: 28px;
-		}
-		.aeopugmill-file-row h3 {
-			font-size: 14px;
-			font-weight: 600;
-			margin: 0 0 4px;
-		}
-		.aeopugmill-preview-card {
-			border: 2px solid #46b450;
-			border-radius: 6px;
-			overflow: hidden;
-			margin-top: 12px;
-		}
-		.aeopugmill-preview-card.has-conflict {
-			border-color: #ddd;
-		}
-		.aeopugmill-preview-card-header {
-			padding: 10px 14px;
-			background: #f0faf0;
-			display: flex;
-			align-items: center;
-			gap: 8px;
-		}
-		.aeopugmill-preview-card.has-conflict .aeopugmill-preview-card-header {
-			background: #f6f7f7;
-		}
-		.aeopugmill-conflict-block {
-			margin-top: 12px;
-			border: 1px solid #f5c542;
-			border-left: 4px solid #ffb900;
-			border-radius: 0 4px 4px 0;
-			background: #fff8e1;
-			padding: 12px 16px;
-		}
-		.aeopugmill-conflict-block-title {
-			font-weight: 600;
-			font-size: 13px;
-			margin-bottom: 10px;
-		}
-		.aeopugmill-conflict-item {
-			margin-bottom: 8px;
-			font-size: 13px;
-			line-height: 1.5;
-			color: #444;
-		}
-		.aeopugmill-conflict-item:last-child { margin-bottom: 0; }
-		.aeopugmill-conflict-item strong { color: #222; }
-		.aeopugmill-no-conflict {
-			font-size: 12px;
-			color: #46b450;
-			margin-top: 8px;
-		}
-		</style>
-
-		<form method="post" action="options.php">
-		<?php settings_fields( 'aeopugmill_settings' ); ?>
-
-		<!-- ── sitemap.xml ─────────────────────────────────────────── -->
-		<div class="aeopugmill-file-row">
-			<h3>/sitemap.xml</h3>
-			<p style="<?php echo esc_attr( $p_style ); ?>"><?php esc_html_e( 'Lists all your public posts and pages so search engines and AI crawlers can discover them. AEO Pugmill\'s version adds an xhtml:link alternate to each entry, pointing crawlers directly to the structured AEO version of each page.', 'aeo-pugmill' ); ?></p>
-			<p style="margin:0 0 12px;">
-				<a href="<?php echo esc_url( home_url( '/sitemap.xml' ) ); ?>" target="_blank" class="button button-secondary">
-					<?php esc_html_e( 'View sitemap.xml →', 'aeo-pugmill' ); ?>
-				</a>
-			</p>
-
-			<div class="aeopugmill-preview-card <?php echo ! empty( $compat['sitemap_conflicts'] ) ? 'has-conflict' : ''; ?>">
-				<div class="aeopugmill-preview-card-header">
-					<?php if ( empty( $compat['sitemap_conflicts'] ) ) : ?>
-					<span style="color:#46b450; font-weight:bold;">&#10003;</span>
-					<span style="font-weight:600; font-size:13px; color:#1e6e2e;"><?php esc_html_e( 'No sitemap conflicts', 'aeo-pugmill' ); ?></span>
-					<?php else : ?>
-					<span style="font-weight:600; font-size:13px; color:#333;">
-						<?php printf(
-							esc_html( _n( '%d conflict detected', '%d conflicts detected', count( $compat['sitemap_conflicts'] ), 'aeo-pugmill' ) ),
-							count( $compat['sitemap_conflicts'] )
-						); ?>
-					</span>
-					<?php endif; ?>
+				<p style="font-size:13px; font-weight:600; color:#1d2327; margin:0 0 4px;"><?php esc_html_e( 'Author Voice', 'aeo-pugmill' ); ?></p>
+				<p style="font-size:12px; color:#6b7280; margin:0 0 2px; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;"><?php echo esc_html( $voice_text ); ?></p>
+				<?php if ( $social_count > 0 ) : ?>
+				<p style="font-size:11px; color:#9ca3af; margin:4px 0 8px;"><?php printf( esc_html( _n( '%d social profile', '%d social profiles', $social_count, 'aeo-pugmill' ) ), $social_count ); ?></p>
+				<?php else : ?>
+				<p style="font-size:11px; color:#d97706; margin:4px 0 8px;"><?php esc_html_e( 'No social profiles added', 'aeo-pugmill' ); ?></p>
+				<?php endif; ?>
+				<details style="font-size:12px;">
+					<summary style="cursor:pointer; color:#7c3aed; font-weight:600; font-size:11px;"><?php esc_html_e( 'Edit voice & socials', 'aeo-pugmill' ); ?></summary>
+					<div style="margin-top:12px;">
+						<form method="post" action="options.php">
+							<?php settings_fields( 'aeopugmill_settings' ); ?>
+							<label style="display:block; font-size:11px; font-weight:600; color:#374151; margin-bottom:4px;"><?php esc_html_e( 'Voice Guide', 'aeo-pugmill' ); ?></label>
+							<textarea name="aeopugmill_author_voice" rows="4" style="width:100%; font-size:12px; margin-bottom:8px;" placeholder="<?php echo esc_attr__( 'Describe your writing tone, audience, style…', 'aeo-pugmill' ); ?>"><?php echo esc_textarea( $voice_text ); ?></textarea>
+							<label style="display:block; font-size:11px; font-weight:600; color:#374151; margin-bottom:4px;"><?php esc_html_e( 'Social Profiles (one URL per line)', 'aeo-pugmill' ); ?></label>
+							<textarea name="aeopugmill_author_same_as" rows="3" style="width:100%; font-size:12px; margin-bottom:6px;" placeholder="https://twitter.com/you&#10;https://linkedin.com/in/you"><?php echo esc_textarea( get_option( 'aeopugmill_author_same_as', '' ) ); ?></textarea>
+							<?php submit_button( __( 'Save', 'aeo-pugmill' ), 'small', 'submit', false ); ?>
+						</form>
+					</div>
+				</details>
+				<?php else : ?>
+				<div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
+					<span style="color:#d97706; font-size:14px;">&#9675;</span>
+					<span style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#d97706;"><?php esc_html_e( 'Not Set', 'aeo-pugmill' ); ?></span>
 				</div>
+				<p style="font-size:13px; font-weight:600; color:#1d2327; margin:0 0 4px;"><?php esc_html_e( 'Author Voice', 'aeo-pugmill' ); ?></p>
+				<p style="font-size:12px; color:#6b7280; margin:0 0 10px;"><?php esc_html_e( 'Describe your writing style so AI-generated content matches your voice.', 'aeo-pugmill' ); ?></p>
+				<form method="post" action="options.php">
+					<?php settings_fields( 'aeopugmill_settings' ); ?>
+					<label style="display:block; font-size:11px; font-weight:600; color:#374151; margin-bottom:4px;"><?php esc_html_e( 'Voice Guide', 'aeo-pugmill' ); ?></label>
+					<textarea name="aeopugmill_author_voice" rows="4" style="width:100%; font-size:12px; margin-bottom:8px;" placeholder="<?php echo esc_attr__( 'Describe your writing tone, audience, style…', 'aeo-pugmill' ); ?>"></textarea>
+					<label style="display:block; font-size:11px; font-weight:600; color:#374151; margin-bottom:4px;"><?php esc_html_e( 'Social Profiles (one URL per line)', 'aeo-pugmill' ); ?></label>
+					<textarea name="aeopugmill_author_same_as" rows="3" style="width:100%; font-size:12px; margin-bottom:6px;" placeholder="https://twitter.com/you&#10;https://linkedin.com/in/you"></textarea>
+					<?php submit_button( __( 'Save', 'aeo-pugmill' ), 'small', 'submit', false ); ?>
+				</form>
+				<?php endif; ?>
 			</div>
 
-			<?php if ( ! empty( $compat['sitemap_conflicts'] ) ) : ?>
-			<div class="aeopugmill-conflict-block">
-				<div class="aeopugmill-conflict-block-title">
-					&#9888; <?php esc_html_e( 'Sitemap conflict — another plugin may be serving /sitemap.xml', 'aeo-pugmill' ); ?>
+			<!-- Card 3 — Pro License -->
+			<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:16px 18px; position:relative;">
+				<?php if ( 'ai' === $mode ) : ?>
+				<div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
+					<span style="color:#16a34a; font-size:14px;">&#10003;</span>
+					<span style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#16a34a;"><?php esc_html_e( 'Active', 'aeo-pugmill' ); ?></span>
 				</div>
-				<?php foreach ( $compat['sitemap_conflicts'] as $conflict ) : ?>
-				<div class="aeopugmill-conflict-item">
-					<strong><?php echo esc_html( $conflict['name'] ); ?>:</strong> <?php echo esc_html( $conflict['instruction'] ); ?>
+				<p style="font-size:13px; font-weight:600; color:#1d2327; margin:0 0 4px;"><?php esc_html_e( 'AEO Pugmill Pro', 'aeo-pugmill' ); ?></p>
+				<p style="font-size:12px; color:#6b7280; margin:0 0 8px;"><?php esc_html_e( 'All features unlocked.', 'aeo-pugmill' ); ?></p>
+				<details style="font-size:12px;">
+					<summary style="cursor:pointer; color:#7c3aed; font-weight:600; font-size:11px;"><?php esc_html_e( 'Manage license', 'aeo-pugmill' ); ?></summary>
+					<div style="margin-top:12px;">
+						<form method="post" action="options.php">
+							<?php settings_fields( 'aeopugmill_settings' ); ?>
+							<label style="display:block; font-size:11px; font-weight:600; color:#374151; margin-bottom:4px;"><?php esc_html_e( 'License Key', 'aeo-pugmill' ); ?></label>
+							<input type="text" name="aeopugmill_license_key" value="<?php echo esc_attr( aeopugmill_mask_secret( $license_key ) ); ?>" style="width:100%; margin-bottom:6px;" placeholder="XXXX-XXXX-XXXX-XXXX">
+							<?php submit_button( __( 'Save', 'aeo-pugmill' ), 'small', 'submit', false ); ?>
+						</form>
+						<a href="https://billing.stripe.com/p/login/cNi00j2uOabA5QZ8BUfUQ00" target="_blank" style="font-size:11px; color:#7c3aed;"><?php esc_html_e( 'Manage subscription →', 'aeo-pugmill' ); ?></a>
+					</div>
+				</details>
+				<?php else : ?>
+				<div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
+					<span style="color:#9ca3af; font-size:14px;">&#9675;</span>
+					<span style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#9ca3af;"><?php esc_html_e( 'Free Plan', 'aeo-pugmill' ); ?></span>
 				</div>
-				<?php endforeach; ?>
-			</div>
-			<?php endif; ?>
-		</div><!-- /sitemap row -->
-
-		<!-- ── llms.txt ────────────────────────────────────────────── -->
-		<div class="aeopugmill-file-row">
-			<h3>/llms.txt</h3>
-			<p style="<?php echo esc_attr( $p_style ); ?>"><?php esc_html_e( 'Serves a structured index of your content in the format AI assistants and LLMs expect. Pugmill\'s version includes your AEO metadata — summaries, Q&A pairs, and entity data.', 'aeo-pugmill' ); ?></p>
-			<p style="margin:0 0 12px;">
-				<a href="<?php echo esc_url( home_url( '/llms.txt' ) ); ?>" target="_blank" class="button button-secondary">
-					<?php esc_html_e( 'View llms.txt →', 'aeo-pugmill' ); ?>
-				</a>
-			</p>
-
-			<div class="aeopugmill-preview-card <?php echo ! empty( $compat['llms_txt_conflicts'] ) ? 'has-conflict' : ''; ?>">
-				<div class="aeopugmill-preview-card-header">
-					<?php if ( empty( $compat['llms_txt_conflicts'] ) ) : ?>
-					<span style="color:#46b450; font-weight:bold;">&#10003;</span>
-					<span style="font-weight:600; font-size:13px; color:#1e6e2e;"><?php esc_html_e( 'No llms.txt conflicts', 'aeo-pugmill' ); ?></span>
-					<?php else : ?>
-					<span style="font-weight:600; font-size:13px; color:#333;">
-						<?php printf(
-							esc_html( _n( '%d conflict detected', '%d conflicts detected', count( $compat['llms_txt_conflicts'] ), 'aeo-pugmill' ) ),
-							count( $compat['llms_txt_conflicts'] )
-						); ?>
-					</span>
-					<?php endif; ?>
-				</div>
-			</div>
-
-			<?php if ( ! empty( $compat['llms_txt_conflicts'] ) ) : ?>
-			<div class="aeopugmill-conflict-block">
-				<div class="aeopugmill-conflict-block-title">
-					&#9888; <?php esc_html_e( 'llms.txt conflict — another plugin may be serving /llms.txt', 'aeo-pugmill' ); ?>
-				</div>
-				<?php foreach ( $compat['llms_txt_conflicts'] as $conflict ) : ?>
-				<div class="aeopugmill-conflict-item">
-					<strong><?php echo esc_html( $conflict['name'] ); ?>:</strong> <?php echo esc_html( $conflict['instruction'] ); ?>
-				</div>
-				<?php endforeach; ?>
-			</div>
-			<?php endif; ?>
-		</div><!-- /llms.txt row -->
-
-		<!-- ── robots.txt ──────────────────────────────────────────── -->
-		<div class="aeopugmill-file-row">
-			<h3>/robots.txt</h3>
-			<p style="<?php echo esc_attr( $p_style ); ?>"><?php esc_html_e( 'Every bot category — AI answer crawlers, training crawlers, search indexers, and SEO tools — checks robots.txt before accessing any content. It is not an SEO-only concern; it is the universal access control layer for all automated web traffic.', 'aeo-pugmill' ); ?></p>
-			<p style="margin:0 0 12px;">
-				<a href="<?php echo esc_url( home_url( '/robots.txt' ) ); ?>" target="_blank" class="button button-secondary">
-					<?php esc_html_e( 'View robots.txt →', 'aeo-pugmill' ); ?>
-				</a>
-			</p>
-
-			<div class="aeopugmill-preview-card">
-				<div class="aeopugmill-preview-card-header">
-					<span style="font-weight:600; font-size:13px; color:#333;"><?php esc_html_e( 'AEO Pugmill additions', 'aeo-pugmill' ); ?></span>
-				</div>
-				<pre class="aeopugmill-col-preview" id="aeopugmill-live-robots"><?php esc_html_e( 'Loading live robots.txt…', 'aeo-pugmill' ); ?></pre>
+				<p style="font-size:13px; font-weight:600; color:#1d2327; margin:0 0 4px;"><?php esc_html_e( 'AEO Pugmill Pro', 'aeo-pugmill' ); ?></p>
+				<p style="font-size:12px; color:#6b7280; margin:0 0 10px;"><?php esc_html_e( 'Unlock Generate All, Tone Check, Social Drafts, Bulk AEO, and more.', 'aeo-pugmill' ); ?></p>
+				<form method="post" action="options.php">
+					<?php settings_fields( 'aeopugmill_settings' ); ?>
+					<label style="display:block; font-size:11px; font-weight:600; color:#374151; margin-bottom:4px;"><?php esc_html_e( 'License Key', 'aeo-pugmill' ); ?></label>
+					<input type="text" name="aeopugmill_license_key" value="<?php echo esc_attr( aeopugmill_mask_secret( $license_key ) ); ?>" style="width:100%; margin-bottom:6px;" placeholder="XXXX-XXXX-XXXX-XXXX">
+					<div style="display:flex; gap:8px; align-items:center; margin-top:6px;">
+						<?php submit_button( __( 'Save', 'aeo-pugmill' ), 'small', 'submit', false ); ?>
+						<a href="https://aeopugmill.com/pricing" target="_blank" style="font-size:11px; color:#7c3aed;"><?php esc_html_e( 'Get a license →', 'aeo-pugmill' ); ?></a>
+					</div>
+				</form>
+				<?php endif; ?>
 			</div>
 
-			<?php if ( ! empty( $compat['robots_conflicts'] ) ) : ?>
-			<div class="aeopugmill-conflict-block">
-				<div class="aeopugmill-conflict-block-title">
-					&#9888; <?php esc_html_e( 'Potential duplicate directives in robots.txt', 'aeo-pugmill' ); ?>
-				</div>
-				<?php foreach ( $compat['robots_conflicts'] as $conflict ) : ?>
-				<div class="aeopugmill-conflict-item">
-					<strong><?php echo esc_html( $conflict['name'] ); ?>:</strong> <?php echo esc_html( $conflict['instruction'] ); ?>
-				</div>
-				<?php endforeach; ?>
-			</div>
-			<?php endif; ?>
+		</div><!-- /setup cards grid -->
 
-			<div style="margin-top:16px;">
-				<p style="<?php echo esc_attr( $p_style ); ?> margin:0 0 6px;"><?php esc_html_e( 'Override WordPress\'s virtual robots.txt with your own content. AEO Pugmill appends a Sitemap: directive automatically. Leave blank to use WordPress defaults.', 'aeo-pugmill' ); ?></p>
-				<textarea
-					name="aeopugmill_robots_txt_custom"
-					id="aeopugmill_robots_txt_custom"
-					rows="10"
-					style="width:100%; font-family:monospace; font-size:12px; box-sizing:border-box;"
-					placeholder="User-agent: *&#10;Disallow:&#10;&#10;Sitemap: <?php echo esc_url( home_url( '/sitemap.xml' ) ); ?>"
-				><?php echo esc_textarea( get_option( 'aeopugmill_robots_txt_custom', '' ) ); ?></textarea>
-				<p class="description" style="margin-top:6px;">
-					<?php printf(
-						wp_kses( __( 'Live robots.txt: <a href="%s" target="_blank">%s</a>', 'aeo-pugmill' ), array( 'a' => array( 'href' => array(), 'target' => array() ) ) ),
-						esc_url( home_url( '/robots.txt' ) ),
-						esc_html( home_url( '/robots.txt' ) )
-					); ?>
-				</p>
-			</div>
-			<label style="display:block; margin-top:12px; font-size:13px;">
-				<input type="hidden" name="aeopugmill_disable_robots_append" value="0">
-				<input type="checkbox" name="aeopugmill_disable_robots_append" value="1" <?php checked( 1, $disable_robots ); ?>>
-				<?php esc_html_e( 'Disable AEO Pugmill robots.txt additions', 'aeo-pugmill' ); ?>
-			</label>
-			<p style="<?php echo esc_attr( $p_style ); ?> margin:4px 0 0 20px; font-size:12px;"><?php esc_html_e( 'Check this if another plugin is already adding Sitemap: directives and you want to avoid duplicates.', 'aeo-pugmill' ); ?></p>
-		</div><!-- /robots.txt row -->
+		<!-- ── Bot Analytics (inline in dashboard) ──────────────── -->
 
-		</div><!-- /output files card -->
-
-		<!-- ── CRAWLER ACCESS ────────────────────────────────────── -->
-		<?php if ( $compat['robots']['discourage'] || $compat['robots']['blocks_all'] || ! empty( $compat['robots']['blocked_bots'] ) ) : ?>
-		<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px 24px; margin-top:16px;">
-		<h2 style="<?php echo esc_attr( $h2_style ); ?> margin-top:0;"><?php esc_html_e( 'Crawler Access', 'aeo-pugmill' ); ?></h2>
-		<p style="<?php echo esc_attr( $p_style ); ?>"><?php esc_html_e( 'AI answer engines (ChatGPT, Perplexity, Claude) use web crawlers to index content. Unlike older SEO bots, these are worth allowing — they cite and surface your content in AI-generated answers.', 'aeo-pugmill' ); ?></p>
-
-		<?php if ( $compat['robots']['discourage'] ) : ?>
-		<div style="background:#fcf0f1; border-left:4px solid #dc3232; padding:12px 16px; border-radius:0 4px 4px 0; margin-bottom:12px;">
-			<strong><?php esc_html_e( '✗ Search engines are discouraged site-wide', 'aeo-pugmill' ); ?></strong><br>
-			<span style="color:#555; font-size:13px;">
-				<?php esc_html_e( 'WordPress Settings → Reading has "Discourage search engines" enabled. This outputs Disallow: / for all crawlers — including AI answer engines — blocking your content from AEO indexing entirely.', 'aeo-pugmill' ); ?>
-			</span><br><br>
-			<a href="<?php echo esc_url( admin_url( 'options-reading.php' ) ); ?>" class="button button-secondary"><?php esc_html_e( 'Fix in Reading Settings →', 'aeo-pugmill' ); ?></a>
-		</div>
-		<?php endif; ?>
-		<?php if ( $compat['robots']['blocks_all'] ) : ?>
-		<div style="background:#fff8e1; border-left:4px solid #ffb900; padding:12px 16px; border-radius:0 4px 4px 0; margin-bottom:12px;">
-			<strong><?php esc_html_e( '⚠ robots.txt blocks all crawlers (Disallow: /)', 'aeo-pugmill' ); ?></strong><br>
-			<span style="color:#555; font-size:13px;">
-				<?php esc_html_e( 'Your robots.txt has a wildcard User-agent: * rule with Disallow: /. This blocks all web crawlers including AI answer engines. Consider replacing it with specific rules that allow GPTBot, ClaudeBot, PerplexityBot, and Google-Extended.', 'aeo-pugmill' ); ?>
-			</span>
-		</div>
-		<?php endif; ?>
-		<?php if ( ! empty( $compat['robots']['blocked_bots'] ) ) : ?>
-		<div style="background:#fff8e1; border-left:4px solid #ffb900; padding:12px 16px; border-radius:0 4px 4px 0; margin-bottom:12px;">
-			<strong><?php esc_html_e( '⚠ AI crawlers blocked in robots.txt', 'aeo-pugmill' ); ?></strong><br>
-			<span style="color:#555; font-size:13px;">
-			<?php printf(
-				esc_html__( 'The following AI crawlers are explicitly blocked: %s. Remove or adjust these Disallow rules to improve AEO discoverability.', 'aeo-pugmill' ),
-				'<strong>' . esc_html( implode( ', ', $compat['robots']['blocked_bots'] ) ) . '</strong>'
-			); ?>
-			</span>
-		</div>
-		<?php endif; ?>
-		</div><!-- /crawler access card -->
-		<?php endif; ?>
-
-		<?php submit_button( __( 'Save Changes', 'aeo-pugmill' ) ); ?>
-		</form>
-
-		<script>
-		(function () {
-			// Load live robots.txt into the preview panel.
-			var el = document.getElementById( 'aeopugmill-live-robots' );
-			if ( el ) {
-				fetch( <?php echo wp_json_encode( home_url( '/robots.txt' ) ); ?>, { credentials: 'omit', cache: 'no-store' } )
-					.then( function ( r ) { return r.text(); } )
-					.then( function ( text ) {
-						var lines = text.split( '\n' ).slice( 0, 60 );
-						if ( text.split( '\n' ).length > 60 ) { lines.push( '… (truncated)' ); }
-						el.textContent = lines.join( '\n' );
-					} )
-					.catch( function () {
-						el.textContent = '(Could not load)';
-					} );
-			}
-
-		}());
-		</script>
-
-		<?php elseif ( 'analytics' === $active_tab ) : ?>
-		<!-- ════════════════════════════════════════════════════════════
-		     BOT ANALYTICS TAB
-		     ════════════════════════════════════════════════════════════ -->
-		<?php if ( ! get_option( 'aeopugmill_analytics_opted_in' ) ) : ?>
-		<div style="max-width:600px; margin:40px auto; padding:32px; background:#fff; border:1px solid #ddd; border-radius:8px; text-align:center;">
+<?php if ( ! get_option( 'aeopugmill_analytics_opted_in' ) ) : ?>
+		<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:32px; text-align:center; margin-top:24px;">
 			<div style="font-size:32px; margin-bottom:16px;">📡</div>
 			<h2 style="margin:0 0 12px; font-size:20px;"><?php esc_html_e( 'Activate Bot Analytics', 'aeo-pugmill' ); ?></h2>
 			<p style="color:#555; font-size:14px; line-height:1.7; margin:0 0 20px;">
@@ -2716,8 +1658,8 @@ function aeopugmill_render_settings_page() {
 				</div>
 				<!-- Bullet graph: your bar + hanging dot for network avg -->
 				<div style="position:relative; padding-bottom:<?php echo ( null !== $avg_pct ) ? '20' : '0'; ?>px;">
-					<div style="position:relative; height:12px; border-radius:3px; overflow:hidden; background:<?php echo esc_attr( $q['zone_lo'] ); ?>;">
-						<div style="position:absolute;top:50%;transform:translateY(-50%);left:0;width:<?php echo (int) $my_pct; ?>%;height:6px;background:<?php echo esc_attr( $bot_info['color'] ); ?>;border-radius:2px;"></div>
+					<div style="position:relative; height:16px; border-radius:3px; overflow:hidden; background:<?php echo esc_attr( $q['zone_lo'] ); ?>;">
+						<div style="position:absolute;top:50%;transform:translateY(-50%);left:0;width:<?php echo (int) $my_pct; ?>%;height:8px;background:<?php echo esc_attr( $bot_info['color'] ); ?>;border-radius:2px;"></div>
 					</div>
 					<?php if ( null !== $avg_pct ) : ?>
 					<div style="position:absolute; bottom:0; left:<?php echo (int) $avg_pct; ?>%; transform:translateX(-50%); display:flex; flex-direction:column; align-items:center;">
@@ -2895,7 +1837,7 @@ function aeopugmill_render_settings_page() {
 				<!-- Legend -->
 				<div style="display:flex; gap:12px; margin-top:2px;">
 					<?php foreach ( $diet_grp_color as $gk => $gc ) : ?>
-					<span style="display:inline-flex; align-items:center; gap:4px; font-size:10px; color:#6b7280;">
+					<span style="display:inline-flex; align-items:center; gap:4px; font-size:11px; color:#6b7280;">
 						<span style="width:8px; height:8px; border-radius:2px; background:<?php echo esc_attr( $gc ); ?>; flex-shrink:0;"></span>
 						<?php echo esc_html( $diet_grp_label[ $gk ] ); ?>
 					</span>
@@ -3100,8 +2042,8 @@ function aeopugmill_render_settings_page() {
 							$seg_pct = round( $bv / $qb_total * 100 );
 							if ( $seg_pct <= 0 ) continue;
 						?>
-						<span style="display:inline-flex; align-items:center; gap:3px; font-size:9px; color:#6b7280;">
-							<span style="width:6px; height:6px; border-radius:1px; background:<?php echo esc_attr( $qb['colors'][ $bk ] ); ?>; flex-shrink:0;"></span>
+						<span style="display:inline-flex; align-items:center; gap:4px; font-size:11px; color:#6b7280;">
+							<span style="width:8px; height:8px; border-radius:2px; background:<?php echo esc_attr( $qb['colors'][ $bk ] ); ?>; flex-shrink:0;"></span>
 							<?php echo esc_html( $qb['labels'][ $bk ] ); ?>
 						</span>
 						<?php endforeach; ?>
@@ -3255,16 +2197,26 @@ function aeopugmill_render_settings_page() {
 			<p style="margin:0 0 14px; font-size:12px; color:#666;">
 				<?php esc_html_e( 'Most-visited content pages — last 7 days. ★ marks posts where a bot read your AEO markdown endpoint directly.', 'aeo-pugmill' ); ?>
 			</p>
+			<?php
+			// Find max visits for bar scaling.
+			$tp_max = 1;
+			foreach ( $top_posts as $tp_row ) {
+				$tp_max = max( $tp_max, (int) $tp_row['total'] );
+			}
+			?>
 			<table class="widefat" style="font-size:12px; border-collapse:collapse;">
 				<thead>
 					<tr style="background:#f6f7f7;">
 						<th style="padding:8px 12px; text-align:left; font-weight:600;"><?php esc_html_e( 'URL', 'aeo-pugmill' ); ?></th>
 						<th style="padding:8px 12px; text-align:center; font-weight:600; width:60px;"><?php esc_html_e( 'Visits', 'aeo-pugmill' ); ?></th>
+						<th style="padding:8px 12px; text-align:left; font-weight:600; width:120px;"></th>
 						<th style="padding:8px 12px; text-align:left; font-weight:600;"><?php esc_html_e( 'By Bot', 'aeo-pugmill' ); ?></th>
 					</tr>
 				</thead>
 				<tbody>
-				<?php foreach ( $top_posts as $i => $post_row ) : ?>
+				<?php foreach ( $top_posts as $i => $post_row ) :
+					$tp_bar_pct = min( 100, (int) round( $post_row['total'] / $tp_max * 100 ) );
+				?>
 				<tr style="background:<?php echo 0 === $i % 2 ? '#fff' : '#f9fafb'; ?>;">
 					<td style="padding:8px 12px; word-break:break-all; font-size:11px;">
 						<?php if ( $post_row['aeo'] ) : ?>
@@ -3288,6 +2240,11 @@ function aeopugmill_render_settings_page() {
 					</td>
 					<td style="padding:8px 12px; text-align:center; font-weight:700; color:#374151;">
 						<?php echo esc_html( number_format_i18n( $post_row['total'] ) ); ?>
+					</td>
+					<td style="padding:8px 6px;">
+						<div style="height:16px; border-radius:3px; overflow:hidden; background:#f3f4f6;">
+							<div style="height:100%; width:<?php echo (int) $tp_bar_pct; ?>%; background:#7c3aed; border-radius:3px;"></div>
+						</div>
 					</td>
 					<td style="padding:8px 12px;">
 						<span style="display:flex; flex-wrap:wrap; gap:4px;">
@@ -3577,7 +2534,7 @@ function aeopugmill_render_settings_page() {
 		<?php endif; ?>
 		<?php endif; // end opted-in else (analytics tab) ?>
 
-		<?php if ( 'analytics' === $active_tab && get_option( 'aeopugmill_analytics_opted_in' ) ) : ?>
+		<?php if ( 'dashboard' === $active_tab && get_option( 'aeopugmill_analytics_opted_in' ) ) : ?>
 		<div style="margin-top:8px; display:flex; align-items:center; gap:8px; font-size:12px; color:#9ca3af;">
 			<span>&#10003; <?php
 				if ( $network_sites >= 1 ) {
@@ -3635,6 +2592,446 @@ function aeopugmill_render_settings_page() {
 		}() );
 		</script>
 		<?php endif; ?>
+
+		<?php elseif ( 'compatibility' === $active_tab ) : ?>
+		<!-- ════════════════════════════════════════════════════════════
+		     COMPATIBILITY TAB — AEO-centric layout
+		     ════════════════════════════════════════════════════════════ -->
+		<?php
+		$compat               = aeopugmill_get_compatibility_data();
+		$detected_seo         = aeopugmill_detected_seo_plugins();
+		$has_seo_plugin       = ! empty( $detected_seo );
+		$disable_robots       = (int) get_option( 'aeopugmill_disable_robots_append', 0 );
+		$disable_json_ld      = (int) get_option( 'aeopugmill_disable_json_ld', 0 );
+		$disable_seo_meta     = (int) get_option( 'aeopugmill_disable_seo_meta', 0 );
+		$disable_breadcrumbs  = (int) get_option( 'aeopugmill_disable_breadcrumbs', 0 );
+		?>
+
+		<!-- ── SEO Plugin Status ─────────────────────────────────────── -->
+		<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px 24px; margin-top:24px;">
+		<h2 style="<?php echo esc_attr( $h2_style ); ?> margin-top:0;"><?php esc_html_e( 'SEO Plugin Status', 'aeo-pugmill' ); ?></h2>
+
+		<?php if ( $has_seo_plugin ) : ?>
+		<div style="background:#fef9ec; border-left:4px solid #ffb900; padding:12px 16px; border-radius:0 4px 4px 0; margin-bottom:16px;">
+			<strong style="font-size:13px;">⚠ <?php esc_html_e( 'SEO Plugin Detected', 'aeo-pugmill' ); ?></strong><br>
+			<span style="color:#555; font-size:13px;">
+			<?php printf(
+				esc_html__( '%s is active. AEO Pugmill focuses on AEO — the AI layer that SEO plugins don\'t cover. Review the settings below to avoid duplicate output.', 'aeo-pugmill' ),
+				esc_html( aeopugmill_seo_plugin_names() )
+			); ?>
+			</span>
+		</div>
+		<div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:0;">
+			<?php foreach ( $detected_seo as $slug => $display_name ) : ?>
+			<span style="display:inline-flex; align-items:center; gap:6px; background:#f0f6ff; border:1px solid #b3d1f5; border-radius:4px; padding:5px 12px; font-size:12px; font-weight:600; color:#2271b1;">
+				&#10003; <?php echo esc_html( $display_name ); ?>
+			</span>
+			<?php endforeach; ?>
+		</div>
+		<?php else : ?>
+		<div style="display:flex; align-items:center; gap:10px; padding:12px 16px; background:#f0faf0; border:1px solid #46b450; border-radius:4px;">
+			<span style="color:#46b450; font-size:18px;">&#10003;</span>
+			<span style="font-size:13px; color:#1e6e2e; font-weight:600;"><?php esc_html_e( 'No conflicts — no other SEO plugin detected. AEO Pugmill is managing all outputs.', 'aeo-pugmill' ); ?></span>
+		</div>
+		<?php endif; ?>
+		</div><!-- /seo plugin status card -->
+
+		<!-- ── Overlapping SEO Outputs ────────────────────────────────── -->
+		<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px 24px; margin-top:16px;">
+		<h2 style="<?php echo esc_attr( $h2_style ); ?> margin-top:0;"><?php esc_html_e( 'Overlapping SEO Outputs', 'aeo-pugmill' ); ?></h2>
+		<p style="<?php echo esc_attr( $p_style ); ?> margin-top:0;">
+			<?php if ( $has_seo_plugin ) : ?>
+			<?php printf(
+				esc_html__( 'The outputs below are also generated by %s. Disable AEO Pugmill\'s versions to avoid duplicate tags in your page source. Your AEO content is always saved — only the &lt;head&gt; output changes.', 'aeo-pugmill' ),
+				esc_html( aeopugmill_seo_plugin_names() )
+			); ?>
+			<?php else : ?>
+			<?php esc_html_e( 'AEO Pugmill is the only plugin managing these outputs. No conflicts detected.', 'aeo-pugmill' ); ?>
+			<?php endif; ?>
+		</p>
+		<p style="<?php echo esc_attr( $p_style ); ?> margin-top:0; color:#666;">
+			<?php esc_html_e( 'AEO Pugmill automatically detects: Yoast SEO, Rank Math, All in One SEO, The SEO Framework, and SEOPress. If you use a different SEO plugin, manage these outputs manually.', 'aeo-pugmill' ); ?>
+		</p>
+
+		<form method="post" action="options.php" style="margin:0;">
+		<?php settings_fields( 'aeopugmill_settings' ); ?>
+
+		<table style="width:100%; border-collapse:collapse;">
+		<thead>
+			<tr style="border-bottom:2px solid #e5e7eb;">
+				<th style="text-align:left; padding:8px 0; font-size:12px; color:#6b7280; font-weight:600; width:40%;"><?php esc_html_e( 'Output', 'aeo-pugmill' ); ?></th>
+				<th style="text-align:left; padding:8px 0; font-size:12px; color:#6b7280; font-weight:600; width:30%;"><?php esc_html_e( 'Handled by', 'aeo-pugmill' ); ?></th>
+				<th style="text-align:left; padding:8px 0; font-size:12px; color:#6b7280; font-weight:600; width:30%;"><?php esc_html_e( 'AEO Pugmill', 'aeo-pugmill' ); ?></th>
+			</tr>
+		</thead>
+		<tbody>
+		<?php
+		$seo_plugin_label = $has_seo_plugin ? esc_html( aeopugmill_seo_plugin_names() ) : '<span style="color:#6b7280">' . esc_html__( 'No plugin', 'aeo-pugmill' ) . '</span>';
+		$plugin_badge     = $has_seo_plugin ? '<span style="background:#f0f6ff; border:1px solid #b3d1f5; border-radius:3px; padding:2px 8px; font-size:11px; font-weight:600; color:#2271b1;">' . esc_html( aeopugmill_seo_plugin_names() ) . '</span>' : '<span style="color:#6b7280; font-size:12px;">' . esc_html__( 'None active', 'aeo-pugmill' ) . '</span>';
+
+		$overlap_rows = array(
+			array(
+				'label'       => __( 'Meta Description', 'aeo-pugmill' ),
+				'desc'        => __( '<meta name="description">', 'aeo-pugmill' ),
+				'option'      => 'aeopugmill_disable_seo_meta',
+				'current_val' => $disable_seo_meta,
+				'group_size'  => 3,
+			),
+			array(
+				'label'  => __( 'Open Graph Tags', 'aeo-pugmill' ),
+				'desc'   => __( 'og:title, og:description, og:image', 'aeo-pugmill' ),
+				'linked' => true,
+			),
+			array(
+				'label'     => __( 'Twitter / X Cards', 'aeo-pugmill' ),
+				'desc'      => __( 'twitter:card, twitter:title, twitter:description', 'aeo-pugmill' ),
+				'linked'    => true,
+				'group_end' => true,
+			),
+			array(
+				'label'       => __( 'Article JSON-LD', 'aeo-pugmill' ),
+				'desc'        => __( 'BlogPosting / WebPage schema node', 'aeo-pugmill' ),
+				'option'      => 'aeopugmill_disable_json_ld',
+				'current_val' => $disable_json_ld,
+			),
+			array(
+				'label'       => __( 'Breadcrumb Schema', 'aeo-pugmill' ),
+				'desc'        => __( 'BreadcrumbList JSON-LD', 'aeo-pugmill' ),
+				'option'      => 'aeopugmill_disable_breadcrumbs',
+				'current_val' => $disable_breadcrumbs,
+			),
+		);
+		?>
+		<?php
+		foreach ( $overlap_rows as $row ) :
+			$is_linked    = ! empty( $row['linked'] );
+			$is_disabled  = ! $is_linked && (bool) $row['current_val'];
+			$status_style = $is_disabled ? 'color:#6b7280; text-decoration:line-through;' : 'color:#111827;';
+			$rowspan      = ! empty( $row['group_size'] ) ? ' rowspan="' . (int) $row['group_size'] . '"' : '';
+			$badge_text   = $is_disabled
+				? esc_html__( 'Suppressed', 'aeo-pugmill' )
+				: ( $has_seo_plugin ? esc_html__( 'Active — overlap', 'aeo-pugmill' ) : esc_html__( 'Active', 'aeo-pugmill' ) );
+			$badge_color  = $is_disabled
+				? '#6b7280'
+				: ( $has_seo_plugin ? '#d97706' : '#16a34a' );
+			$in_group      = ! empty( $row['group_size'] ) || $is_linked;
+		$close_group   = ! empty( $row['group_end'] );
+		$border_bottom = ( $in_group && ! $close_group ) ? 'border-bottom:none;' : 'border-bottom:1px solid #f3f4f6;';
+		?>
+		<tr style="<?php echo esc_attr( $border_bottom ); ?>">
+			<td style="padding:10px 0;">
+				<div style="font-size:13px; font-weight:600; <?php echo $status_style; // phpcs:ignore ?>"><?php echo esc_html( $row['label'] ); ?></div>
+				<div style="font-size:11px; color:#9ca3af; font-family:monospace;"><?php echo esc_html( $row['desc'] ); ?></div>
+			</td>
+			<?php if ( ! $is_linked ) : ?>
+			<td style="padding:10px 0; vertical-align:middle;"<?php echo $rowspan; // phpcs:ignore ?>>
+				<?php echo $plugin_badge; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+			</td>
+			<td style="padding:10px 0; vertical-align:middle;"<?php echo $rowspan; // phpcs:ignore ?>>
+				<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+					<span style="font-size:11px; font-weight:600; color:<?php echo esc_attr( $badge_color ); ?>;"><?php echo $badge_text; // phpcs:ignore ?></span>
+					<label style="display:flex; align-items:center; gap:5px; font-size:12px; cursor:pointer; margin:0;">
+						<input type="hidden" name="<?php echo esc_attr( $row['option'] ); ?>" value="0">
+						<input type="checkbox" name="<?php echo esc_attr( $row['option'] ); ?>" value="1"<?php checked( 1, $row['current_val'] ); ?> style="margin:0;">
+						<?php echo $has_seo_plugin
+							? esc_html( sprintf( /* translators: %s: SEO plugin name e.g. "Yoast SEO" */ __( 'Let %s handle this', 'aeo-pugmill' ), aeopugmill_seo_plugin_names() ) )
+							: esc_html__( 'Disable', 'aeo-pugmill' ); ?>
+					</label>
+				</div>
+			</td>
+			<?php endif; ?>
+		</tr>
+		<?php endforeach; ?>
+		</tbody>
+		</table>
+
+		<?php if ( $has_seo_plugin ) : ?>
+		<div style="margin-top:14px; padding:10px 14px; background:#f0faf0; border:1px solid #c3e6c3; border-radius:4px; font-size:12px; color:#1e6e2e;">
+			&#128161; <?php printf(
+				esc_html__( 'Recommended: Disable Meta Description, Open Graph Tags, Twitter Cards, Article JSON-LD, and Breadcrumb Schema — let %s handle them. AEO Pugmill will still output its unique AEO additions (FAQPage, entity graph, citations) alongside it.', 'aeo-pugmill' ),
+				esc_html( aeopugmill_seo_plugin_names() )
+			); ?>
+		</div>
+		<?php endif; ?>
+
+		<?php submit_button( __( 'Save Changes', 'aeo-pugmill' ) ); ?>
+		</form>
+		</div><!-- /overlapping outputs card -->
+
+		<!-- ── OUTPUT FILES ─────────────────────────────────────────── -->
+		<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px 24px; margin-top:16px;">
+		<h2 style="<?php echo esc_attr( $h2_style ); ?> margin-top:0;"><?php esc_html_e( 'Output Files', 'aeo-pugmill' ); ?></h2>
+		<p style="<?php echo esc_attr( $p_style ); ?> margin-top:0;"><?php esc_html_e( 'AEO Pugmill generates three key crawl files: an XML sitemap, a robots.txt, and an llms.txt. View live file previews and resolve conflicts if another plugin is already handling one of these files.', 'aeo-pugmill' ); ?></p>
+
+		<style>
+		.aeopugmill-col-preview {
+			margin: 0;
+			padding: 10px 14px;
+			font-size: 11px;
+			line-height: 1.5;
+			max-height: 180px;
+			overflow: auto;
+			background: #fff;
+			white-space: pre;
+			overflow-x: auto;
+			font-family: Consolas, 'Courier New', monospace;
+			color: #333;
+			border-top: 1px solid #eee;
+		}
+		.aeopugmill-file-row {
+			margin-bottom: 28px;
+		}
+		.aeopugmill-file-row h3 {
+			font-size: 14px;
+			font-weight: 600;
+			margin: 0 0 4px;
+		}
+		.aeopugmill-preview-card {
+			border: 2px solid #46b450;
+			border-radius: 6px;
+			overflow: hidden;
+			margin-top: 12px;
+		}
+		.aeopugmill-preview-card.has-conflict {
+			border-color: #ddd;
+		}
+		.aeopugmill-preview-card-header {
+			padding: 10px 14px;
+			background: #f0faf0;
+			display: flex;
+			align-items: center;
+			gap: 8px;
+		}
+		.aeopugmill-preview-card.has-conflict .aeopugmill-preview-card-header {
+			background: #f6f7f7;
+		}
+		.aeopugmill-conflict-block {
+			margin-top: 12px;
+			border: 1px solid #f5c542;
+			border-left: 4px solid #ffb900;
+			border-radius: 0 4px 4px 0;
+			background: #fff8e1;
+			padding: 12px 16px;
+		}
+		.aeopugmill-conflict-block-title {
+			font-weight: 600;
+			font-size: 13px;
+			margin-bottom: 10px;
+		}
+		.aeopugmill-conflict-item {
+			margin-bottom: 8px;
+			font-size: 13px;
+			line-height: 1.5;
+			color: #444;
+		}
+		.aeopugmill-conflict-item:last-child { margin-bottom: 0; }
+		.aeopugmill-conflict-item strong { color: #222; }
+		.aeopugmill-no-conflict {
+			font-size: 12px;
+			color: #46b450;
+			margin-top: 8px;
+		}
+		</style>
+
+		<form method="post" action="options.php">
+		<?php settings_fields( 'aeopugmill_settings' ); ?>
+
+		<!-- ── sitemap.xml ─────────────────────────────────────────── -->
+		<div class="aeopugmill-file-row">
+			<h3>/sitemap.xml</h3>
+			<p style="<?php echo esc_attr( $p_style ); ?>"><?php esc_html_e( 'Lists all your public posts and pages so search engines and AI crawlers can discover them. AEO Pugmill\'s version adds an xhtml:link alternate to each entry, pointing crawlers directly to the structured AEO version of each page.', 'aeo-pugmill' ); ?></p>
+			<p style="margin:0 0 12px;">
+				<a href="<?php echo esc_url( home_url( '/sitemap.xml' ) ); ?>" target="_blank" class="button button-secondary">
+					<?php esc_html_e( 'View sitemap.xml →', 'aeo-pugmill' ); ?>
+				</a>
+			</p>
+
+			<div class="aeopugmill-preview-card <?php echo ! empty( $compat['sitemap_conflicts'] ) ? 'has-conflict' : ''; ?>">
+				<div class="aeopugmill-preview-card-header">
+					<?php if ( empty( $compat['sitemap_conflicts'] ) ) : ?>
+					<span style="color:#46b450; font-weight:bold;">&#10003;</span>
+					<span style="font-weight:600; font-size:13px; color:#1e6e2e;"><?php esc_html_e( 'No sitemap conflicts', 'aeo-pugmill' ); ?></span>
+					<?php else : ?>
+					<span style="font-weight:600; font-size:13px; color:#333;">
+						<?php printf(
+							esc_html( _n( '%d conflict detected', '%d conflicts detected', count( $compat['sitemap_conflicts'] ), 'aeo-pugmill' ) ),
+							count( $compat['sitemap_conflicts'] )
+						); ?>
+					</span>
+					<?php endif; ?>
+				</div>
+			</div>
+
+			<?php if ( ! empty( $compat['sitemap_conflicts'] ) ) : ?>
+			<div class="aeopugmill-conflict-block">
+				<div class="aeopugmill-conflict-block-title">
+					&#9888; <?php esc_html_e( 'Sitemap conflict — another plugin may be serving /sitemap.xml', 'aeo-pugmill' ); ?>
+				</div>
+				<?php foreach ( $compat['sitemap_conflicts'] as $conflict ) : ?>
+				<div class="aeopugmill-conflict-item">
+					<strong><?php echo esc_html( $conflict['name'] ); ?>:</strong> <?php echo esc_html( $conflict['instruction'] ); ?>
+				</div>
+				<?php endforeach; ?>
+			</div>
+			<?php endif; ?>
+		</div><!-- /sitemap row -->
+
+		<!-- ── llms.txt ────────────────────────────────────────────── -->
+		<div class="aeopugmill-file-row">
+			<h3>/llms.txt</h3>
+			<p style="<?php echo esc_attr( $p_style ); ?>"><?php esc_html_e( 'Serves a structured index of your content in the format AI assistants and LLMs expect. Pugmill\'s version includes your AEO metadata — summaries, Q&A pairs, and entity data.', 'aeo-pugmill' ); ?></p>
+			<p style="margin:0 0 12px;">
+				<a href="<?php echo esc_url( home_url( '/llms.txt' ) ); ?>" target="_blank" class="button button-secondary">
+					<?php esc_html_e( 'View llms.txt →', 'aeo-pugmill' ); ?>
+				</a>
+			</p>
+
+			<div class="aeopugmill-preview-card <?php echo ! empty( $compat['llms_txt_conflicts'] ) ? 'has-conflict' : ''; ?>">
+				<div class="aeopugmill-preview-card-header">
+					<?php if ( empty( $compat['llms_txt_conflicts'] ) ) : ?>
+					<span style="color:#46b450; font-weight:bold;">&#10003;</span>
+					<span style="font-weight:600; font-size:13px; color:#1e6e2e;"><?php esc_html_e( 'No llms.txt conflicts', 'aeo-pugmill' ); ?></span>
+					<?php else : ?>
+					<span style="font-weight:600; font-size:13px; color:#333;">
+						<?php printf(
+							esc_html( _n( '%d conflict detected', '%d conflicts detected', count( $compat['llms_txt_conflicts'] ), 'aeo-pugmill' ) ),
+							count( $compat['llms_txt_conflicts'] )
+						); ?>
+					</span>
+					<?php endif; ?>
+				</div>
+			</div>
+
+			<?php if ( ! empty( $compat['llms_txt_conflicts'] ) ) : ?>
+			<div class="aeopugmill-conflict-block">
+				<div class="aeopugmill-conflict-block-title">
+					&#9888; <?php esc_html_e( 'llms.txt conflict — another plugin may be serving /llms.txt', 'aeo-pugmill' ); ?>
+				</div>
+				<?php foreach ( $compat['llms_txt_conflicts'] as $conflict ) : ?>
+				<div class="aeopugmill-conflict-item">
+					<strong><?php echo esc_html( $conflict['name'] ); ?>:</strong> <?php echo esc_html( $conflict['instruction'] ); ?>
+				</div>
+				<?php endforeach; ?>
+			</div>
+			<?php endif; ?>
+		</div><!-- /llms.txt row -->
+
+		<!-- ── robots.txt ──────────────────────────────────────────── -->
+		<div class="aeopugmill-file-row">
+			<h3>/robots.txt</h3>
+			<p style="<?php echo esc_attr( $p_style ); ?>"><?php esc_html_e( 'Every bot category — AI answer crawlers, training crawlers, search indexers, and SEO tools — checks robots.txt before accessing any content. It is not an SEO-only concern; it is the universal access control layer for all automated web traffic.', 'aeo-pugmill' ); ?></p>
+			<p style="margin:0 0 12px;">
+				<a href="<?php echo esc_url( home_url( '/robots.txt' ) ); ?>" target="_blank" class="button button-secondary">
+					<?php esc_html_e( 'View robots.txt →', 'aeo-pugmill' ); ?>
+				</a>
+			</p>
+
+			<div class="aeopugmill-preview-card">
+				<div class="aeopugmill-preview-card-header">
+					<span style="font-weight:600; font-size:13px; color:#333;"><?php esc_html_e( 'AEO Pugmill additions', 'aeo-pugmill' ); ?></span>
+				</div>
+				<pre class="aeopugmill-col-preview" id="aeopugmill-live-robots"><?php esc_html_e( 'Loading live robots.txt…', 'aeo-pugmill' ); ?></pre>
+			</div>
+
+			<?php if ( ! empty( $compat['robots_conflicts'] ) ) : ?>
+			<div class="aeopugmill-conflict-block">
+				<div class="aeopugmill-conflict-block-title">
+					&#9888; <?php esc_html_e( 'Potential duplicate directives in robots.txt', 'aeo-pugmill' ); ?>
+				</div>
+				<?php foreach ( $compat['robots_conflicts'] as $conflict ) : ?>
+				<div class="aeopugmill-conflict-item">
+					<strong><?php echo esc_html( $conflict['name'] ); ?>:</strong> <?php echo esc_html( $conflict['instruction'] ); ?>
+				</div>
+				<?php endforeach; ?>
+			</div>
+			<?php endif; ?>
+
+			<div style="margin-top:16px;">
+				<p style="<?php echo esc_attr( $p_style ); ?> margin:0 0 6px;"><?php esc_html_e( 'Override WordPress\'s virtual robots.txt with your own content. AEO Pugmill appends a Sitemap: directive automatically. Leave blank to use WordPress defaults.', 'aeo-pugmill' ); ?></p>
+				<textarea
+					name="aeopugmill_robots_txt_custom"
+					id="aeopugmill_robots_txt_custom"
+					rows="10"
+					style="width:100%; font-family:monospace; font-size:12px; box-sizing:border-box;"
+					placeholder="User-agent: *&#10;Disallow:&#10;&#10;Sitemap: <?php echo esc_url( home_url( '/sitemap.xml' ) ); ?>"
+				><?php echo esc_textarea( get_option( 'aeopugmill_robots_txt_custom', '' ) ); ?></textarea>
+				<p class="description" style="margin-top:6px;">
+					<?php printf(
+						wp_kses( __( 'Live robots.txt: <a href="%s" target="_blank">%s</a>', 'aeo-pugmill' ), array( 'a' => array( 'href' => array(), 'target' => array() ) ) ),
+						esc_url( home_url( '/robots.txt' ) ),
+						esc_html( home_url( '/robots.txt' ) )
+					); ?>
+				</p>
+			</div>
+			<label style="display:block; margin-top:12px; font-size:13px;">
+				<input type="hidden" name="aeopugmill_disable_robots_append" value="0">
+				<input type="checkbox" name="aeopugmill_disable_robots_append" value="1" <?php checked( 1, $disable_robots ); ?>>
+				<?php esc_html_e( 'Disable AEO Pugmill robots.txt additions', 'aeo-pugmill' ); ?>
+			</label>
+			<p style="<?php echo esc_attr( $p_style ); ?> margin:4px 0 0 20px; font-size:12px;"><?php esc_html_e( 'Check this if another plugin is already adding Sitemap: directives and you want to avoid duplicates.', 'aeo-pugmill' ); ?></p>
+		</div><!-- /robots.txt row -->
+
+		</div><!-- /output files card -->
+
+		<!-- ── CRAWLER ACCESS ────────────────────────────────────── -->
+		<?php if ( $compat['robots']['discourage'] || $compat['robots']['blocks_all'] || ! empty( $compat['robots']['blocked_bots'] ) ) : ?>
+		<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px 24px; margin-top:16px;">
+		<h2 style="<?php echo esc_attr( $h2_style ); ?> margin-top:0;"><?php esc_html_e( 'Crawler Access', 'aeo-pugmill' ); ?></h2>
+		<p style="<?php echo esc_attr( $p_style ); ?>"><?php esc_html_e( 'AI answer engines (ChatGPT, Perplexity, Claude) use web crawlers to index content. Unlike older SEO bots, these are worth allowing — they cite and surface your content in AI-generated answers.', 'aeo-pugmill' ); ?></p>
+
+		<?php if ( $compat['robots']['discourage'] ) : ?>
+		<div style="background:#fcf0f1; border-left:4px solid #dc3232; padding:12px 16px; border-radius:0 4px 4px 0; margin-bottom:12px;">
+			<strong><?php esc_html_e( '✗ Search engines are discouraged site-wide', 'aeo-pugmill' ); ?></strong><br>
+			<span style="color:#555; font-size:13px;">
+				<?php esc_html_e( 'WordPress Settings → Reading has "Discourage search engines" enabled. This outputs Disallow: / for all crawlers — including AI answer engines — blocking your content from AEO indexing entirely.', 'aeo-pugmill' ); ?>
+			</span><br><br>
+			<a href="<?php echo esc_url( admin_url( 'options-reading.php' ) ); ?>" class="button button-secondary"><?php esc_html_e( 'Fix in Reading Settings →', 'aeo-pugmill' ); ?></a>
+		</div>
+		<?php endif; ?>
+		<?php if ( $compat['robots']['blocks_all'] ) : ?>
+		<div style="background:#fff8e1; border-left:4px solid #ffb900; padding:12px 16px; border-radius:0 4px 4px 0; margin-bottom:12px;">
+			<strong><?php esc_html_e( '⚠ robots.txt blocks all crawlers (Disallow: /)', 'aeo-pugmill' ); ?></strong><br>
+			<span style="color:#555; font-size:13px;">
+				<?php esc_html_e( 'Your robots.txt has a wildcard User-agent: * rule with Disallow: /. This blocks all web crawlers including AI answer engines. Consider replacing it with specific rules that allow GPTBot, ClaudeBot, PerplexityBot, and Google-Extended.', 'aeo-pugmill' ); ?>
+			</span>
+		</div>
+		<?php endif; ?>
+		<?php if ( ! empty( $compat['robots']['blocked_bots'] ) ) : ?>
+		<div style="background:#fff8e1; border-left:4px solid #ffb900; padding:12px 16px; border-radius:0 4px 4px 0; margin-bottom:12px;">
+			<strong><?php esc_html_e( '⚠ AI crawlers blocked in robots.txt', 'aeo-pugmill' ); ?></strong><br>
+			<span style="color:#555; font-size:13px;">
+			<?php printf(
+				esc_html__( 'The following AI crawlers are explicitly blocked: %s. Remove or adjust these Disallow rules to improve AEO discoverability.', 'aeo-pugmill' ),
+				'<strong>' . esc_html( implode( ', ', $compat['robots']['blocked_bots'] ) ) . '</strong>'
+			); ?>
+			</span>
+		</div>
+		<?php endif; ?>
+		</div><!-- /crawler access card -->
+		<?php endif; ?>
+
+		<?php submit_button( __( 'Save Changes', 'aeo-pugmill' ) ); ?>
+		</form>
+
+		<script>
+		(function () {
+			// Load live robots.txt into the preview panel.
+			var el = document.getElementById( 'aeopugmill-live-robots' );
+			if ( el ) {
+				fetch( <?php echo wp_json_encode( home_url( '/robots.txt' ) ); ?>, { credentials: 'omit', cache: 'no-store' } )
+					.then( function ( r ) { return r.text(); } )
+					.then( function ( text ) {
+						var lines = text.split( '\n' ).slice( 0, 60 );
+						if ( text.split( '\n' ).length > 60 ) { lines.push( '… (truncated)' ); }
+						el.textContent = lines.join( '\n' );
+					} )
+					.catch( function () {
+						el.textContent = '(Could not load)';
+					} );
+			}
+
+		}());
+		</script>
 
 		<?php elseif ( 'audit-aeo' === $active_tab ) : ?>
 		<!-- ════════════════════════════════════════════════════════════
