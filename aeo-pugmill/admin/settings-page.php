@@ -2329,23 +2329,26 @@ function aeopugmill_render_settings_page() {
 						$show_avg = $has_net_key && $opted_in_network;
 					?>
 					<div>
-						<div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11px; margin-bottom:3px;">
+						<div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11px; margin-bottom:5px;">
 							<span style="color:#374151; font-weight:600;"><?php echo esc_html( $rf['label'] ); ?></span>
 							<span style="color:<?php echo esc_attr( $rc ); ?>; font-weight:700;"><?php echo (int) $rf['pct']; ?>% <span style="color:#9ca3af; font-weight:400; font-size:10px;">(<?php echo esc_html( number_format_i18n( $rf['count'] ) ); ?>)</span></span>
 						</div>
-						<!-- Single bar; tick marker overlays it at the network avg position -->
-						<div style="position:relative;">
-							<div style="height:6px; background:#f0f0f0; border-radius:3px; overflow:hidden;">
-								<div style="height:100%; width:<?php echo (int) $rf['pct']; ?>%; background:<?php echo esc_attr( $rc ); ?>; border-radius:3px;"></div>
-							</div>
+						<!-- Bullet graph: qualitative zones + feature bar + comparative marker -->
+						<div style="position:relative; height:16px; border-radius:3px; overflow:hidden; background:#f3f4f6;">
+							<!-- Qualitative zones: poor (0–40%) / satisfactory (40–75%) / good (75–100%) -->
+							<div style="position:absolute;top:0;left:0;width:40%;height:100%;background:#f3f4f6;"></div>
+							<div style="position:absolute;top:0;left:40%;width:35%;height:100%;background:#eaebee;"></div>
+							<div style="position:absolute;top:0;left:75%;width:25%;height:100%;background:#e0e2e6;"></div>
+							<!-- Feature bar — actual site value, narrower, vertically centred -->
+							<div style="position:absolute;top:50%;transform:translateY(-50%);left:0;width:<?php echo (int) $rf['pct']; ?>%;height:8px;background:<?php echo esc_attr( $rc ); ?>;border-radius:2px;"></div>
 							<?php if ( $show_avg && null !== $net_pct ) : ?>
-							<!-- Tick is sibling of track — not clipped by overflow:hidden -->
-							<div style="position:absolute; top:-1px; left:<?php echo (int) $net_pct; ?>%; width:2px; height:8px; background:#7c3aed; border-radius:1px; transform:translateX(-50%);"></div>
+							<!-- Comparative marker — network average, full track height, dark -->
+							<div style="position:absolute;top:0;left:<?php echo (int) $net_pct; ?>%;width:3px;height:100%;background:#374151;transform:translateX(-50%);"></div>
 							<?php endif; ?>
 						</div>
 						<?php if ( $show_avg ) : ?>
 						<div style="display:flex; justify-content:flex-end; margin-top:3px;">
-							<span style="font-size:9px; color:#7c3aed; font-weight:500;"><?php esc_html_e( 'Network avg:', 'aeo-pugmill' ); ?>&nbsp;<?php echo null !== $net_pct ? (int) $net_pct . '%' : '&#8212;'; ?></span>
+							<span style="font-size:9px; color:#6b7280; font-weight:500;"><?php esc_html_e( 'Network avg:', 'aeo-pugmill' ); ?>&nbsp;<strong style="color:#374151;"><?php echo null !== $net_pct ? (int) $net_pct . '%' : '&#8212;'; ?></strong></span>
 						</div>
 						<?php endif; ?>
 					</div>
