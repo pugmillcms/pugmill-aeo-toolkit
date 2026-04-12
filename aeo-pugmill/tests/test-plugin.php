@@ -216,7 +216,7 @@ class WP_Error {
 
 define( 'ABSPATH',              '/fake/abspath/' );
 define( 'HOUR_IN_SECONDS',      3600 );
-define( 'AEOPUGMILL_VERSION',    '0.4.0' );
+define( 'AEOPUGMILL_VERSION',    '1.0.1' );
 define( 'AEOPUGMILL_PLUGIN_DIR', dirname( __DIR__ ) . '/' );
 define( 'AEOPUGMILL_PLUGIN_URL', 'https://example.com/wp-content/plugins/aeo-pugmill/' );
 define( 'AEOPUGMILL_MAX_AI_INPUT', 8000 );
@@ -242,11 +242,10 @@ function aeopugmill_get_aeo( int $post_id ): array {
 // rate-limit.php defines aeopugmill_get_rate_limit + aeopugmill_check_rate_limit.
 // ai-utils.php defines aeopugmill_decode_ai_json, aeopugmill_remap_passage_to_raw,
 //   and aeopugmill_get_paragraph_block_texts (pure helpers, no AJAX registrations).
-// audit.php defines aeopugmill_run_audit.
+// on-page-seo.php defines aeopugmill_get_seo + aeopugmill_save_seo.
 
 require_once AEOPUGMILL_PLUGIN_DIR . 'includes/rate-limit.php';
 require_once AEOPUGMILL_PLUGIN_DIR . 'includes/ai-utils.php';
-require_once AEOPUGMILL_PLUGIN_DIR . 'includes/audit.php';
 require_once AEOPUGMILL_PLUGIN_DIR . 'includes/on-page-seo.php';
 
 // ═════════════════════════════════════════════════════════════════════════
@@ -571,295 +570,40 @@ $decoded_ts = aeopugmill_decode_ai_json( $raw_type_set, 'anthropic' );
 assert_true( '{"type":"HowTo"} → returned as array', is_array( $decoded_ts ) );
 assert_equal( 'type value is HowTo', 'HowTo', $decoded_ts['type'] );
 
-// ── 7. aeopugmill_run_audit — scoring engine ───────────────────────────────
+// ── 7. aeopugmill_get_seo / aeopugmill_save_seo — on-page SEO store ──────
 
-// Helper: create a minimal mock post object
-function make_mock_post( string $content, string $type = 'post' ): object {
-	$p               = new stdClass();
-	$p->ID           = 1;
-	$p->post_content = $content;
-	$p->post_type    = $type;
-	return $p;
-}
+section( '7. aeopugmill_get_seo — defaults when no meta stored' );
 
-section( '7. aeopugmill_run_audit — structural invariant' );
+$seo_defaults = aeopugmill_get_seo( 1 );
+assert_equal( 'title defaults to empty string',     '', $seo_defaults['title'] );
+assert_equal( 'meta_desc defaults to empty string',  '', $seo_defaults['meta_desc'] );
+assert_equal( 'canonical defaults to empty string',  '', $seo_defaults['canonical'] );
+assert_equal( 'noindex defaults to false',           false, $seo_defaults['noindex'] );
+assert_equal( 'nofollow defaults to false',          false, $seo_defaults['nofollow'] );
+assert_equal( 'og_title defaults to empty string',   '', $seo_defaults['og_title'] );
+assert_equal( 'og_desc defaults to empty string',    '', $seo_defaults['og_desc'] );
+assert_equal( 'og_image defaults to empty string',   '', $seo_defaults['og_image'] );
 
-$GLOBALS['_mock_post']      = make_mock_post( '' );
-$GLOBALS['_mock_post_type'] = 'post';
-$GLOBALS['_mock_aeo']       = [ 'summary' => '', 'questions' => [], 'entities' => [], 'keywords' => [] ];
+section( '7b. aeopugmill_get_seo — parses stored JSON' );
 
-$audit_empty = aeopugmill_run_audit( 1 );
-assert_true( 'Result has "checks" key', isset( $audit_empty['checks'] ) );
-assert_true( 'Result has "score" key', isset( $audit_empty['score'] ) );
-assert_equal( 'passed + warned + failed === total',
-	$audit_empty['total'],
-	$audit_empty['passed'] + $audit_empty['warned'] + $audit_empty['failed']
-);
+$GLOBALS['_mock_seo_raw'] = json_encode( [ 'title' => 'My SEO Title', 'noindex' => true ] );
+$seo_parsed = aeopugmill_get_seo( 1 );
+assert_equal( 'title parsed from stored JSON',       'My SEO Title', $seo_parsed['title'] );
+assert_equal( 'noindex parsed as true',              true,           $seo_parsed['noindex'] );
+assert_equal( 'meta_desc filled with default',       '',             $seo_parsed['meta_desc'] );
 
-section( '7b. Empty content + empty AEO → low score' );
+// Reset
+$GLOBALS['_mock_seo_raw'] = '';
 
-// 14 checks total: 12 original + featured_image_alt (check 13) + single_h1 (check 14)
-assert_equal( 'Empty audit has 14 checks total', 14, $audit_empty['total'] );
-// Vacuous passes: questions_natural + entity_specificity (parent fields empty) + single_h1 (no H1 in empty content)
-// = 3/14 = round(21.43) = 21
-assert_equal( 'Empty audit score is 21 (3 vacuous passes)', 21, $audit_empty['score'] );
+section( '7c. aeopugmill_get_seo — invalid JSON returns defaults' );
 
-section( '7c. Well-populated AEO + long content → high score' );
+$GLOBALS['_mock_seo_raw'] = '{broken-json';
+$seo_broken = aeopugmill_get_seo( 1 );
+assert_equal( 'invalid JSON returns default title',  '', $seo_broken['title'] );
+assert_equal( 'invalid JSON returns default noindex', false, $seo_broken['noindex'] );
 
-$long_content = '<h2>Section One</h2>' . str_repeat( '<p>' . implode( ' ', array_fill( 0, 50, 'widget' ) ) . ' pottery pugmill reclaim clay studio technique.</p>', 10 );
-
-$GLOBALS['_mock_post'] = make_mock_post( $long_content );
-$GLOBALS['_mock_aeo']  = [
-	'summary'   => 'AEO Pugmill is a WordPress plugin for AEO and on-page SEO optimisation of posts and pages.',
-	'questions' => [
-		[ 'q' => 'What is a pugmill used for in pottery?',     'a' => 'A pugmill reclaims clay.' ],
-		[ 'q' => 'How does a pugmill improve clay reclaim?',   'a' => 'It de-airs and mixes clay.' ],
-		[ 'q' => 'What studio techniques use a pugmill?',      'a' => 'Wedging and reclaim workflows.' ],
-	],
-	'entities'  => [
-		[ 'name' => 'AEO Pugmill', 'type' => 'Product' ],
-		[ 'name' => 'Pottery Studio', 'type' => 'Organization' ],
-	],
-	'keywords'  => [ 'pugmill', 'clay reclaim', 'pottery studio', 'widget technique', 'studio technique', 'AEO plugin' ],
-];
-
-$audit_full = aeopugmill_run_audit( 1 );
-assert_true( 'Well-populated audit score > 70', $audit_full['score'] > 70 );
-
-// Verify the keywords_in_content check passed (keywords appear in content)
-$kw_check = null;
-foreach ( $audit_full['checks'] as $c ) {
-	if ( 'keywords_in_content' === $c['id'] ) { $kw_check = $c; break; }
-}
-assert_true( 'keywords_in_content check exists', $kw_check !== null );
-assert_equal( 'keywords_in_content passes when keywords in content', 'pass', $kw_check['status'] );
-
-// Verify has_headings passes (content has <h2>)
-$h_check = null;
-foreach ( $audit_full['checks'] as $c ) {
-	if ( 'has_headings' === $c['id'] ) { $h_check = $c; break; }
-}
-assert_equal( 'has_headings passes when <h2> present', 'pass', $h_check['status'] );
-
-section( '7d. Keywords not in content → keywords_in_content fails' );
-
-$GLOBALS['_mock_post'] = make_mock_post( '<p>This post talks about gardening and tomatoes.</p>' );
-$GLOBALS['_mock_aeo']  = [
-	'summary'   => 'A detailed look at advanced widget pottery techniques and clay reclaim methods.',
-	'questions' => [],
-	'entities'  => [],
-	'keywords'  => [ 'pugmill', 'clay reclaim', 'pottery studio', 'widget technique', 'AEO plugin' ],
-];
-
-$audit_kw = aeopugmill_run_audit( 1 );
-$kw_miss  = null;
-foreach ( $audit_kw['checks'] as $c ) {
-	if ( 'keywords_in_content' === $c['id'] ) { $kw_miss = $c; break; }
-}
-assert_equal( 'keywords_in_content fails when keywords absent from content', 'fail', $kw_miss['status'] );
-
-section( '7e. Long opening paragraph → opening_concise fails' );
-
-$long_intro = '<p>' . implode( ' ', array_fill( 0, 150, 'word' ) ) . '.</p>';
-$GLOBALS['_mock_post'] = make_mock_post( $long_intro );
-$GLOBALS['_mock_aeo']  = [ 'summary' => '', 'questions' => [], 'entities' => [], 'keywords' => [] ];
-
-$audit_long = aeopugmill_run_audit( 1 );
-$open_check = null;
-foreach ( $audit_long['checks'] as $c ) {
-	if ( 'opening_concise' === $c['id'] ) { $open_check = $c; break; }
-}
-assert_equal( 'opening_concise fails for 150-word intro', 'fail', $open_check['status'] );
-
-section( '7f. "page" post type uses "page" label in tips' );
-
-$GLOBALS['_mock_post']      = make_mock_post( '<p>Short page content.</p>', 'page' );
-$GLOBALS['_mock_post_type'] = 'page';
-$GLOBALS['_mock_aeo']       = [ 'summary' => '', 'questions' => [], 'entities' => [], 'keywords' => [] ];
-
-$audit_page = aeopugmill_run_audit( 1 );
-$len_check  = null;
-foreach ( $audit_page['checks'] as $c ) {
-	if ( 'content_length' === $c['id'] ) { $len_check = $c; break; }
-}
-assert_true( 'content_length check exists for page', $len_check !== null );
-assert_contains( 'content_length message mentions "page"', 'page', $len_check['message'] );
-
-section( '7g. summary_length and qa_coverage warn states' );
-
-// summary 40–79 chars → warn (< 40 → fail, >= 80 → pass)
-$GLOBALS['_mock_post'] = make_mock_post( '<p>Some content here.</p>' );
-$GLOBALS['_mock_aeo']  = [
-	'summary'   => str_repeat( 'x', 55 ), // 55 chars: >= 40, < 80 → warn
-	'questions' => [],
-	'entities'  => [],
-	'keywords'  => [],
-];
-$audit_sw = aeopugmill_run_audit( 1 );
-$sl_check = null;
-foreach ( $audit_sw['checks'] as $c ) {
-	if ( 'summary_length' === $c['id'] ) { $sl_check = $c; break; }
-}
-assert_equal( 'summary_length warns at 55 chars (40–79 range)', 'warn', $sl_check['status'] );
-
-// 1 Q&A → qa_coverage warns (< 1 → fail, >= 3 → pass)
-$GLOBALS['_mock_aeo'] = [
-	'summary'   => '',
-	'questions' => [ [ 'q' => 'Is this a question?', 'a' => 'Yes.' ] ],
-	'entities'  => [],
-	'keywords'  => [],
-];
-$audit_qa = aeopugmill_run_audit( 1 );
-$qac_check = null;
-foreach ( $audit_qa['checks'] as $c ) {
-	if ( 'qa_coverage' === $c['id'] ) { $qac_check = $c; break; }
-}
-assert_equal( 'qa_coverage warns at 1 Q&A pair (1–2 range)', 'warn', $qac_check['status'] );
-
-section( '7h. content_length warn state (200–399 words)' );
-
-// 250-word post → content_length warns (< 200 → fail, >= 400 → pass)
-$word_content = '<p>' . implode( ' ', array_fill( 0, 250, 'word' ) ) . '.</p>';
-$GLOBALS['_mock_post'] = make_mock_post( $word_content );
-$GLOBALS['_mock_aeo']  = [ 'summary' => '', 'questions' => [], 'entities' => [], 'keywords' => [] ];
-$audit_wc = aeopugmill_run_audit( 1 );
-$cl_check = null;
-foreach ( $audit_wc['checks'] as $c ) {
-	if ( 'content_length' === $c['id'] ) { $cl_check = $c; break; }
-}
-assert_equal( 'content_length warns at 250 words (200–399 range)', 'warn', $cl_check['status'] );
-
-section( '7i. featured_image_alt audit check' );
-
-// No thumbnail → warn
-$GLOBALS['_mock_post']         = make_mock_post( '<p>Some content.</p>' );
-$GLOBALS['_mock_post_type']    = 'post';
-$GLOBALS['_mock_aeo']          = [ 'summary' => '', 'questions' => [], 'entities' => [], 'keywords' => [] ];
-$GLOBALS['_mock_thumbnail_id'] = 0;
-$GLOBALS['_mock_thumbnail_alt'] = '';
-
-$audit_noimg = aeopugmill_run_audit( 1 );
-$fa_check    = null;
-foreach ( $audit_noimg['checks'] as $c ) {
-	if ( 'featured_image_alt' === $c['id'] ) { $fa_check = $c; break; }
-}
-assert_true( 'featured_image_alt check exists', $fa_check !== null );
-assert_equal( 'featured_image_alt warns when no thumbnail', 'warn', $fa_check['status'] );
-assert_true(  'featured_image_alt check includes has_thumbnail field', array_key_exists( 'has_thumbnail', $fa_check ) );
-assert_false( 'has_thumbnail is false when no thumbnail', $fa_check['has_thumbnail'] );
-
-// Thumbnail present but no alt text → warn
-$GLOBALS['_mock_thumbnail_id']  = 42;
-$GLOBALS['_mock_thumbnail_alt'] = '';
-
-$audit_noalt = aeopugmill_run_audit( 1 );
-$fa_noalt    = null;
-foreach ( $audit_noalt['checks'] as $c ) {
-	if ( 'featured_image_alt' === $c['id'] ) { $fa_noalt = $c; break; }
-}
-assert_equal( 'featured_image_alt warns when thumbnail has no alt text', 'warn', $fa_noalt['status'] );
-assert_true(  'has_thumbnail is true when thumbnail ID is set but no alt', $fa_noalt['has_thumbnail'] );
-
-// Thumbnail present with alt text → pass
-$GLOBALS['_mock_thumbnail_id']  = 42;
-$GLOBALS['_mock_thumbnail_alt'] = 'A photo of a pottery pugmill';
-
-$audit_withalt = aeopugmill_run_audit( 1 );
-$fa_withalt    = null;
-foreach ( $audit_withalt['checks'] as $c ) {
-	if ( 'featured_image_alt' === $c['id'] ) { $fa_withalt = $c; break; }
-}
-assert_equal( 'featured_image_alt passes when thumbnail has alt text', 'pass', $fa_withalt['status'] );
-assert_true(  'has_thumbnail is true when thumbnail has alt text', $fa_withalt['has_thumbnail'] );
-
-// Reset thumbnail state
-$GLOBALS['_mock_thumbnail_id']  = 0;
-$GLOBALS['_mock_thumbnail_alt'] = '';
-
-section( '7j. single_h1 audit check' );
-
-// No H1 in content → pass
-$GLOBALS['_mock_post'] = make_mock_post( '<h2>Section</h2><p>Some content.</p>' );
-$GLOBALS['_mock_aeo']  = [ 'summary' => '', 'questions' => [], 'entities' => [], 'keywords' => [] ];
-
-$audit_noh1 = aeopugmill_run_audit( 1 );
-$h1_check   = null;
-foreach ( $audit_noh1['checks'] as $c ) {
-	if ( 'single_h1' === $c['id'] ) { $h1_check = $c; break; }
-}
-assert_true( 'single_h1 check exists', $h1_check !== null );
-assert_equal( 'single_h1 passes when no H1 in content', 'pass', $h1_check['status'] );
-
-// H1 present in content → warn
-$GLOBALS['_mock_post'] = make_mock_post( '<h1>A Duplicate H1</h1><p>Some content.</p>' );
-
-$audit_h1 = aeopugmill_run_audit( 1 );
-$h1_warn  = null;
-foreach ( $audit_h1['checks'] as $c ) {
-	if ( 'single_h1' === $c['id'] ) { $h1_warn = $c; break; }
-}
-assert_equal( 'single_h1 warns when H1 found in content', 'warn', $h1_warn['status'] );
-
-// Reset mocks so nothing leaks
-$GLOBALS['_mock_post']          = null;
-$GLOBALS['_mock_post_type']     = 'post';
-$GLOBALS['_mock_aeo']           = [ 'summary' => '', 'questions' => [], 'entities' => [], 'keywords' => [] ];
-$GLOBALS['_mock_thumbnail_id']  = 0;
-$GLOBALS['_mock_thumbnail_alt'] = '';
-
-// ── 8. aeopugmill_filter_robots ────────────────────────────────────────────
-
-section( '8. aeopugmill_filter_robots — wp_robots filter' );
-
-// Reset to clean state.
-$GLOBALS['_mock_is_singular']       = true;
-$GLOBALS['_mock_queried_object_id'] = 1;
-$GLOBALS['_mock_seo_raw']           = '';
-unset( $GLOBALS['_wp_options']['aeopugmill_disable_seo_meta'] );
-
-// Normal post: always injects snippet/preview directives.
-$result_normal = aeopugmill_filter_robots( [] );
-assert_equal( 'max-snippet set to -1',             '-1',   $result_normal['max-snippet'] );
-assert_equal( 'max-video-preview set to -1',       '-1',   $result_normal['max-video-preview'] );
-assert_equal( 'max-image-preview set to large',    'large', $result_normal['max-image-preview'] );
-assert_false( 'noindex absent on normal post',   array_key_exists( 'noindex',  $result_normal ) );
-assert_false( 'nofollow absent on normal post',  array_key_exists( 'nofollow', $result_normal ) );
-
-// Merges with existing directives from other plugins (e.g. Jetpack max-image-preview).
-$result_merge = aeopugmill_filter_robots( [ 'max-image-preview' => 'large' ] );
-assert_equal( 'max-snippet added when merging with existing input', '-1', $result_merge['max-snippet'] );
-assert_equal( 'max-image-preview preserved through merge',       'large', $result_merge['max-image-preview'] );
-
-// Feature disabled: returns input unchanged (other plugins handle robots).
-$GLOBALS['_wp_options']['aeopugmill_disable_seo_meta'] = true;
-$result_disabled = aeopugmill_filter_robots( [ 'existing' => true ] );
-assert_equal( 'Returns input unchanged when feature disabled', [ 'existing' => true ], $result_disabled );
-unset( $GLOBALS['_wp_options']['aeopugmill_disable_seo_meta'] );
-
-// Non-singular view: returns input unchanged.
-$GLOBALS['_mock_is_singular'] = false;
-$result_nonsing = aeopugmill_filter_robots( [ 'other' => true ] );
-assert_equal( 'Returns input unchanged on non-singular view', [ 'other' => true ], $result_nonsing );
-$GLOBALS['_mock_is_singular'] = true;
-
-// Post with noindex=true: adds noindex directive, removes any prior index key.
-$GLOBALS['_mock_seo_raw'] = json_encode( [ 'noindex' => true, 'nofollow' => false ] );
-$result_noindex = aeopugmill_filter_robots( [ 'index' => false ] );
-assert_true( 'noindex added when post has noindex=true',        array_key_exists( 'noindex', $result_noindex ) );
-assert_true( 'noindex value is boolean true',                   $result_noindex['noindex'] === true );
-assert_false( 'index key removed when noindex is set',          array_key_exists( 'index', $result_noindex ) );
-
-// Post with nofollow=true: adds nofollow directive.
-$GLOBALS['_mock_seo_raw'] = json_encode( [ 'noindex' => false, 'nofollow' => true ] );
-$result_nofollow = aeopugmill_filter_robots( [] );
-assert_true( 'nofollow added when post has nofollow=true',  array_key_exists( 'nofollow', $result_nofollow ) );
-assert_false( 'noindex absent when only nofollow is set',   array_key_exists( 'noindex', $result_nofollow ) );
-assert_false( 'follow key not injected',                    array_key_exists( 'follow',  $result_nofollow ) );
-
-// Reset.
-$GLOBALS['_mock_seo_raw']           = '';
-$GLOBALS['_mock_is_singular']       = true;
-$GLOBALS['_mock_queried_object_id'] = 1;
+// Reset
+$GLOBALS['_mock_seo_raw'] = '';
 
 // ── Summary ───────────────────────────────────────────────────────────────
 

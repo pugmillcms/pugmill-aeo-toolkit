@@ -4,7 +4,7 @@ Tags: aeo, answer engine optimization, ai, structured data, bot analytics, llms-
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.0.0
+Stable tag: 1.0.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -164,6 +164,10 @@ Plus: llms.txt, per-post AEO markdown endpoints, and a bot analytics dashboard s
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.0.1 =
+* **Fix**: AI Provider form now saves API keys correctly — restored the JavaScript change-detection listener lost during dashboard consolidation.
+* **Tests**: Updated PHP test suite — removed stale audit.php references, added on-page SEO store tests, bumped version constant. All 205 tests pass (65 PHP plugin + 23 PHP encryption + 117 JS).
 
 = 1.0.0 =
 * **Dashboard consolidation**: Settings page restructured from 8 tabs to 5. New Dashboard tab is the default, with three inline setup cards (AI Provider, Author Voice, Pro License) that expand on demand and collapse when configured. Bot Analytics content now lives directly in the Dashboard.
