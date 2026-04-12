@@ -4,7 +4,7 @@ Tags: aeo, answer engine optimization, ai, structured data, bot analytics, llms-
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.3.3
+Stable tag: 1.3.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -164,6 +164,9 @@ Plus: llms.txt, per-post AEO markdown endpoints, and a bot analytics dashboard s
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.3.4 =
+* **AEO Content Coverage**: Network comparison redesigned — replaces the second parallel bar with a single bar plus a purple tick marker at the network average position and a clear "Network avg: X%" label. Opted-in sites now always see the comparison row (shows "—" when no network data yet, instead of hiding entirely).
 
 = 1.3.3 =
 * **Network**: All API calls to pugmillaeo.com now use the www canonical URL directly, eliminating a 307 redirect that was occurring on every registration, ingest, and report fetch. This resolves an edge case where the Authorization header could be dropped on redirect, causing a false 401 on registration.

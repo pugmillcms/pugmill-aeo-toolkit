@@ -2304,6 +2304,7 @@ function aeopugmill_render_settings_page() {
 						array( 'label' => __( 'SEO Title',           'aeo-pugmill' ), 'net_key' => '',          'count' => $cov_field_seo_title,    'pct' => ( $cov_total > 0 ? (int) round( $cov_field_seo_title    / $cov_total * 100 ) : 0 ) ),
 						array( 'label' => __( 'Meta Description',    'aeo-pugmill' ), 'net_key' => '',          'count' => $cov_field_seo_desc,     'pct' => ( $cov_total > 0 ? (int) round( $cov_field_seo_desc     / $cov_total * 100 ) : 0 ) ),
 					);
+					$opted_in_network = (bool) get_option( 'aeopugmill_analytics_opted_in' );
 					foreach ( $radar_fields as $rf ) :
 						if ( isset( $rf['section'] ) ) :
 							$border = empty( $rf['first'] ) ? 'margin-top:4px; padding-top:8px; border-top:1px solid #f0f0f0;' : '';
@@ -2314,25 +2315,37 @@ function aeopugmill_render_settings_page() {
 							<?php
 							continue;
 						endif;
-						$rc      = $rf['pct'] >= 75 ? '#16a34a' : ( $rf['pct'] >= 40 ? '#d97706' : '#e11d48' );
-						$net_pct = ( ! empty( $rf['net_key'] ) && ! empty( $network_coverage['fields'][ $rf['net_key'] ]['pct'] ) ) ? (int) $network_coverage['fields'][ $rf['net_key'] ]['pct'] : null;
+						$rc          = $rf['pct'] >= 75 ? '#16a34a' : ( $rf['pct'] >= 40 ? '#d97706' : '#e11d48' );
+						$has_net_key = ! empty( $rf['net_key'] );
+						$net_pct     = null;
+						if ( $has_net_key ) {
+							$raw = $network_coverage['fields'][ $rf['net_key'] ]['pct'] ?? null;
+							if ( null !== $raw && '' !== $raw ) {
+								$net_pct = (int) $raw;
+							}
+						}
+						// Show comparison row for opted-in sites on fields that have a network key,
+						// even when no data yet — shows "—" so users know it exists.
+						$show_avg = $has_net_key && $opted_in_network;
 					?>
 					<div>
 						<div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11px; margin-bottom:3px;">
 							<span style="color:#374151; font-weight:600;"><?php echo esc_html( $rf['label'] ); ?></span>
 							<span style="color:<?php echo esc_attr( $rc ); ?>; font-weight:700;"><?php echo (int) $rf['pct']; ?>% <span style="color:#9ca3af; font-weight:400; font-size:10px;">(<?php echo esc_html( number_format_i18n( $rf['count'] ) ); ?>)</span></span>
 						</div>
-						<!-- Your site bar -->
-						<div style="height:6px; background:#f0f0f0; border-radius:3px; overflow:hidden; margin-bottom:2px;">
-							<div style="height:100%; width:<?php echo (int) $rf['pct']; ?>%; background:<?php echo esc_attr( $rc ); ?>; border-radius:3px;"></div>
-						</div>
-						<?php if ( null !== $net_pct ) : ?>
-						<!-- Network avg bar -->
-						<div style="display:flex; align-items:center; gap:4px; margin-top:1px;">
-							<div style="height:3px; flex:1; background:#f0f0f0; border-radius:2px; overflow:hidden;">
-								<div style="height:100%; width:<?php echo (int) $net_pct; ?>%; background:#7c3aed; opacity:0.4; border-radius:2px;"></div>
+						<!-- Single bar; tick marker overlays it at the network avg position -->
+						<div style="position:relative;">
+							<div style="height:6px; background:#f0f0f0; border-radius:3px; overflow:hidden;">
+								<div style="height:100%; width:<?php echo (int) $rf['pct']; ?>%; background:<?php echo esc_attr( $rc ); ?>; border-radius:3px;"></div>
 							</div>
-							<span style="font-size:9px; color:#7c3aed; white-space:nowrap;"><?php echo (int) $net_pct; ?>% <?php esc_html_e( 'net', 'aeo-pugmill' ); ?></span>
+							<?php if ( $show_avg && null !== $net_pct ) : ?>
+							<!-- Tick is sibling of track — not clipped by overflow:hidden -->
+							<div style="position:absolute; top:-1px; left:<?php echo (int) $net_pct; ?>%; width:2px; height:8px; background:#7c3aed; border-radius:1px; transform:translateX(-50%);"></div>
+							<?php endif; ?>
+						</div>
+						<?php if ( $show_avg ) : ?>
+						<div style="display:flex; justify-content:flex-end; margin-top:3px;">
+							<span style="font-size:9px; color:#7c3aed; font-weight:500;"><?php esc_html_e( 'Network avg:', 'aeo-pugmill' ); ?>&nbsp;<?php echo null !== $net_pct ? (int) $net_pct . '%' : '&#8212;'; ?></span>
 						</div>
 						<?php endif; ?>
 					</div>
