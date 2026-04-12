@@ -4,7 +4,7 @@ Tags: aeo, answer engine optimization, ai, structured data, bot analytics, llms-
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.3.2
+Stable tag: 1.3.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -164,6 +164,9 @@ Plus: llms.txt, per-post AEO markdown endpoints, and a bot analytics dashboard s
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.3.3 =
+* **Network**: All API calls to pugmillaeo.com now use the www canonical URL directly, eliminating a 307 redirect that was occurring on every registration, ingest, and report fetch. This resolves an edge case where the Authorization header could be dropped on redirect, causing a false 401 on registration.
 
 = 1.3.2 =
 * **AI Provider**: Save Changes button is now disabled until a provider is selected (required field). A hint message prompts the user to select a provider first, preventing silent failures from submitting a key with no provider set.

@@ -732,7 +732,7 @@ function aeopugmill_render_settings_page() {
 			<?php settings_fields( 'aeopugmill_settings' ); ?>
 			<table class="form-table">
 				<tr>
-					<th><label for="aeopugmill_ai_provider"><?php esc_html_e( 'Provider', 'aeo-pugmill' ); ?></label></th>
+					<th><label for="aeopugmill_ai_provider"><?php esc_html_e( 'Provider', 'aeo-pugmill' ); ?> <span style="color:#dc3232;">*</span></label></th>
 					<td>
 						<select id="aeopugmill_ai_provider" name="aeopugmill_ai_provider">
 							<option value=""><?php esc_html_e( '— Select provider —', 'aeo-pugmill' ); ?></option>
@@ -744,6 +744,7 @@ function aeopugmill_render_settings_page() {
 								<option value="<?php echo esc_attr( $val ); ?>" <?php selected( $saved_provider, $val ); ?>><?php echo esc_html( $label ); ?></option>
 							<?php endforeach; ?>
 						</select>
+						<span id="aeopugmill-provider-hint" style="display:<?php echo empty( $saved_provider ) ? 'inline' : 'none'; ?>; margin-left:8px; font-size:12px; color:#dc3232;"><?php esc_html_e( 'Please select a provider before saving.', 'aeo-pugmill' ); ?></span>
 					</td>
 				</tr>
 				<tr>
@@ -779,18 +780,22 @@ function aeopugmill_render_settings_page() {
 				</tr>
 			</table>
 			<p style="margin-top:4px;">
-				<?php submit_button( null, 'primary', 'submit', false, $api_key ? array( 'id' => 'aeopugmill-ai-save-btn', 'disabled' => 'disabled' ) : array( 'id' => 'aeopugmill-ai-save-btn' ) ); ?>
+				<?php
+			$btn_disabled = ( $api_key || empty( $saved_provider ) );
+			submit_button( null, 'primary', 'submit', false, $btn_disabled ? array( 'id' => 'aeopugmill-ai-save-btn', 'disabled' => 'disabled' ) : array( 'id' => 'aeopugmill-ai-save-btn' ) );
+			?>
 			</p>
 		</form>
 		</div><!-- /ai-provider card -->
 		<script>
 		(function() {
-			var status     = document.getElementById( 'aeopugmill-test-api-key-status' );
-			var keyField   = document.getElementById( 'aeopugmill_ai_api_key' );
-			var saveBtn    = document.getElementById( 'aeopugmill-ai-save-btn' );
-			var flagField  = document.getElementById( 'aeopugmill_api_key_changed' );
-			var providerSel = document.getElementById( 'aeopugmill_ai_provider' );
-			var rateSelect  = document.getElementById( 'aeopugmill_ai_rate_limit' );
+			var status       = document.getElementById( 'aeopugmill-test-api-key-status' );
+			var keyField     = document.getElementById( 'aeopugmill_ai_api_key' );
+			var saveBtn      = document.getElementById( 'aeopugmill-ai-save-btn' );
+			var flagField    = document.getElementById( 'aeopugmill_api_key_changed' );
+			var providerSel  = document.getElementById( 'aeopugmill_ai_provider' );
+			var rateSelect   = document.getElementById( 'aeopugmill_ai_rate_limit' );
+			var providerHint = document.getElementById( 'aeopugmill-provider-hint' );
 			if ( ! keyField || ! status ) { return; }
 
 			var ajaxUrl    = <?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>;
@@ -800,13 +805,15 @@ function aeopugmill_render_settings_page() {
 			var isDirty   = false;
 			var isTesting = false;
 
-			// Enable the Save button whenever any field on this form changes.
-			function enableSave() {
-				if ( saveBtn ) { saveBtn.disabled = false; }
+			// Enable Save only when a provider is selected — provider is required.
+			// If the provider dropdown is blank the hint is shown and Save stays disabled.
+			function checkCanSave() {
+				var providerEmpty = providerSel && providerSel.value === '';
+				if ( providerHint ) { providerHint.style.display = providerEmpty ? 'inline' : 'none'; }
+				if ( saveBtn ) { saveBtn.disabled = providerEmpty; }
 			}
 
 			keyField.addEventListener( 'input', function() {
-				enableSave();
 				if ( ! isDirty ) {
 					isDirty = true;
 					// Tell PHP a new key was typed — used by the sanitize callback
@@ -815,10 +822,11 @@ function aeopugmill_render_settings_page() {
 					// Clear the "Key saved" indicator while the user is editing.
 					status.innerHTML = '';
 				}
+				checkCanSave();
 			} );
 
-			if ( providerSel ) { providerSel.addEventListener( 'change', enableSave ); }
-			if ( rateSelect )  { rateSelect.addEventListener( 'change', enableSave ); }
+			if ( providerSel ) { providerSel.addEventListener( 'change', checkCanSave ); }
+			if ( rateSelect )  { rateSelect.addEventListener( 'change', checkCanSave ); }
 
 			// Run a validation test against the AI provider.
 			// Only sends the typed value when dirty; omits it when pristine so
@@ -1887,7 +1895,7 @@ function aeopugmill_render_settings_page() {
 		$network_coverage   = array();  // content_coverage block from API
 
 		if ( get_option( 'aeopugmill_analytics_opted_in' ) ) {
-			$net_response = wp_remote_get( 'https://pugmillaeo.com/api/report', array( 'timeout' => 5, 'sslverify' => true ) );
+			$net_response = wp_remote_get( 'https://www.pugmillaeo.com/api/report', array( 'timeout' => 5, 'sslverify' => true ) );
 			if ( ! is_wp_error( $net_response ) ) {
 				$net_data      = json_decode( wp_remote_retrieve_body( $net_response ), true ) ?: array();
 				$network_sites = (int) ( $net_data['sites_contributing'] ?? 0 );
