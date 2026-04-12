@@ -2287,38 +2287,51 @@ function aeopugmill_render_settings_page() {
 				<?php endforeach; ?>
 				</div>
 
-				<!-- 2x2 quadrant grid: category name + big % + top bots -->
-				<div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
-				<?php foreach ( $cat_order_c1 as $ck ) :
+				<!-- Stacked category cards, sorted by traffic share descending -->
+				<?php
+				// Sort categories by total visits descending.
+				$sorted_c1 = $cat_order_c1;
+				usort( $sorted_c1, function( $a, $b ) use ( $cat_totals_c1 ) {
+					return $cat_totals_c1[ $b ] - $cat_totals_c1[ $a ];
+				} );
+				?>
+				<div style="display:flex; flex-direction:column; gap:5px;">
+				<?php foreach ( $sorted_c1 as $ck ) :
 					$share_pct_q = round( $cat_totals_c1[ $ck ] / $grand_total_c1 * 100, 1 );
 					$is_zero_q   = ( $cat_totals_c1[ $ck ] === 0 );
-					$pct_font_q  = ( $share_pct_q >= 10 ) ? '26' : '22';
 					$bots_q      = array();
 					foreach ( $cat_bots_c1[ $ck ] as $bk => $_ ) {
 						$bots_q[ $bk ] = (int) ( $summary[ $bk ] ?? 0 );
 					}
 					arsort( $bots_q );
 				?>
-				<div style="background:<?php echo esc_attr( $cat_bg_c1[ $ck ] ); ?>; border:1px solid <?php echo esc_attr( $cat_border_c1[ $ck ] ); ?>; border-radius:6px; padding:7px 6px 6px; text-align:center;">
-					<div style="font-size:8px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:<?php echo esc_attr( $cat_colors[ $ck ] ); ?>; line-height:1.2; margin-bottom:3px;"><?php echo esc_html( $cat_labels_c1[ $ck ] ); ?></div>
-					<div style="font-size:<?php echo esc_attr( $pct_font_q ); ?>px; font-weight:800; color:<?php echo $is_zero_q ? '#d1d5db' : esc_attr( $cat_colors[ $ck ] ); ?>; line-height:1; margin-bottom:6px;"><?php echo esc_html( $share_pct_q ); ?>%</div>
-					<?php
-					$shown_q = 0;
-					foreach ( $bots_q as $bk => $bv ) :
-						if ( $bv === 0 ) continue;
-						if ( $shown_q >= 3 ) break;
-						$shown_q++;
-						$bi_q = $cat_bots_c1[ $ck ][ $bk ];
-					?>
-					<div style="display:flex; align-items:center; gap:3px; font-size:9px; color:#6b7280; text-align:left; margin-bottom:2px;">
-						<span style="width:5px; height:5px; border-radius:50%; background:<?php echo esc_attr( $bi_q['color'] ); ?>; flex-shrink:0;"></span>
-						<span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><?php echo esc_html( $bi_q['label'] ); ?></span>
-						<span style="font-weight:600; color:<?php echo esc_attr( $cat_colors[ $ck ] ); ?>; flex-shrink:0;"><?php echo esc_html( number_format_i18n( $bv ) ); ?></span>
+				<div style="background:<?php echo esc_attr( $cat_bg_c1[ $ck ] ); ?>; border:1px solid <?php echo esc_attr( $cat_border_c1[ $ck ] ); ?>; border-radius:6px; padding:6px 8px;">
+					<div style="display:flex; align-items:center; gap:8px;">
+						<!-- Big % -->
+						<div style="font-size:22px; font-weight:800; color:<?php echo $is_zero_q ? '#d1d5db' : esc_attr( $cat_colors[ $ck ] ); ?>; line-height:1; min-width:44px; text-align:right; flex-shrink:0;"><?php echo esc_html( $share_pct_q ); ?>%</div>
+						<div style="flex:1; min-width:0;">
+							<!-- Category label -->
+							<div style="font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:<?php echo esc_attr( $cat_colors[ $ck ] ); ?>; margin-bottom:3px;"><?php echo esc_html( $cat_labels_c1[ $ck ] ); ?></div>
+							<!-- Top bots inline -->
+							<?php
+							$shown_q = 0;
+							foreach ( $bots_q as $bk => $bv ) :
+								if ( $bv === 0 ) continue;
+								if ( $shown_q >= 3 ) break;
+								$shown_q++;
+								$bi_q = $cat_bots_c1[ $ck ][ $bk ];
+							?>
+							<div style="display:flex; align-items:center; gap:3px; font-size:9px; color:#6b7280; margin-bottom:1px;">
+								<span style="width:5px; height:5px; border-radius:50%; background:<?php echo esc_attr( $bi_q['color'] ); ?>; flex-shrink:0;"></span>
+								<span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><?php echo esc_html( $bi_q['label'] ); ?></span>
+								<span style="font-weight:600; color:<?php echo esc_attr( $cat_colors[ $ck ] ); ?>; flex-shrink:0;"><?php echo esc_html( number_format_i18n( $bv ) ); ?></span>
+							</div>
+							<?php endforeach; ?>
+							<?php if ( $is_zero_q ) : ?>
+							<div style="font-size:9px; color:#d1d5db; font-style:italic;"><?php esc_html_e( 'none yet', 'aeo-pugmill' ); ?></div>
+							<?php endif; ?>
+						</div>
 					</div>
-					<?php endforeach; ?>
-					<?php if ( $is_zero_q ) : ?>
-					<div style="font-size:9px; color:#d1d5db; font-style:italic; margin-top:2px;"><?php esc_html_e( 'none yet', 'aeo-pugmill' ); ?></div>
-					<?php endif; ?>
 				</div>
 				<?php endforeach; ?>
 				</div>
@@ -2375,28 +2388,37 @@ function aeopugmill_render_settings_page() {
 							<span style="color:#374151; font-weight:600;"><?php echo esc_html( $rf['label'] ); ?></span>
 							<span style="color:<?php echo esc_attr( $rc ); ?>; font-weight:700;"><?php echo (int) $rf['pct']; ?>% <span style="color:#9ca3af; font-weight:400; font-size:10px;">(<?php echo esc_html( number_format_i18n( $rf['count'] ) ); ?>)</span></span>
 						</div>
-						<!-- Bullet graph: qualitative zones + feature bar + comparative marker -->
-						<div style="position:relative; height:16px; border-radius:3px; overflow:hidden; background:#f3f4f6;">
-							<!-- Qualitative zones: poor (0–40%) / satisfactory (40–75%) / good (75–100%) -->
-							<div style="position:absolute;top:0;left:0;width:40%;height:100%;background:#f3f4f6;"></div>
-							<div style="position:absolute;top:0;left:40%;width:35%;height:100%;background:#eaebee;"></div>
-							<div style="position:absolute;top:0;left:75%;width:25%;height:100%;background:#e0e2e6;"></div>
-							<!-- Feature bar — actual site value, narrower, vertically centred -->
-							<div style="position:absolute;top:50%;transform:translateY(-50%);left:0;width:<?php echo (int) $rf['pct']; ?>%;height:8px;background:<?php echo esc_attr( $rc ); ?>;border-radius:2px;"></div>
+						<!-- Bullet graph: qualitative zones + feature bar + dot avg marker -->
+						<div style="position:relative; padding-bottom:<?php echo ( $show_avg && null !== $net_pct ) ? '20' : '0'; ?>px;">
+							<div style="position:relative; height:16px; border-radius:3px; overflow:hidden; background:#f3f4f6;">
+								<!-- Qualitative zones: poor (0–40%) / satisfactory (40–75%) / good (75–100%) -->
+								<div style="position:absolute;top:0;left:0;width:40%;height:100%;background:#f3f4f6;"></div>
+								<div style="position:absolute;top:0;left:40%;width:35%;height:100%;background:#eaebee;"></div>
+								<div style="position:absolute;top:0;left:75%;width:25%;height:100%;background:#e0e2e6;"></div>
+								<!-- Feature bar — actual site value, narrower, vertically centred -->
+								<div style="position:absolute;top:50%;transform:translateY(-50%);left:0;width:<?php echo (int) $rf['pct']; ?>%;height:8px;background:<?php echo esc_attr( $rc ); ?>;border-radius:2px;"></div>
+							</div>
 							<?php if ( $show_avg && null !== $net_pct ) : ?>
-							<!-- Comparative marker — network average, full track height, dark -->
-							<div style="position:absolute;top:0;left:<?php echo (int) $net_pct; ?>%;width:3px;height:100%;background:#374151;transform:translateX(-50%);"></div>
+							<!-- Dot avg marker — hangs below the track -->
+							<div style="position:absolute; bottom:0; left:<?php echo (int) $net_pct; ?>%; transform:translateX(-50%); display:flex; flex-direction:column; align-items:center;">
+								<div style="width:1px; height:4px; background:#9ca3af;"></div>
+								<div style="width:8px; height:8px; border-radius:50%; background:#374151;"></div>
+								<span style="font-size:9px; color:#374151; font-weight:700; white-space:nowrap; margin-top:2px;"><?php echo (int) $net_pct; ?>%</span>
+							</div>
+							<?php elseif ( $show_avg ) : ?>
+							<div style="text-align:right; margin-top:3px; font-size:9px; color:#d1d5db;"><?php esc_html_e( 'Network avg: ', 'aeo-pugmill' ); ?>&#8212;</div>
 							<?php endif; ?>
 						</div>
-						<?php if ( $show_avg ) : ?>
-						<div style="display:flex; justify-content:flex-end; margin-top:3px;">
-							<span style="font-size:9px; color:#6b7280; font-weight:500;"><?php esc_html_e( 'Network avg:', 'aeo-pugmill' ); ?>&nbsp;<strong style="color:#374151;"><?php echo null !== $net_pct ? (int) $net_pct . '%' : '&#8212;'; ?></strong></span>
-						</div>
-						<?php endif; ?>
 					</div>
 					<?php endforeach; ?>
 				</div>
-				<div style="margin-top:10px; padding-top:7px; border-top:1px solid #f0f0f0; font-size:10px; color:#9ca3af;">
+				<?php if ( $opted_in_network ) : ?>
+				<div style="display:flex; align-items:center; gap:5px; margin-top:10px; font-size:10px; color:#6b7280;">
+					<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#374151; flex-shrink:0;"></span>
+					<?php esc_html_e( 'Dot marker = Pugmill network average', 'aeo-pugmill' ); ?>
+				</div>
+				<?php endif; ?>
+				<div style="margin-top:6px; padding-top:7px; border-top:1px solid #f0f0f0; font-size:10px; color:#9ca3af;">
 					<?php echo esc_html( number_format_i18n( $cov_total ) . ' ' . _n( 'post/page total', 'posts/pages total', $cov_total, 'aeo-pugmill' ) ); ?>
 					<?php if ( null !== ( $network_coverage['with_aeo_pct'] ?? null ) ) : ?>
 					&nbsp;&middot;&nbsp;<span style="color:#7c3aed;"><?php echo (int) $network_coverage['with_aeo_pct']; ?>% <?php esc_html_e( 'of network posts have any AEO data', 'aeo-pugmill' ); ?></span>
