@@ -125,3 +125,17 @@ function aeopugmill_deactivate() {
 register_deactivation_hook( __FILE__, 'aeopugmill_deactivate' );
 
 add_action( 'aeopugmill_daily_prune', 'aeopugmill_bot_analytics_prune' );
+
+/**
+ * Add a "Settings" link on the Plugins page (next to Deactivate).
+ *
+ * @param  array $links Existing action links.
+ * @return array
+ */
+function aeopugmill_plugin_action_links( $links ) {
+	$settings_link = '<a href="' . esc_url( admin_url( 'admin.php?page=aeo-pugmill' ) ) . '">'
+		. esc_html__( 'Settings', 'aeo-pugmill' ) . '</a>';
+	array_unshift( $links, $settings_link );
+	return $links;
+}
+add_filter( 'plugin_action_links_' . plugin_basename( AEOPUGMILL_PLUGIN_FILE ), 'aeopugmill_plugin_action_links' );

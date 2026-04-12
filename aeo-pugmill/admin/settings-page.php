@@ -482,7 +482,8 @@ function aeopugmill_render_settings_page() {
 		$social_lines    = array_filter( array_map( 'trim', explode( "\n", get_option( 'aeopugmill_author_same_as', '' ) ) ) );
 		$social_count    = count( $social_lines );
 		?>
-		<div class="aeo-setup-card" data-card="settings" style="background:#fff; border:1px solid #ddd; border-radius:8px; overflow:hidden; margin-top:24px;">
+		<?php $settings_force_open = ( empty( $api_key ) && ! $has_voice && 'free' === $mode ) ? '1' : '0'; ?>
+		<div class="aeo-setup-card" data-card="settings" data-force-open="<?php echo esc_attr( $settings_force_open ); ?>" style="background:#fff; border:1px solid #ddd; border-radius:8px; overflow:hidden; margin-top:24px;">
 			<div class="aeo-setup-header" style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; cursor:pointer; user-select:none;" onclick="aeoToggleCard(this)">
 				<div style="display:flex; align-items:center; gap:8px;">
 					<span class="aeo-chevron" style="font-size:11px; color:#9ca3af; transition:transform .15s;">&#9660;</span>
@@ -654,13 +655,18 @@ function aeopugmill_render_settings_page() {
 			chev.style.transform = open ? 'rotate(-90deg)' : '';
 			try { localStorage.setItem( key, open ? '0' : '1' ); } catch(e) {}
 		}
-		/* Restore saved state on load */
+		/* Restore saved state on load — respect data-force-open for fresh installs */
 		(function() {
 			var cards = document.querySelectorAll( '.aeo-setup-card' );
 			cards.forEach( function( card ) {
 				var key  = 'aeo_card_' + card.dataset.card;
 				var body = card.querySelector( '.aeo-setup-body' );
 				var chev = card.querySelector( '.aeo-chevron' );
+				/* If nothing is configured yet, keep open regardless of stale localStorage */
+				if ( card.dataset.forceOpen === '1' ) {
+					try { localStorage.removeItem( key ); } catch(e) {}
+					return;
+				}
 				try {
 					var saved = localStorage.getItem( key );
 					if ( saved === '0' ) {
@@ -901,6 +907,17 @@ function aeopugmill_render_settings_page() {
 		?>
 
 		<!-- ── AI Insights ──────────────────────────────────────────────── -->
+		<?php if ( 0 === $total ) : ?>
+		<div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:28px 32px; margin:24px 0 0; text-align:center;">
+			<div style="font-size:28px; margin-bottom:12px;">📡</div>
+			<h3 style="margin:0 0 8px; font-size:16px; font-weight:600; color:#166534;">
+				<?php esc_html_e( 'Bot Analytics Activated', 'aeo-pugmill' ); ?>
+			</h3>
+			<p style="margin:0; font-size:13px; color:#555; line-height:1.7; max-width:520px; display:inline-block;">
+				<?php esc_html_e( 'We\'re now watching the watchers that visit your website. This page will update automatically with metrics in real time as bots explore your content.', 'aeo-pugmill' ); ?>
+			</p>
+		</div>
+		<?php else : ?>
 		<div style="background:#faf7ff; border:1px solid #d4c8f0; border-radius:8px; padding:20px 24px; margin:24px 0 0;">
 			<div style="display:flex; justify-content:space-between; align-items:center; gap:16px;">
 				<div style="flex:1; min-width:0;">
@@ -980,6 +997,7 @@ function aeopugmill_render_settings_page() {
 			</div>
 			<?php endif; ?>
 		</div>
+		<?php endif; /* $total === 0 welcome vs AI Analysis */ ?>
 
 
 		<?php if ( $total > 0 ) : ?>
