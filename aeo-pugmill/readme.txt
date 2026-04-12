@@ -4,7 +4,7 @@ Tags: aeo, answer engine optimization, ai, structured data, bot analytics, llms-
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.3.4
+Stable tag: 1.0.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -164,6 +164,12 @@ Plus: llms.txt, per-post AEO markdown endpoints, and a bot analytics dashboard s
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.0.0 =
+* **Dashboard consolidation**: Settings page restructured from 8 tabs to 5. New Dashboard tab is the default, with three inline setup cards (AI Provider, Author Voice, Pro License) that expand on demand and collapse when configured. Bot Analytics content now lives directly in the Dashboard.
+* **Data visualizations**: Content Reach diet bars, Crawl Intelligence quality bars, Top Posts visit bars, dot markers for network averages, and proportional bubble chart for Bot Activity.
+* **Visual polish**: Consistent bar weights, solid track backgrounds, larger legends, title case headings throughout.
+* First public release — prepared for WordPress.org submission.
 
 = 1.3.4 =
 * **AEO Content Coverage**: Network comparison redesigned — replaces the second parallel bar with a single bar plus a purple tick marker at the network average position and a clear "Network avg: X%" label. Opted-in sites now always see the comparison row (shows "—" when no network data yet, instead of hiding entirely).

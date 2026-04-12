@@ -1685,36 +1685,6 @@ function aeopugmill_render_settings_page() {
 
 		
 
-		<!-- 30-day trend chart -->
-		<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px 24px; margin-bottom:24px;">
-			<h3 style="margin:0 0 16px; font-size:14px; font-weight:600;">
-				<?php esc_html_e( 'Last 30 Days', 'aeo-pugmill' ); ?>
-			</h3>
-
-			<?php if ( 0 === $total ) : ?>
-			<p style="color:#9ca3af; font-size:13px; text-align:center; padding:40px 0;">
-				<?php esc_html_e( 'No AI bot visits recorded yet. Visits will appear here as AI crawlers discover your site.', 'aeo-pugmill' ); ?>
-			</p>
-			<?php else : ?>
-
-			<canvas id="aeopugmill-bot-chart" width="860" height="220"
-				style="width:100%; height:auto; display:block;"></canvas>
-
-			<!-- Legend -->
-			<div style="display:flex; flex-wrap:wrap; gap:12px 20px; margin-top:14px; justify-content:center;">
-				<?php foreach ( $bots as $bot_key => $bot_info ) :
-					if ( ! isset( $daily_index[ $bot_key ] ) ) continue;
-				?>
-				<span style="display:flex; align-items:center; gap:6px; font-size:12px; color:#555;">
-					<span style="width:20px; height:3px; background:<?php echo esc_attr( $bot_info['color'] ); ?>; border-radius:2px; display:inline-block;"></span>
-					<?php echo esc_html( $bot_info['label'] ); ?>
-				</span>
-				<?php endforeach; ?>
-			</div>
-
-			<?php endif; ?>
-		</div>
-
 		<!-- Content Reach ───────────────────────────────────────────────────── -->
 		<?php
 		// Build active_types from by_resource data (which columns have any visits)
@@ -2264,6 +2234,36 @@ function aeopugmill_render_settings_page() {
 			</table>
 		</div>
 		<?php endif; ?>
+
+		<!-- 30-day trend chart -->
+		<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px 24px; margin-bottom:24px;">
+			<h3 style="margin:0 0 16px; font-size:14px; font-weight:600;">
+				<?php esc_html_e( 'Last 30 Days', 'aeo-pugmill' ); ?>
+			</h3>
+
+			<?php if ( 0 === $total ) : ?>
+			<p style="color:#9ca3af; font-size:13px; text-align:center; padding:40px 0;">
+				<?php esc_html_e( 'No AI bot visits recorded yet. Visits will appear here as AI crawlers discover your site.', 'aeo-pugmill' ); ?>
+			</p>
+			<?php else : ?>
+
+			<canvas id="aeopugmill-bot-chart" width="860" height="220"
+				style="width:100%; height:auto; display:block;"></canvas>
+
+			<!-- Legend -->
+			<div style="display:flex; flex-wrap:wrap; gap:12px 20px; margin-top:14px; justify-content:center;">
+				<?php foreach ( $bots as $bot_key => $bot_info ) :
+					if ( ! isset( $daily_index[ $bot_key ] ) ) continue;
+				?>
+				<span style="display:flex; align-items:center; gap:6px; font-size:12px; color:#555;">
+					<span style="width:20px; height:3px; background:<?php echo esc_attr( $bot_info['color'] ); ?>; border-radius:2px; display:inline-block;"></span>
+					<?php echo esc_html( $bot_info['label'] ); ?>
+				</span>
+				<?php endforeach; ?>
+			</div>
+
+			<?php endif; ?>
+		</div>
 
 		<!-- Recent visits table -->
 		<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px 24px; margin-bottom:32px;">
