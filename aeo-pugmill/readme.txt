@@ -67,20 +67,20 @@ This plugin connects to the following external services:
 **Pugmill AEO Intelligence Network** (anonymous bot traffic benchmarking)
 When you opt in to Bot Analytics (Settings → AEO Pugmill → Bot Analytics), the plugin:
 - Registers your site with a one-way hashed site ID (SHA-256 of your home URL + a randomly generated instance ID). Your URL is never transmitted directly.
-- Submits anonymized daily bot traffic counts (bot name, resource type, visit count) to pugmillaeo.com once per day via a scheduled background task.
-- Fetches aggregated network averages from pugmillaeo.com to show how your bot traffic compares to other sites on the network.
+- Submits anonymized daily bot traffic counts (bot name, resource type, visit count) to aeopugmill.com once per day via a scheduled background task.
+- Fetches aggregated network averages from aeopugmill.com to show how your bot traffic compares to other sites on the network.
 
 No visitor data, IP addresses, post content, or personally identifiable information is ever transmitted. You can opt out at any time from the Bot Analytics tab; opting out stops all submissions and removes your site from the network.
-- Service: [https://pugmillaeo.com](https://pugmillaeo.com)
-- Privacy Policy: [https://pugmillaeo.com/privacy](https://pugmillaeo.com/privacy)
-- Terms of Service: [https://pugmillaeo.com/terms](https://pugmillaeo.com/terms)
-- This connection only occurs after explicit opt-in. Free mode users who have not opted in make no connections to pugmillaeo.com.
+- Service: [https://aeopugmill.com](https://aeopugmill.com)
+- Privacy Policy: [https://aeopugmill.com/privacy](https://aeopugmill.com/privacy)
+- Terms of Service: [https://aeopugmill.com/terms](https://aeopugmill.com/terms)
+- This connection only occurs after explicit opt-in. Free mode users who have not opted in make no connections to aeopugmill.com.
 
 **Pugmill License Server** (license validation)
-When a license key is entered in Settings → AEO Pugmill, the plugin contacts the pugmillaeo.com API to validate the license. This sends your license key and your site's domain to the license server.
-- Service: [https://pugmillaeo.com](https://pugmillaeo.com)
-- Privacy Policy: [https://pugmillaeo.com/privacy](https://pugmillaeo.com/privacy)
-- Terms of Service: [https://pugmillaeo.com/terms](https://pugmillaeo.com/terms)
+When a license key is entered in Settings → AEO Pugmill, the plugin contacts the aeopugmill.com API to validate the license. This sends your license key and your site's domain to the license server.
+- Service: [https://aeopugmill.com](https://aeopugmill.com)
+- Privacy Policy: [https://aeopugmill.com/privacy](https://aeopugmill.com/privacy)
+- Terms of Service: [https://aeopugmill.com/terms](https://aeopugmill.com/terms)
 - This connection only occurs when a license key is entered. Free mode users make no external connections.
 
 **AI Providers** (AI Connector mode only)
@@ -179,7 +179,7 @@ Plus: llms.txt, per-post AEO markdown endpoints, and a bot analytics dashboard s
 * **AEO Content Coverage**: Network comparison redesigned — replaces the second parallel bar with a single bar plus a purple tick marker at the network average position and a clear "Network avg: X%" label. Opted-in sites now always see the comparison row (shows "—" when no network data yet, instead of hiding entirely).
 
 = 1.3.3 =
-* **Network**: All API calls to pugmillaeo.com now use the www canonical URL directly, eliminating a 307 redirect that was occurring on every registration, ingest, and report fetch. This resolves an edge case where the Authorization header could be dropped on redirect, causing a false 401 on registration.
+* **Network**: All API calls to aeopugmill.com now use the www canonical URL directly, eliminating a 307 redirect that was occurring on every registration, ingest, and report fetch. This resolves an edge case where the Authorization header could be dropped on redirect, causing a false 401 on registration.
 
 = 1.3.2 =
 * **AI Provider**: Save Changes button is now disabled until a provider is selected (required field). A hint message prompts the user to select a provider first, preventing silent failures from submitting a key with no provider set.
@@ -276,12 +276,12 @@ Plus: llms.txt, per-post AEO markdown endpoints, and a bot analytics dashboard s
 = 1.2.5 =
 * **Bug fix**: Network category trend arrows (↑/↓ % network) in the Bot Benchmark quadrant grid were never displaying — the API returns category keys like "AI Answer Engine" but the plugin was looking up "ai". Fixed with a remapping layer.
 * **Network coverage**: Plugin now captures the `content_coverage` block from the network API response and uses it to show a "net avg" comparison bar beneath each AEO field bar in the AEO Content Coverage card.
-* **AEO Content Coverage card**: Removed the radar/spider chart — replaced with taller horizontal bars that are directly comparable to the bar charts on pugmillaeo.com/intelligence. Adds a thin purple "net avg" bar beneath each field bar when network data is available.
+* **AEO Content Coverage card**: Removed the radar/spider chart — replaced with taller horizontal bars that are directly comparable to the bar charts on aeopugmill.com/intelligence. Adds a thin purple "net avg" bar beneath each field bar when network data is available.
 * **Category labels**: Aligned category display names across the plugin and the public dashboard — "AI Crawlers" → "AI Answer Engines", "Training Crawlers" → "AI Training Crawlers", "SEO Bots" → "SEO Tools".
-* **pugmillaeo.com**: Section order on /intelligence reordered — Bot Activity Trends now follows Categories immediately, then What Bots Are Fetching (categories → bots → resources → signals → coverage).
-* **pugmillaeo.com**: Resource type distribution now grouped by taxonomy (AEO Endpoints / Discovery / Page Crawls) instead of sorted by volume — makes the AEO vs non-AEO split immediately visible.
-* **pugmillaeo.com**: Category cards now render in canonical AI-first order (AI Answer Engines, AI Training Crawlers, Search Engines, SEO Tools) matching the plugin's quadrant layout.
-* **pugmillaeo.com**: Signal Intelligence bar charts now use human-readable bucket labels (Short/Medium/Long, Fresh/Recent/Mature/Archive) instead of raw database keys.
+* **aeopugmill.com**: Section order on /intelligence reordered — Bot Activity Trends now follows Categories immediately, then What Bots Are Fetching (categories → bots → resources → signals → coverage).
+* **aeopugmill.com**: Resource type distribution now grouped by taxonomy (AEO Endpoints / Discovery / Page Crawls) instead of sorted by volume — makes the AEO vs non-AEO split immediately visible.
+* **aeopugmill.com**: Category cards now render in canonical AI-first order (AI Answer Engines, AI Training Crawlers, Search Engines, SEO Tools) matching the plugin's quadrant layout.
+* **aeopugmill.com**: Signal Intelligence bar charts now use human-readable bucket labels (Short/Medium/Long, Fresh/Recent/Mature/Archive) instead of raw database keys.
 
 = 1.2.4 =
 * **Compatibility tab**: Removed "AEO-Exclusive Outputs" panel — this information is already communicated by the AEO Infrastructure card on the Bot Analytics page. Compatibility tab now focuses entirely on plugin coexistence.
@@ -341,14 +341,14 @@ Plus: llms.txt, per-post AEO markdown endpoints, and a bot analytics dashboard s
 * **Fix**: "Send to Network" button now only appears when the user has opted into the Pugmill AEO Intelligence Network.
 
 = 1.0.43 =
-* **Change**: Removed hardcoded test license key — all license validation now goes through the pugmillaeo.com API.
+* **Change**: Removed hardcoded test license key — all license validation now goes through the aeopugmill.com API.
 * **Change**: Added "Manage subscription" link to the License tab next to the renewal date, pointing to the Stripe Customer Portal.
 
 = 1.0.42 =
 * **Fix**: Fatal error on activation caused by duplicate `aeopugmill_mode()` function definition — removed redundant declaration from `license.php` (canonical version with dev-mode bypass lives in `aeo-pugmill.php`).
 
 = 1.0.41 =
-* **Change**: License validation migrated from Lemon Squeezy to self-hosted Stripe-backed system at pugmillaeo.com. Domain registration now happens passively on first validation — no separate activation call required. Supports up to 3 sites per license key.
+* **Change**: License validation migrated from Lemon Squeezy to self-hosted Stripe-backed system at aeopugmill.com. Domain registration now happens passively on first validation — no separate activation call required. Supports up to 3 sites per license key.
 
 
 = 1.0.40 =
@@ -368,13 +368,13 @@ Plus: llms.txt, per-post AEO markdown endpoints, and a bot analytics dashboard s
 * **Branding**: Renamed "Pugmill Intelligence Network" → "Pugmill AEO Intelligence Network" throughout the plugin UI, prompts, and code comments.
 
 = 1.0.36 =
-* **Enhancement**: Get AI Analytics now includes per-bot Crawl Intelligence signals (word count, freshness, fact density, URL depth, URL type) from this site in the analysis context, plus network-average signals from pugmillaeo.com for comparison. New "## Crawl Intelligence" section in the AI report interprets what bots are reading and how it compares to the network.
+* **Enhancement**: Get AI Analytics now includes per-bot Crawl Intelligence signals (word count, freshness, fact density, URL depth, URL type) from this site in the analysis context, plus network-average signals from aeopugmill.com for comparison. New "## Crawl Intelligence" section in the AI report interprets what bots are reading and how it compares to the network.
 
 = 1.0.35 =
-* **Change**: Network endpoint updated from pugmill.dev to pugmillaeo.com.
+* **Change**: Network endpoint updated from pugmill.dev to aeopugmill.com.
 
 = 1.0.34 =
-* **Feature**: Per-bot Crawl Intelligence signals now included in the daily network payload — word count, content freshness, fact density, URL depth, URL type, 404 rate, and generation time sent to pugmillaeo.com keyed by bot name.
+* **Feature**: Per-bot Crawl Intelligence signals now included in the daily network payload — word count, content freshness, fact density, URL depth, URL type, 404 rate, and generation time sent to aeopugmill.com keyed by bot name.
 
 = 1.0.33 =
 * **Enhancement**: Unknown bot display names — extract the domain from any URL embedded in the UA string (e.g. "ahrefs.com", "semrush.com") instead of raw UA fragments. Falls back to the leading token (e.g. "curl", "python-requests"), then silently drops truly unidentifiable UAs.

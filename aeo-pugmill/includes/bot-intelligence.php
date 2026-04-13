@@ -3,7 +3,7 @@
  * AEO Pugmill — Pugmill AEO Intelligence Network: rich signal capture.
  *
  * Captures anonymized, server-side-only signals from known AI bot visits
- * and appends them to the daily intelligence payload sent to pugmillaeo.com.
+ * and appends them to the daily intelligence payload sent to aeopugmill.com.
  *
  * No JS injection. No DOM manipulation. No user data. Every signal is either
  * a bucketed count or an aggregate statistic derived from data WordPress

@@ -1,9 +1,9 @@
 <?php
 /**
  * Plugin Name: AEO Pugmill
- * Plugin URI:  https://pugmillaeo.com
+ * Plugin URI:  https://aeopugmill.com
  * Description: The AEO plugin for WordPress. Structures your content for AI answer engines — FAQPage schema, entity graph, citations, bot analytics, and llms.txt. Works alongside Yoast, RankMath, and AIOSEO.
- * Version:     1.0.5
+ * Version:     1.0.6
  * Author:      Janzen Works
  * Author URI:  https://janzenworks.com
  * License:     GPL-2.0-or-later
@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 // the full PHP generation time for bot requests.
 define( 'AEOPUGMILL_REQUEST_START', microtime( true ) );
 
-define( 'AEOPUGMILL_VERSION',         '1.0.5' );
+define( 'AEOPUGMILL_VERSION',         '1.0.6' );
 define( 'AEOPUGMILL_PLUGIN_DIR',      plugin_dir_path( __FILE__ ) );
 define( 'AEOPUGMILL_PLUGIN_URL',      plugin_dir_url( __FILE__ ) );
 define( 'AEOPUGMILL_PLUGIN_FILE',     __FILE__ );
@@ -33,7 +33,7 @@ define( 'AEOPUGMILL_MAX_AI_INPUT',     8000 ); // character cap — approximatel
 // secret. Its purpose is to version-gate the HMAC scheme so both sides agree on
 // the algorithm, not to keep a value hidden. The actual per-site secret is the
 // network_token returned at registration and stored encrypted in the database.
-// This value must match PUGMILL_NETWORK_SECRET on the pugmillaeo.com server.
+// This value must match PUGMILL_NETWORK_SECRET on the aeopugmill.com server.
 define( 'AEOPUGMILL_NETWORK_SECRET',   'pugmill-network-v1' );
 
 /**

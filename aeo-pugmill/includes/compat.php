@@ -90,7 +90,7 @@ function aeopugmill_seo_plugin_names() {
  * open graph) are listed only when Pugmill is currently handling them,
  * i.e. the corresponding disable toggle is NOT set.
  *
- * This list is used in the network intelligence payload so pugmillaeo.com
+ * This list is used in the network intelligence payload so aeopugmill.com
  * knows which outputs each contributing site is running.
  *
  * @return string[]

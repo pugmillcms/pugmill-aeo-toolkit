@@ -1,6 +1,6 @@
 <?php
 /**
- * License validation via pugmillaeo.com (self-hosted, Stripe-backed).
+ * License validation via aeopugmill.com (self-hosted, Stripe-backed).
  *
  * Modes:
  *   free  — no license key entered
@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 define( 'AEOPUGMILL_LICENSE_CACHE_TTL',  6 * HOUR_IN_SECONDS );
-define( 'AEOPUGMILL_VALIDATE_URL', 'https://pugmillaeo.com/api/validate-license' );
+define( 'AEOPUGMILL_VALIDATE_URL', 'https://aeopugmill.com/api/validate-license' );
 
 /**
  * Get a stable instance ID for this WordPress installation.
@@ -59,7 +59,7 @@ function aeopugmill_license_status() {
 }
 
 /**
- * Validate the stored license key against the pugmillaeo.com API.
+ * Validate the stored license key against the aeopugmill.com API.
  * Sends the site's domain so it is registered on first call.
  *
  * @return array
