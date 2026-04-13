@@ -949,13 +949,14 @@ add_filter( 'query_vars', 'aeopugmill_jsonld_query_vars' );
 /**
  * Register the /aeo/{slug}.jsonld rewrite rule.
  *
- * Maps e.g. /aeo/my-post-slug.jsonld → index.php?name=my-post-slug&aeopugmill_jsonld=1
- * The `name` query var triggers WordPress's standard post lookup by slug.
+ * Maps e.g. /aeo/my-post-slug.jsonld → index.php?aeopugmill_jsonld=my-post-slug
+ * We look up the post by slug ourselves rather than relying on WordPress's
+ * `name` query var, which depends on the site's permalink structure.
  */
 function aeopugmill_jsonld_rewrite_rules() {
 	add_rewrite_rule(
 		'^aeo/([^/]+)\.jsonld$',
-		'index.php?name=$matches[1]&aeopugmill_jsonld=1',
+		'index.php?aeopugmill_jsonld=$matches[1]',
 		'top'
 	);
 }
@@ -972,12 +973,14 @@ add_action( 'init', 'aeopugmill_jsonld_rewrite_rules' );
  * Bot visits are logged as resource type 8 (aeo_jsonld).
  */
 function aeopugmill_serve_jsonld_file() {
-	if ( ! get_query_var( 'aeopugmill_jsonld' ) ) {
+	$slug = get_query_var( 'aeopugmill_jsonld' );
+	if ( ! $slug ) {
 		return;
 	}
 
-	$post_id = get_queried_object_id();
-	$post    = $post_id ? get_post( $post_id ) : null;
+	// Look up the post by slug directly — don't rely on WP_Query main loop.
+	$post = get_page_by_path( $slug, OBJECT, array( 'post', 'page' ) );
+	$post_id = $post ? $post->ID : 0;
 
 	header( 'Content-Type: application/ld+json; charset=utf-8' );
 	header( 'X-Content-Type-Options: nosniff' );
