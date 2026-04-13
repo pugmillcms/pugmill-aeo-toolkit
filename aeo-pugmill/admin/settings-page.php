@@ -1650,7 +1650,7 @@ function aeopugmill_render_settings_page() {
 
 		// Column order: AEO group first, then Discovery, then Page Crawls
 		$col_order_by_cat = array(
-			'aeo'       => array( 1, 2, 3, 4 ),
+			'aeo'       => array( 1, 2, 3, 4, 7, 8 ),
 			'discovery' => array( 5, 6 ),
 			'crawl'     => array( 0 ),
 		);
