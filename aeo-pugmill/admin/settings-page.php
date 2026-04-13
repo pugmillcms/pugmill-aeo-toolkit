@@ -676,15 +676,48 @@ function aeopugmill_render_settings_page() {
 				} catch(e) {}
 			});
 		})();
-		/* Flag API key field as changed so the save handler accepts the new value */
+		/* AI Provider form — flag key changes + disable Save until both fields filled */
 		(function() {
 			var keyField  = document.getElementById( 'aeopugmill_ai_api_key' );
 			var flagField = document.getElementById( 'aeopugmill_api_key_changed' );
-			if ( keyField && flagField ) {
-				keyField.addEventListener( 'input', function() {
-					flagField.value = '1';
-				});
+			var provSel   = document.getElementById( 'aeopugmill_ai_provider' );
+			if ( ! keyField || ! flagField ) return;
+
+			/* Mark key as changed on any user interaction */
+			[ 'input', 'change', 'keyup', 'paste' ].forEach( function( evt ) {
+				keyField.addEventListener( evt, function() { flagField.value = '1'; } );
+			} );
+
+			/* Find the submit button in the same form */
+			var form = keyField.closest( 'form' );
+			var btn  = form ? form.querySelector( 'input[type="submit"], button[type="submit"]' ) : null;
+
+			function checkCanSave() {
+				if ( ! btn ) return;
+				var provOk = ! provSel || ( provSel.value !== '' );
+				var keyOk  = keyField.value.trim().length > 0;
+				btn.disabled = ! ( provOk && keyOk );
+				btn.style.opacity = btn.disabled ? '0.5' : '1';
 			}
+
+			/* Safety net: on form submit, if key is non-empty and flag is still 0, set it */
+			if ( form ) {
+				form.addEventListener( 'submit', function() {
+					if ( keyField.value.trim().length > 0 && flagField.value === '0' ) {
+						flagField.value = '1';
+					}
+				} );
+			}
+
+			/* Listen for changes on both fields */
+			if ( provSel ) {
+				provSel.addEventListener( 'change', checkCanSave );
+			}
+			keyField.addEventListener( 'input', checkCanSave );
+			keyField.addEventListener( 'paste', function() { setTimeout( checkCanSave, 0 ); } );
+
+			/* Initial state */
+			checkCanSave();
 		})();
 		</script>
 
@@ -907,7 +940,13 @@ function aeopugmill_render_settings_page() {
 		?>
 
 		<!-- ── AI Insights ──────────────────────────────────────────────── -->
-		<?php if ( 0 === $total ) : ?>
+		<?php
+		$just_activated = get_transient( 'aeopugmill_analytics_just_activated' );
+		if ( $just_activated ) {
+			delete_transient( 'aeopugmill_analytics_just_activated' );
+		}
+		?>
+		<?php if ( $just_activated ) : ?>
 		<div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:28px 32px; margin:24px 0 0; text-align:center;">
 			<div style="font-size:28px; margin-bottom:12px;">📡</div>
 			<h3 style="margin:0 0 8px; font-size:16px; font-weight:600; color:#166534;">
@@ -997,7 +1036,7 @@ function aeopugmill_render_settings_page() {
 			</div>
 			<?php endif; ?>
 		</div>
-		<?php endif; /* $total === 0 welcome vs AI Analysis */ ?>
+		<?php endif; /* just_activated welcome vs AI Analysis */ ?>
 
 
 		<?php if ( $total > 0 ) : ?>

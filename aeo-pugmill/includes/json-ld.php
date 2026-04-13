@@ -920,3 +920,212 @@ function aeopugmill_get_site_image_url() {
 	}
 	return '';
 }
+
+// =========================================================================
+// AEO JSON-LD Virtual Endpoint  —  /aeo/{slug}.jsonld
+// =========================================================================
+//
+// Serves a standalone JSON-LD file containing only the AEO-unique structured
+// data (FAQPage, entity mentions, citations, keywords, summary) that Pugmill
+// injects into the HTML. This duplicates a subset of the inline JSON-LD into
+// a separate, crawlable file — the goal is to track whether any bot fetches
+// it, which would prove bots follow <link rel="alternate"> references.
+//
+// The file is virtual (no disk write). WordPress resolves the post via its
+// slug, then template_redirect intercepts and serves the JSON-LD payload.
+
+/**
+ * Register the `aeopugmill_jsonld` query var so WordPress recognises it.
+ *
+ * @param  array $vars Existing query vars.
+ * @return array
+ */
+function aeopugmill_jsonld_query_vars( $vars ) {
+	$vars[] = 'aeopugmill_jsonld';
+	return $vars;
+}
+add_filter( 'query_vars', 'aeopugmill_jsonld_query_vars' );
+
+/**
+ * Register the /aeo/{slug}.jsonld rewrite rule.
+ *
+ * Maps e.g. /aeo/my-post-slug.jsonld → index.php?name=my-post-slug&aeopugmill_jsonld=1
+ * The `name` query var triggers WordPress's standard post lookup by slug.
+ */
+function aeopugmill_jsonld_rewrite_rules() {
+	add_rewrite_rule(
+		'^aeo/([^/]+)\.jsonld$',
+		'index.php?name=$matches[1]&aeopugmill_jsonld=1',
+		'top'
+	);
+}
+add_action( 'init', 'aeopugmill_jsonld_rewrite_rules' );
+
+/**
+ * Serve the AEO JSON-LD file at template_redirect.
+ *
+ * Builds a @graph with only AEO-unique nodes:
+ *   - FAQPage (from questions)
+ *   - Entity mentions (from entities)
+ *   - Article stub with keywords, citations, summary, associatedMedia
+ *
+ * Bot visits are logged as resource type 8 (aeo_jsonld).
+ */
+function aeopugmill_serve_jsonld_file() {
+	if ( ! get_query_var( 'aeopugmill_jsonld' ) ) {
+		return;
+	}
+
+	$post_id = get_queried_object_id();
+	$post    = $post_id ? get_post( $post_id ) : null;
+
+	header( 'Content-Type: application/ld+json; charset=utf-8' );
+	header( 'X-Content-Type-Options: nosniff' );
+
+	if ( ! $post || 'publish' !== $post->post_status ) {
+		status_header( 404 );
+		echo wp_json_encode( array( '@context' => 'https://schema.org', 'error' => 'Not found' ), JSON_UNESCAPED_SLASHES );
+		exit;
+	}
+
+	$aeo = aeopugmill_get_aeo( $post_id );
+
+	// Only serve if the post actually has AEO data.
+	if ( empty( $aeo['summary'] ) && empty( $aeo['questions'] ) && empty( $aeo['entities'] ) ) {
+		status_header( 404 );
+		echo wp_json_encode( array( '@context' => 'https://schema.org', 'error' => 'No AEO data' ), JSON_UNESCAPED_SLASHES );
+		exit;
+	}
+
+	$permalink = get_permalink( $post_id );
+	$graph     = array();
+
+	// ── FAQPage node ─────────────────────────────────────────────────────
+	$faq = aeopugmill_build_faq_node( $permalink, $aeo['questions'] );
+	if ( $faq ) {
+		$graph[] = $faq;
+	}
+
+	// ── Article stub with AEO-unique properties ─────────────────────────
+	$article = array(
+		'@type'    => 'Article',
+		'@id'      => $permalink . '#article',
+		'headline' => get_the_title( $post_id ),
+		'url'      => $permalink,
+	);
+
+	if ( ! empty( $aeo['summary'] ) ) {
+		$article['description'] = $aeo['summary'];
+	}
+
+	// Entity mentions.
+	if ( ! empty( $aeo['entities'] ) ) {
+		$schema_types = array(
+			'Person'       => 'Person',
+			'Organization' => 'Organization',
+			'Product'      => 'Product',
+			'Place'        => 'Place',
+			'Event'        => 'Event',
+			'Technology'   => 'SoftwareApplication',
+			'DefinedTerm'  => 'DefinedTerm',
+			'Thing'        => 'Thing',
+		);
+		$article['mentions'] = array_map( function( $entity ) use ( $schema_types ) {
+			$type = isset( $schema_types[ $entity['type'] ?? '' ] ) ? $schema_types[ $entity['type'] ] : 'Thing';
+			$item = array( '@type' => $type, 'name' => $entity['name'] );
+			if ( ! empty( $entity['description'] ) ) {
+				$item['description'] = $entity['description'];
+			}
+			if ( ! empty( $entity['same_as'] ) && filter_var( $entity['same_as'], FILTER_VALIDATE_URL ) ) {
+				$item['sameAs'] = esc_url_raw( $entity['same_as'] );
+			}
+			return $item;
+		}, $aeo['entities'] );
+	}
+
+	// Keywords.
+	if ( ! empty( $aeo['keywords'] ) ) {
+		$article['keywords'] = implode( ', ', $aeo['keywords'] );
+	}
+
+	// Citations — same logic as aeopugmill_build_article_node().
+	if ( ! empty( $post->post_content ) ) {
+		$site_host = wp_parse_url( home_url(), PHP_URL_HOST );
+		preg_match_all( '/<a\s[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)<\/a>/is', $post->post_content, $matches );
+		$citations = array();
+		foreach ( $matches[1] as $idx => $href ) {
+			$href   = esc_url_raw( trim( $href ) );
+			$parsed = wp_parse_url( $href );
+			if ( empty( $href ) || empty( $parsed['scheme'] ) || ! in_array( $parsed['scheme'], array( 'http', 'https' ), true ) ) {
+				continue;
+			}
+			if ( ! empty( $parsed['host'] ) && rtrim( $parsed['host'], '.' ) === rtrim( $site_host, '.' ) ) {
+				continue;
+			}
+			$anchor = trim( wp_strip_all_tags( $matches[2][ $idx ] ) );
+			if ( empty( $anchor ) || strlen( $anchor ) < 3 || filter_var( $anchor, FILTER_VALIDATE_URL ) ) {
+				continue;
+			}
+			$citations[] = array( '@type' => 'WebPage', 'url' => $href, 'name' => $anchor );
+		}
+		if ( ! empty( $citations ) ) {
+			$article['citation'] = array_values( array_unique( $citations, SORT_REGULAR ) );
+		}
+	}
+
+	// Link to the post's AEO markdown endpoint.
+	if ( ! empty( $aeo['summary'] ) ) {
+		$article['associatedMedia'] = array(
+			'@type'          => 'MediaObject',
+			'encodingFormat' => 'text/markdown',
+			'contentUrl'     => add_query_arg( 'aeopugmill_llm', '1', $permalink ),
+			'name'           => get_the_title( $post_id ) . ' — AEO Markdown',
+		);
+	}
+
+	$graph[] = $article;
+
+	// ── Serve response ───────────────────────────────────────────────────
+	status_header( 200 );
+	header( 'Cache-Control: public, max-age=86400' );
+
+	echo wp_json_encode(
+		array( '@context' => 'https://schema.org', '@graph' => $graph ),
+		JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT
+	);
+	exit;
+}
+add_action( 'template_redirect', 'aeopugmill_serve_jsonld_file' );
+
+/**
+ * Output a <link rel="alternate"> tag pointing to the AEO JSON-LD file
+ * for singular posts that have AEO data.
+ *
+ * This makes the standalone JSON-LD discoverable by crawlers parsing HTML.
+ * The rel="alternate" + type="application/ld+json" combination signals
+ * that the linked file is an alternative structured-data representation.
+ */
+function aeopugmill_output_jsonld_link_tag() {
+	if ( ! is_singular() ) {
+		return;
+	}
+
+	$post_id = get_the_ID();
+	$post    = get_post( $post_id );
+
+	if ( ! $post || 'publish' !== $post->post_status ) {
+		return;
+	}
+
+	$aeo = aeopugmill_get_aeo( $post_id );
+
+	// Only link if the post has AEO data that would produce a valid file.
+	if ( empty( $aeo['summary'] ) && empty( $aeo['questions'] ) && empty( $aeo['entities'] ) ) {
+		return;
+	}
+
+	$jsonld_url = home_url( '/aeo/' . $post->post_name . '.jsonld' );
+
+	echo '<link rel="alternate" type="application/ld+json" href="' . esc_url( $jsonld_url ) . '">' . "\n";
+}
+add_action( 'wp_head', 'aeopugmill_output_jsonld_link_tag', 3 );

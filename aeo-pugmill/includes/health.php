@@ -51,11 +51,11 @@ function aeopugmill_content_score( $post_id, $content = null ) {
 	$plain = preg_replace( '/<!--[\s\S]*?-->/', ' ', $content );
 	$plain = wp_strip_all_tags( $plain );
 	$plain = trim( preg_replace( '/\s+/', ' ', $plain ) );
-	$words = $plain ? str_word_count( $plain ) : 0;
+	$words = $plain ? count( preg_split( '/\s+/', $plain, -1, PREG_SPLIT_NO_EMPTY ) ) : 0;
 
 	preg_match( '/<p[^>]*>([\s\S]*?)<\/p>/i', $content, $m );
 	$opening       = isset( $m[1] ) ? wp_strip_all_tags( $m[1] ) : '';
-	$opening_words = $opening ? str_word_count( $opening ) : 0;
+	$opening_words = $opening ? count( preg_split( '/\s+/', $opening, -1, PREG_SPLIT_NO_EMPTY ) ) : 0;
 
 	$score  = 0;
 	if ( $words >= 400 )                                           $score += 15;
@@ -80,16 +80,19 @@ function aeopugmill_health_score( $post_id ) {
 
 	// ── Content helpers ───────────────────────────────────────────────────────
 	// Strip block serialisation comments then HTML to get plain text —
-	// mirrors the JS plainText calculation in scoring.js.
+	// mirrors the JS plainText calculation in scoring.js exactly.
 	$plain_text = preg_replace( '/<!--[\s\S]*?-->/', ' ', $content );
 	$plain_text = wp_strip_all_tags( $plain_text );
 	$plain_text = trim( preg_replace( '/\s+/', ' ', $plain_text ) );
-	$word_count = $plain_text ? str_word_count( $plain_text ) : 0;
+	// Use preg_split instead of str_word_count() to match the JS
+	// .split(/\s+/).filter(Boolean).length — str_word_count() is
+	// locale-dependent and can produce different results.
+	$word_count = $plain_text ? count( preg_split( '/\s+/', $plain_text, -1, PREG_SPLIT_NO_EMPTY ) ) : 0;
 
 	// Opening paragraph — first <p>…</p> in the raw content.
 	preg_match( '/<p[^>]*>([\s\S]*?)<\/p>/i', $content, $first_para );
 	$opening_text       = ! empty( $first_para[1] ) ? wp_strip_all_tags( $first_para[1] ) : '';
-	$opening_word_count = $opening_text ? str_word_count( $opening_text ) : 0;
+	$opening_word_count = $opening_text ? count( preg_split( '/\s+/', $opening_text, -1, PREG_SPLIT_NO_EMPTY ) ) : 0;
 
 	// ── Content length ────────────────────────────────────────────────────────
 	$has_enough_words = $word_count >= 400;
@@ -286,6 +289,16 @@ function aeopugmill_ajax_calculate_scores() {
 		wp_send_json_success( array() );
 	}
 
+	// Map health-check item IDs to the field labels shown in the Audit table.
+	// Deriving "missing" directly from the score items guarantees the
+	// displayed score and the missing-field tags can never disagree.
+	$item_to_field = array(
+		'summary_present' => 'Summary',
+		'qa_present'      => 'Q&A',
+		'entities_present' => 'Entities',
+		'keywords_present' => 'Keywords',
+	);
+
 	$results = array();
 	foreach ( $post_ids as $post_id ) {
 		if ( ! current_user_can( 'edit_post', $post_id ) ) {
@@ -296,22 +309,13 @@ function aeopugmill_ajax_calculate_scores() {
 		update_post_meta( $post_id, '_aeopugmill_score',         (int) $health['score'] );
 		update_post_meta( $post_id, '_aeopugmill_content_score', (int) $content_score );
 
-		$aeo      = aeopugmill_get_aeo( $post_id );
-		$missing  = array();
-		if ( empty( trim( $aeo['summary'] ?? '' ) ) ) {
-			$missing[] = 'Summary';
-		}
-		$qa_count = count( array_filter( $aeo['questions'] ?? array(), function( $q ) {
-			return ! empty( $q['q'] ) && ! empty( $q['a'] );
-		} ) );
-		if ( $qa_count < 1 ) {
-			$missing[] = 'Q&A';
-		}
-		if ( count( array_filter( $aeo['entities'] ?? array(), function( $e ) { return ! empty( $e['name'] ); } ) ) < 1 ) {
-			$missing[] = 'Entities';
-		}
-		if ( count( array_filter( $aeo['keywords'] ?? array(), 'strlen' ) ) < 5 ) {
-			$missing[] = 'Keywords';
+		// Derive missing fields from the score's own item results — single
+		// source of truth, no second aeopugmill_get_aeo() call needed.
+		$missing = array();
+		foreach ( $health['items'] as $item ) {
+			if ( ! $item['pass'] && isset( $item_to_field[ $item['id'] ] ) ) {
+				$missing[] = $item_to_field[ $item['id'] ];
+			}
 		}
 
 		$results[ $post_id ] = array(

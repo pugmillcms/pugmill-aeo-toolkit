@@ -68,10 +68,14 @@ function aeopugmill_register_settings() {
 		'sanitize_callback' => function( $value ) {
 			// phpcs:ignore WordPress.Security.NonceVerification.Missing
 			if ( ! isset( $_POST['aeopugmill_ai_provider'] ) ) {
-				return get_option( 'aeopugmill_ai_provider', 'anthropic' );
+				return get_option( 'aeopugmill_ai_provider', '' );
 			}
 			$allowed = array( 'anthropic', 'openai', 'gemini' );
-			return in_array( $value, $allowed, true ) ? $value : 'anthropic';
+			// If empty ("— Select —") or invalid, keep existing rather than silently defaulting.
+			if ( ! in_array( $value, $allowed, true ) ) {
+				return get_option( 'aeopugmill_ai_provider', '' );
+			}
+			return $value;
 		},
 	) );
 
@@ -90,8 +94,22 @@ function aeopugmill_register_settings() {
 	) );
 
 	// AI API key — encrypted at rest
+	//
+	// IMPORTANT — double-sanitize guard:
+	// WordPress's update_option() calls sanitize_option() and then, when the
+	// option does not yet exist (fresh install), falls through to add_option()
+	// which calls sanitize_option() a *second* time. Without the static guard
+	// below the key would be encrypted twice on first save, producing a value
+	// that decrypts to ciphertext instead of plaintext — the root cause of the
+	// "key looks saved but returns 401" bug on fresh installs.
 	register_setting( 'aeopugmill_settings', 'aeopugmill_ai_api_key', array(
 		'sanitize_callback' => function( $value ) {
+			static $already_sanitized = false;
+			if ( $already_sanitized ) {
+				return $value; // prevent double-encryption on fresh installs
+			}
+			$already_sanitized = true;
+
 			// If the hidden flag isn't set to '1' the user did not type a new key —
 			// the field contains the masked display value. Keep the existing encrypted
 			// value without touching it. This is deterministic and requires no
@@ -116,9 +134,15 @@ function aeopugmill_register_settings() {
 		},
 	) );
 
-	// License key — encrypted at rest
+	// License key — encrypted at rest (same double-sanitize guard as API key above)
 	register_setting( 'aeopugmill_settings', 'aeopugmill_license_key', array(
 		'sanitize_callback' => function( $value ) {
+			static $already_sanitized = false;
+			if ( $already_sanitized ) {
+				return $value;
+			}
+			$already_sanitized = true;
+
 			$value = sanitize_text_field( $value );
 			if ( empty( $value ) ) {
 				// Field not submitted (different tab's form) — preserve existing value.
@@ -224,8 +248,23 @@ function aeopugmill_register_settings() {
 	// Registered under its own group so submitting other settings forms
 	// (AI Connector, SEO, etc.) cannot inadvertently reset the opt-in state.
 	register_setting( 'aeopugmill_analytics', 'aeopugmill_analytics_opted_in', array(
-		'sanitize_callback' => 'absint',
+		'sanitize_callback' => 'aeopugmill_sanitize_analytics_opt_in',
 		'default'           => 0,
 	) );
 }
 add_action( 'admin_init', 'aeopugmill_register_settings' );
+
+/**
+ * Sanitize the analytics opt-in value and set a transient when first activated.
+ *
+ * @param  mixed $value Incoming value.
+ * @return int
+ */
+function aeopugmill_sanitize_analytics_opt_in( $value ) {
+	$new = absint( $value );
+	$old = (int) get_option( 'aeopugmill_analytics_opted_in', 0 );
+	if ( 1 === $new && 0 === $old ) {
+		set_transient( 'aeopugmill_analytics_just_activated', 1, 5 * MINUTE_IN_SECONDS );
+	}
+	return $new;
+}

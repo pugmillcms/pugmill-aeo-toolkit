@@ -3,7 +3,7 @@
  * Plugin Name: AEO Pugmill
  * Plugin URI:  https://pugmillaeo.com
  * Description: The AEO plugin for WordPress. Structures your content for AI answer engines — FAQPage schema, entity graph, citations, bot analytics, and llms.txt. Works alongside Yoast, RankMath, and AIOSEO.
- * Version:     1.0.1
+ * Version:     1.0.2
  * Author:      Janzen Works
  * Author URI:  https://janzenworks.com
  * License:     GPL-2.0-or-later
@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 // the full PHP generation time for bot requests.
 define( 'AEOPUGMILL_REQUEST_START', microtime( true ) );
 
-define( 'AEOPUGMILL_VERSION',         '1.0.1' );
+define( 'AEOPUGMILL_VERSION',         '1.0.2' );
 define( 'AEOPUGMILL_PLUGIN_DIR',      plugin_dir_path( __FILE__ ) );
 define( 'AEOPUGMILL_PLUGIN_URL',      plugin_dir_url( __FILE__ ) );
 define( 'AEOPUGMILL_PLUGIN_FILE',     __FILE__ );
@@ -97,6 +97,7 @@ function aeopugmill_activate() {
 	aeopugmill_llms_rewrite_rules();
 	aeopugmill_sitemap_rewrite();
 	aeopugmill_indexnow_rewrite();
+	aeopugmill_jsonld_rewrite_rules();
 	// Create bot analytics DB tables
 	aeopugmill_bot_analytics_install();
 	aeopugmill_bot_analytics_prune();

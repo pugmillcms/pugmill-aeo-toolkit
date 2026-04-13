@@ -99,6 +99,7 @@ function aeopugmill_bot_name( $id ) {
  * 5 — /sitemap.xml             (crawl discovery)
  * 6 — /robots.txt              (crawl policy)
  * 7 — AEO Post HTML            (singular post with AEO metadata — FAQPage, entities, etc.)
+ * 8 — /aeo/{slug}.jsonld       (standalone JSON-LD file with AEO-unique structured data)
  *
  * @return array<int, string>
  */
@@ -112,6 +113,7 @@ function aeopugmill_resource_type_labels() {
 		5 => 'Sitemap',
 		6 => 'Robots.txt',
 		7 => 'AEO Post',
+		8 => 'AEO JSON-LD',
 	);
 }
 
@@ -130,6 +132,7 @@ function aeopugmill_resource_type_categories() {
 		5 => 'discovery',
 		6 => 'discovery',
 		7 => 'aeo',
+		8 => 'aeo',
 	);
 }
 
@@ -289,6 +292,9 @@ function aeopugmill_detect_resource_type() {
 	}
 	if ( false !== strpos( $uri, 'robots.txt' ) ) {
 		return 6;
+	}
+	if ( preg_match( '#/aeo/[^/]+\.jsonld#', $uri ) ) {
+		return 8;
 	}
 
 	return 0;
@@ -1324,6 +1330,7 @@ function aeopugmill_intelligence_resource_slugs() {
 		5 => 'sitemap',
 		6 => 'robots_txt',
 		7 => 'aeo_post',
+		8 => 'aeo_jsonld',
 	);
 }
 
@@ -1500,7 +1507,7 @@ function aeopugmill_intelligence_send() {
 	 */
 	$payload = apply_filters( 'aeopugmill_intelligence_payload', $payload, $yesterday );
 
-	wp_remote_post(
+	$response = wp_remote_post(
 		'https://www.pugmillaeo.com/api/ingest',
 		array(
 			'timeout'     => 10,
@@ -1510,9 +1517,35 @@ function aeopugmill_intelligence_send() {
 				'Authorization' => 'Bearer ' . $submission_hmac,
 			),
 			'body'        => wp_json_encode( $payload ),
-			'blocking'    => false, // fire-and-forget — don't slow down cron
+			'blocking'    => true,
 		)
 	);
+
+	// Auto-recover from stale or corrupted tokens: if the server returns 401,
+	// re-register to get a fresh token and retry once.
+	if ( ! is_wp_error( $response ) && 401 === (int) wp_remote_retrieve_response_code( $response ) ) {
+		if ( aeopugmill_intelligence_register() === true ) {
+			$fresh_token = aeopugmill_get_encrypted_option( 'aeopugmill_network_token', '' );
+			if ( ! empty( $fresh_token ) ) {
+				$retry_hmac               = hash_hmac( 'sha256', "{$site_id}:{$date}:" . AEOPUGMILL_VERSION, $fresh_token );
+				$payload['network_token'] = $fresh_token;
+
+				wp_remote_post(
+					'https://www.pugmillaeo.com/api/ingest',
+					array(
+						'timeout'   => 10,
+						'sslverify' => true,
+						'headers'   => array(
+							'Content-Type'  => 'application/json',
+							'Authorization' => 'Bearer ' . $retry_hmac,
+						),
+						'body'      => wp_json_encode( $payload ),
+						'blocking'  => false,
+					)
+				);
+			}
+		}
+	}
 }
 add_action( 'aeopugmill_intelligence_send', 'aeopugmill_intelligence_send' );
 
@@ -1694,6 +1727,42 @@ function aeopugmill_ajax_manual_send() {
 			/* translators: %s: date string */
 			sprintf( __( 'Sent successfully for %s.', 'aeo-pugmill' ), $date )
 		);
+	}
+
+	// If the server rejected with 401, the stored token is likely stale or corrupted
+	// (e.g. double-encrypted from a pre-1.0.1 install). Re-register to get a fresh
+	// token and retry the send once before giving up.
+	if ( 401 === $code ) {
+		$rereg = aeopugmill_intelligence_register();
+		if ( true === $rereg ) {
+			$fresh_token = aeopugmill_get_encrypted_option( 'aeopugmill_network_token', '' );
+			if ( ! empty( $fresh_token ) ) {
+				// Recalculate HMAC with the fresh token and resend.
+				$retry_hmac            = hash_hmac( 'sha256', "{$site_id}:{$date}:" . AEOPUGMILL_VERSION, $fresh_token );
+				$payload['network_token'] = $fresh_token;
+
+				$retry_response = wp_remote_post(
+					'https://www.pugmillaeo.com/api/ingest',
+					array(
+						'timeout'   => 15,
+						'sslverify' => true,
+						'headers'   => array(
+							'Content-Type'  => 'application/json',
+							'Authorization' => 'Bearer ' . $retry_hmac,
+						),
+						'body'      => wp_json_encode( $payload ),
+						'blocking'  => true,
+					)
+				);
+
+				if ( ! is_wp_error( $retry_response ) && 200 === (int) wp_remote_retrieve_response_code( $retry_response ) ) {
+					wp_send_json_success(
+						/* translators: %s: date string */
+						sprintf( __( 'Re-registered and sent successfully for %s.', 'aeo-pugmill' ), $date )
+					);
+				}
+			}
+		}
 	}
 
 	$server_error = $body['error'] ?? __( 'Unknown error', 'aeo-pugmill' );
