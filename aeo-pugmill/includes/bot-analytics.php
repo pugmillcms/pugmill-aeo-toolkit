@@ -1401,15 +1401,24 @@ function aeopugmill_intelligence_send() {
 		 AND LENGTH(meta_value) > 10",
 		ARRAY_A
 	);
-	$field_summary   = 0;
-	$field_questions = 0;
-	$field_entities  = 0;
-	$field_keywords  = 0;
+	$field_summary         = 0;
+	$field_summary_quality = 0;
+	$field_questions       = 0;
+	$field_questions_3plus = 0;
+	$field_entities        = 0;
+	$field_keywords        = 0;
 	foreach ( (array) $aeo_field_rows as $aeo_field_row ) {
 		$aeo_data = json_decode( $aeo_field_row['meta_value'], true );
 		if ( ! is_array( $aeo_data ) ) { continue; }
-		if ( ! empty( $aeo_data['summary'] ) )   { $field_summary++; }
-		if ( ! empty( $aeo_data['questions'] ) ) { $field_questions++; }
+		if ( ! empty( $aeo_data['summary'] ) ) {
+			$field_summary++;
+			if ( strlen( $aeo_data['summary'] ) >= 50 ) { $field_summary_quality++; }
+		}
+		if ( ! empty( $aeo_data['questions'] ) ) {
+			$qa_count = is_array( $aeo_data['questions'] ) ? count( $aeo_data['questions'] ) : 0;
+			$field_questions++;
+			if ( $qa_count >= 3 ) { $field_questions_3plus++; }
+		}
 		if ( ! empty( $aeo_data['entities'] ) )  { $field_entities++; }
 		if ( ! empty( $aeo_data['keywords'] ) )  { $field_keywords++; }
 	}
@@ -1486,10 +1495,12 @@ function aeopugmill_intelligence_send() {
 		'markdown_assets_served' => $markdown_assets_served,
 		'pugmill_outputs_active' => $pugmill_outputs_active,
 		'field_coverage'         => array(
-			'summary'   => $field_summary,
-			'questions' => $field_questions,
-			'entities'  => $field_entities,
-			'keywords'  => $field_keywords,
+			'summary'          => $field_summary,
+			'summary_quality'  => $field_summary_quality,
+			'questions'        => $field_questions,
+			'questions_3plus'  => $field_questions_3plus,
+			'entities'         => $field_entities,
+			'keywords'         => $field_keywords,
 		),
 		'bots'                   => $bots,
 		'network_token'          => $network_token,
@@ -1617,15 +1628,24 @@ function aeopugmill_ajax_manual_send() {
 		 AND LENGTH(meta_value) > 10",
 		ARRAY_A
 	);
-	$field_summary   = 0;
-	$field_questions = 0;
-	$field_entities  = 0;
-	$field_keywords  = 0;
+	$field_summary         = 0;
+	$field_summary_quality = 0;
+	$field_questions       = 0;
+	$field_questions_3plus = 0;
+	$field_entities        = 0;
+	$field_keywords        = 0;
 	foreach ( (array) $aeo_field_rows as $aeo_field_row ) {
 		$aeo_data = json_decode( $aeo_field_row['meta_value'], true );
 		if ( ! is_array( $aeo_data ) ) { continue; }
-		if ( ! empty( $aeo_data['summary'] ) )   { $field_summary++; }
-		if ( ! empty( $aeo_data['questions'] ) ) { $field_questions++; }
+		if ( ! empty( $aeo_data['summary'] ) ) {
+			$field_summary++;
+			if ( strlen( $aeo_data['summary'] ) >= 50 ) { $field_summary_quality++; }
+		}
+		if ( ! empty( $aeo_data['questions'] ) ) {
+			$qa_count = is_array( $aeo_data['questions'] ) ? count( $aeo_data['questions'] ) : 0;
+			$field_questions++;
+			if ( $qa_count >= 3 ) { $field_questions_3plus++; }
+		}
 		if ( ! empty( $aeo_data['entities'] ) )  { $field_entities++; }
 		if ( ! empty( $aeo_data['keywords'] ) )  { $field_keywords++; }
 	}
@@ -1684,10 +1704,12 @@ function aeopugmill_ajax_manual_send() {
 		'markdown_assets_served' => $markdown_ajax,
 		'pugmill_outputs_active' => $pugmill_outputs_ajax,
 		'field_coverage'         => array(
-			'summary'   => $field_summary,
-			'questions' => $field_questions,
-			'entities'  => $field_entities,
-			'keywords'  => $field_keywords,
+			'summary'          => $field_summary,
+			'summary_quality'  => $field_summary_quality,
+			'questions'        => $field_questions,
+			'questions_3plus'  => $field_questions_3plus,
+			'entities'         => $field_entities,
+			'keywords'         => $field_keywords,
 		),
 		'bots'                   => $bots,
 		'network_token'          => $network_token,

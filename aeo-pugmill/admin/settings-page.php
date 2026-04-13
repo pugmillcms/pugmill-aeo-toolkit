@@ -1515,15 +1515,15 @@ function aeopugmill_render_settings_page() {
 		?>
 
 		<?php if ( ! empty( $network_avgs ) || $total_visits > 0 ) : ?>
-		<p style="font-size:12px; font-weight:600; color:#1d2327; margin:20px 0 8px;">
+		<div class="pugmill-card" style="margin:20px 0 24px;">
+		<h3 style="margin:0 0 4px; font-size:14px; font-weight:600;">
 			<?php esc_html_e( 'Your Site vs. Network Average', 'aeo-pugmill' ); ?>
 			<?php if ( $network_sites > 0 ) : ?>
 			<span style="font-size:11px; font-weight:400; color:#9ca3af; margin-left:6px;">
 				<?php printf( esc_html( _n( '(%d site in network)', '(%d sites in network)', $network_sites, 'aeo-pugmill' ) ), (int) $network_sites ); ?>
 			</span>
 			<?php endif; ?>
-		</p>
-		<?php endif; ?>
+		</h3>
 
 		<div style="border:1px solid #e5e7eb; border-radius:8px; overflow:hidden; margin-bottom:8px;">
 		<?php
@@ -1622,14 +1622,16 @@ function aeopugmill_render_settings_page() {
 		</div>
 		<?php $_bm_first = false; endforeach; ?>
 		</div>
-		<p style="font-size:11px; color:#9ca3af; margin:4px 0 24px;">
+		<p style="font-size:11px; color:#9ca3af; margin:4px 0 0;">
 			<?php esc_html_e( 'Last 30 days', 'aeo-pugmill' ); ?>
 			<?php if ( ! empty( $network_avgs ) ) : ?>
 			&nbsp;&middot;&nbsp; <?php esc_html_e( 'Bar = your site · Dot = network avg (per-category scale)', 'aeo-pugmill' ); ?>
 			<?php endif; ?>
 		</p>
+		</div><!-- /.pugmill-card Your Site vs. Network Average -->
+		<?php endif; ?>
 
-		
+
 
 		<!-- Content Reach ───────────────────────────────────────────────────── -->
 		<?php
