@@ -599,7 +599,7 @@ export function MainPanel() {
 				onFix={ handleHealthFix }
 			/>
 
-			{ /* ── Generate All ───────────────────────────────────────────── */ }
+			{ /* ── Generate AEO ───────────────────────────────────────────── */ }
 			{ IS_AI_MODE && generateAllError && (
 				<Notice status="error" isDismissible={ false } style={ { marginTop: '8px' } }>
 					{ generateAllError }
@@ -610,10 +610,20 @@ export function MainPanel() {
 					Fields generated — review and save.
 				</Notice>
 			) }
+			{ ! IS_AI_MODE ? (
+				<button
+					type="button"
+					disabled
+					style={ { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: '100%', marginTop: '12px', background: '#e5e7eb', color: '#9ca3af', border: '1px solid #d1d5db', borderRadius: '4px', padding: '0 18px', height: '36px', fontSize: '13px', cursor: 'not-allowed' } }
+				>
+					✨ Generate AEO
+					<span style={ { fontSize: '9px', fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase', background: '#f3e8ff', color: '#7c3aed', padding: '1px 6px', borderRadius: '3px', lineHeight: '1.4' } }>Pro</span>
+				</button>
+			) : (
 			<Button
 				variant="primary"
 				isBusy={ generateAllLoading }
-				disabled={ ! IS_AI_MODE || generateAllLoading }
+				disabled={ generateAllLoading }
 				onClick={ async () => {
 					setGenerateAllLoading( true );
 					setGenerateAllError( '' );
@@ -719,10 +729,11 @@ export function MainPanel() {
 						setGenerateAllLoading( false );
 					}
 				} }
-				style={ { width: '100%', justifyContent: 'center', marginTop: '12px', ...BUTTON_STYLE, ...( ! IS_AI_MODE ? { opacity: 0.4 } : {} ) } }
+				style={ { width: '100%', justifyContent: 'center', marginTop: '12px', ...BUTTON_STYLE } }
 			>
-				{ generateAllLoading ? 'Generating…' : '✨ Generate All' }
+				{ generateAllLoading ? 'Generating…' : '✨ Generate AEO' }
 			</Button>
+			) }
 			{ IS_AI_MODE && <UsageMeter usage={ usage } /> }
 			{ IS_AI_MODE && (
 				<p style={ { margin: '6px 0 0', fontSize: '11px', color: '#9ca3af', lineHeight: '1.5', textAlign: 'center' } }>
@@ -731,7 +742,7 @@ export function MainPanel() {
 			) }
 			{ ! IS_AI_MODE && (
 				<p style={ { margin: '6px 0 0', fontSize: '11px', color: '#9ca3af', lineHeight: '1.5', textAlign: 'center' } }>
-					Generate All is available with AEO Pugmill Pro.
+					Generate AEO is available with AEO Pugmill Pro.
 				</p>
 			) }
 
@@ -933,18 +944,17 @@ export function MainPanel() {
 								</div>
 								<p style={ { fontSize: '12px', color: '#555', margin: '0 0 8px' } }>{ topicState.result.note }</p>
 								{ s < 5 && (
-									<Button
-										variant="secondary"
-										isBusy={ refineState.loading }
-										disabled={ ! IS_AI_MODE || refineState.loading }
+									<AiPill
+										label="Refine"
+										isActive={ refineState.loading }
+										anyPending={ refineState.loading }
+										locked={ ! IS_AI_MODE }
+										pillLabel="Pro"
 										onClick={ () => {
 											setSwapStates( {} );
 											ajaxFetch( 'aeopugmill_refine_focus', refineFocusNonce, setRefineState );
 										} }
-										style={ { width: '100%', justifyContent: 'center', ...BUTTON_STYLE, ...( ! IS_AI_MODE ? { opacity: 0.4 } : {} ) } }
-									>
-										{ refineState.loading ? 'Working…' : '🎯 Refine Focus' }
-									</Button>
+									/>
 								) }
 							</div>
 						);
@@ -1002,15 +1012,14 @@ export function MainPanel() {
 							} ) }
 						</div>
 					) }
-					<Button
-						variant="secondary"
-						isBusy={ topicState.loading }
-						disabled={ ! IS_AI_MODE || topicState.loading }
+					<AiPill
+						label="Analyze"
+						isActive={ topicState.loading }
+						anyPending={ topicState.loading }
+						locked={ ! IS_AI_MODE }
+						pillLabel="Pro"
 						onClick={ runTopicFocus }
-						style={ { width: '100%', justifyContent: 'center', ...BUTTON_STYLE, ...( ! IS_AI_MODE ? { opacity: 0.4 } : {} ) } }
-					>
-						{ topicState.loading ? 'Analyzing…' : '🎯 Analyze Topic Focus' }
-					</Button>
+					/>
 			</PanelBody>
 
 			{ /* Internal Links */ }
@@ -1077,15 +1086,14 @@ export function MainPanel() {
 							} ) }
 						</div>
 					) }
-					<Button
-						variant="secondary"
-						isBusy={ linksState.loading }
-						disabled={ ! IS_AI_MODE || linksState.loading }
+					<AiPill
+						label="Find Links"
+						isActive={ linksState.loading }
+						anyPending={ linksState.loading }
+						locked={ ! IS_AI_MODE }
+						pillLabel="Pro"
 						onClick={ runInternalLinks }
-						style={ { width: '100%', justifyContent: 'center', ...BUTTON_STYLE, ...( ! IS_AI_MODE ? { opacity: 0.4 } : {} ) } }
-					>
-						{ linksState.loading ? 'Finding links…' : '🔗 Find Internal Links' }
-					</Button>
+					/>
 			</PanelBody>
 
 			{ /* Reading Level */ }
@@ -1112,15 +1120,14 @@ export function MainPanel() {
 							</p>
 						</div>
 					) }
-					<Button
-						variant="secondary"
-						isBusy={ readingState.loading }
-						disabled={ ! IS_AI_MODE || readingState.loading }
+					<AiPill
+						label="Analyze"
+						isActive={ readingState.loading }
+						anyPending={ readingState.loading }
+						locked={ ! IS_AI_MODE }
+						pillLabel="Pro"
 						onClick={ runReadingLevel }
-						style={ { width: '100%', justifyContent: 'center', ...BUTTON_STYLE, ...( ! IS_AI_MODE ? { opacity: 0.4 } : {} ) } }
-					>
-						{ readingState.loading ? 'Analyzing…' : '📖 Analyze Reading Level' }
-					</Button>
+					/>
 			</PanelBody>
 
 			{ /* Suggest Titles */ }
@@ -1162,6 +1169,7 @@ export function MainPanel() {
 							isActive={ headlineState.loading }
 							anyPending={ headlineState.loading }
 							locked={ ! IS_AI_MODE }
+							pillLabel="Pro"
 							onClick={ runSuggestTitles }
 						/>
 					</div>
@@ -1219,6 +1227,7 @@ export function MainPanel() {
 							isActive={ excerptState.loading }
 							anyPending={ excerptState.loading }
 							locked={ ! IS_AI_MODE }
+							pillLabel="Pro"
 							onClick={ runSuggestExcerpt }
 						/>
 					</div>

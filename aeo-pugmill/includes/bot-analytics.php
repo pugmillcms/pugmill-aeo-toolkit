@@ -947,7 +947,7 @@ function aeopugmill_bot_analytics_insights_context() {
 	// ── Network benchmark ────────────────────────────────────────────────────
 	$network_context = null;
 	if ( get_option( 'aeopugmill_analytics_opted_in' ) ) {
-		$net_response = wp_remote_get( 'https://www.aeopugmill.com/api/report', array( 'timeout' => 8, 'sslverify' => true ) );
+		$net_response = wp_remote_get( 'https://aeopugmill.com/api/report', array( 'timeout' => 8, 'sslverify' => true ) );
 		if ( ! is_wp_error( $net_response ) ) {
 			$net_data      = json_decode( wp_remote_retrieve_body( $net_response ), true ) ?: array();
 			$network_sites = (int) ( $net_data['sites_contributing'] ?? 0 );
@@ -1263,7 +1263,7 @@ function aeopugmill_intelligence_register() {
 	$reg_hmac = hash_hmac( 'sha256', "{$site_id}:{$opted_in_at}:{$nonce}", $network_secret );
 
 	$response = wp_remote_post(
-		'https://www.aeopugmill.com/api/ingest/register',
+		'https://aeopugmill.com/api/ingest/register',
 		array(
 			'timeout'   => 15,
 			'sslverify' => true,
@@ -1519,7 +1519,7 @@ function aeopugmill_intelligence_send() {
 	$payload = apply_filters( 'aeopugmill_intelligence_payload', $payload, $yesterday );
 
 	$response = wp_remote_post(
-		'https://www.aeopugmill.com/api/ingest',
+		'https://aeopugmill.com/api/ingest',
 		array(
 			'timeout'     => 10,
 			'sslverify'   => true,
@@ -1532,6 +1532,11 @@ function aeopugmill_intelligence_send() {
 		)
 	);
 
+	// Record successful send timestamp for dashboard display.
+	if ( ! is_wp_error( $response ) && 200 === (int) wp_remote_retrieve_response_code( $response ) ) {
+		update_option( 'aeopugmill_last_network_send', time(), false );
+	}
+
 	// Auto-recover from stale or corrupted tokens: if the server returns 401,
 	// re-register to get a fresh token and retry once.
 	if ( ! is_wp_error( $response ) && 401 === (int) wp_remote_retrieve_response_code( $response ) ) {
@@ -1542,7 +1547,7 @@ function aeopugmill_intelligence_send() {
 				$payload['network_token'] = $fresh_token;
 
 				wp_remote_post(
-					'https://www.aeopugmill.com/api/ingest',
+					'https://aeopugmill.com/api/ingest',
 					array(
 						'timeout'   => 10,
 						'sslverify' => true,
@@ -1724,7 +1729,7 @@ function aeopugmill_ajax_manual_send() {
 
 	// Blocking so we can report success/failure back to the UI.
 	$response = wp_remote_post(
-		'https://www.aeopugmill.com/api/ingest',
+		'https://aeopugmill.com/api/ingest',
 		array(
 			'timeout'   => 15,
 			'sslverify' => true,
@@ -1745,6 +1750,7 @@ function aeopugmill_ajax_manual_send() {
 	$body = json_decode( wp_remote_retrieve_body( $response ), true );
 
 	if ( 200 === $code ) {
+		update_option( 'aeopugmill_last_network_send', time(), false );
 		wp_send_json_success(
 			/* translators: %s: date string */
 			sprintf( __( 'Sent successfully for %s.', 'aeo-pugmill' ), $date )
@@ -1764,7 +1770,7 @@ function aeopugmill_ajax_manual_send() {
 				$payload['network_token'] = $fresh_token;
 
 				$retry_response = wp_remote_post(
-					'https://www.aeopugmill.com/api/ingest',
+					'https://aeopugmill.com/api/ingest',
 					array(
 						'timeout'   => 15,
 						'sslverify' => true,
@@ -1778,6 +1784,7 @@ function aeopugmill_ajax_manual_send() {
 				);
 
 				if ( ! is_wp_error( $retry_response ) && 200 === (int) wp_remote_retrieve_response_code( $retry_response ) ) {
+					update_option( 'aeopugmill_last_network_send', time(), false );
 					wp_send_json_success(
 						/* translators: %s: date string */
 						sprintf( __( 'Re-registered and sent successfully for %s.', 'aeo-pugmill' ), $date )

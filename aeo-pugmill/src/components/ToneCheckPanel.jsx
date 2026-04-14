@@ -11,6 +11,7 @@
 import { PanelBody, Button, Notice } from '@wordpress/components';
 
 import { BUTTON_STYLE } from '../constants';
+import { AiPill } from './AiInput';
 
 /**
  * @param {{
@@ -105,15 +106,14 @@ export function ToneCheckPanel( {
 					</button>
 				</div>
 			) }
-			<Button
-				variant="secondary"
-				isBusy={ loading }
-				disabled={ locked || loading }
+			<AiPill
+				label="Check Tone"
+				isActive={ loading }
+				anyPending={ loading }
+				locked={ locked }
+				pillLabel="Pro"
 				onClick={ onCheck }
-				style={ { width: '100%', justifyContent: 'center', ...BUTTON_STYLE, ...( locked ? { opacity: 0.4 } : {} ) } }
-			>
-				{ loading ? 'Checking…' : '🎨 Check Tone' }
-			</Button>
+			/>
 		</PanelBody>
 	);
 }

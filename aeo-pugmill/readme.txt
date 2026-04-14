@@ -4,7 +4,7 @@ Tags: aeo, answer engine optimization, ai, structured data, bot analytics, llms-
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.0.1
+Stable tag: 1.0.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -164,6 +164,16 @@ Plus: llms.txt, per-post AEO markdown endpoints, and a bot analytics dashboard s
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.0.7 =
+* **UI**: "Generate All" renamed to "Generate AEO" across Dashboard, Audit AEO, Bulk AEO, and sidebar.
+* **UI**: Sidebar AI buttons (Tone Check, Topic Focus, Refine, Internal Links, Reading Level) converted from full-width buttons to compact AiPill components with shorter labels.
+* **UI**: AI-gated features show an "AI" pill badge when locked; Pro-gated features show a "Pro" pill badge. Replaces plain text hints and faded buttons.
+* **UI**: Site AEO "Draft with AI" and "Get AI Improvement Tips" now show disabled buttons with AI pill when no API key is configured.
+* **UI**: "Settings" panel renamed to "Preferences" on the dashboard.
+* **Fix**: Network slug mapping for aeo_post and aeo_jsonld resource types — enables network comparison arrows in Content Reach.
+* **Fix**: Network API URL corrected from www.aeopugmill.com to aeopugmill.com.
+* **UI**: Dashboard charts rendered as separate bordered panels. Network legend replaced with visual bar/dot swatches and "Resync now" link with last-sync timestamp.
 
 = 1.0.1 =
 * **Fix**: AI Provider form now saves API keys correctly — restored the JavaScript change-detection listener lost during dashboard consolidation.

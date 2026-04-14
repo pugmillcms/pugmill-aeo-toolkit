@@ -53,6 +53,9 @@ export function SocialDraftPanel( { open, onToggle, state, onStateChange, onGene
 						{ state.loading && state.platform === key ? '…' : label }
 					</button>
 				) ) }
+				{ locked && (
+					<span style={ { fontSize: '9px', fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase', background: '#f3e8ff', color: '#7c3aed', padding: '1px 6px', borderRadius: '3px', lineHeight: '1.4', alignSelf: 'center' } }>Pro</span>
+				) }
 			</div>
 			{ state.loading && (
 				<div style={ { height: '6px', borderRadius: '3px', overflow: 'hidden', marginBottom: '10px' } }>

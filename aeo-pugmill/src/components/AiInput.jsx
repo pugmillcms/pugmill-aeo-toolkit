@@ -8,9 +8,9 @@
  */
 
 /**
- * @param {{ label: string, onClick: Function, isActive: boolean, anyPending: boolean, locked: boolean }} props
+ * @param {{ label: string, onClick: Function, isActive: boolean, anyPending: boolean, locked: boolean, pillLabel: string }} props
  */
-export function AiPill( { label, onClick, isActive, anyPending, locked } ) {
+export function AiPill( { label, onClick, isActive, anyPending, locked, pillLabel } ) {
 	const idle = {
 		display:      'inline-flex',
 		alignItems:   'center',
@@ -45,6 +45,9 @@ export function AiPill( { label, onClick, isActive, anyPending, locked } ) {
 				<path d="M13 10V3L4 14h7v7l9-11h-7z" />
 			</svg>
 			{ isActive ? 'Working…' : label }
+			{ locked && (
+				<span style={ { fontSize: '8px', fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase', background: '#f3e8ff', color: '#7c3aed', padding: '1px 5px', borderRadius: '3px', lineHeight: '1.4', opacity: 1 } }>{ pillLabel || 'AI' }</span>
+			) }
 		</button>
 	);
 }

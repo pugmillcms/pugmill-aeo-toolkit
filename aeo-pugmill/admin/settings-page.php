@@ -487,7 +487,7 @@ function aeopugmill_render_settings_page() {
 			<div class="aeo-setup-header" style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; cursor:pointer; user-select:none;" onclick="aeoToggleCard(this)">
 				<div style="display:flex; align-items:center; gap:8px;">
 					<span class="aeo-chevron" style="font-size:11px; color:#9ca3af; transition:transform .15s;">&#9660;</span>
-					<span style="font-size:14px; font-weight:600; color:#1d2327;"><?php esc_html_e( 'Settings', 'aeo-pugmill' ); ?></span>
+					<span style="font-size:14px; font-weight:600; color:#1d2327;"><?php esc_html_e( 'Preferences', 'aeo-pugmill' ); ?></span>
 					<span style="display:flex; align-items:center; gap:10px;">
 						<?php if ( $api_key ) : ?>
 						<span style="font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#16a34a;">&#10003; <?php esc_html_e( 'AI Connected', 'aeo-pugmill' ); ?></span>
@@ -626,7 +626,7 @@ function aeopugmill_render_settings_page() {
 					<?php if ( ! empty( $license_key ) && 'free' === $mode ) : ?>
 					<p style="font-size:11px; color:#dc3232; font-weight:600; margin:8px 0 8px;"><?php esc_html_e( 'License key invalid.', 'aeo-pugmill' ); ?> <?php echo esc_html( $license_status['error'] ?? __( 'Please check your key and try again.', 'aeo-pugmill' ) ); ?></p>
 					<?php else : ?>
-					<p style="font-size:12px; color:#6b7280; margin:10px 0 10px;"><?php esc_html_e( 'Unlock Generate All, Tone Check, Social Drafts, Bulk AEO, and more.', 'aeo-pugmill' ); ?></p>
+					<p style="font-size:12px; color:#6b7280; margin:10px 0 10px;"><?php esc_html_e( 'Unlock Generate AEO, Tone Check, Social Drafts, Bulk AEO, and more.', 'aeo-pugmill' ); ?></p>
 					<?php endif; ?>
 					<form method="post" action="options.php">
 						<?php settings_fields( 'aeopugmill_settings' ); ?>
@@ -957,24 +957,7 @@ function aeopugmill_render_settings_page() {
 			</p>
 		</div>
 		<?php else : ?>
-		<div style="background:#faf7ff; border:1px solid #d4c8f0; border-radius:8px; padding:20px 24px; margin:24px 0 0;">
-			<div style="display:flex; justify-content:space-between; align-items:center; gap:16px;">
-				<div style="flex:1; min-width:0;">
-					<h3 style="margin:0 0 4px; font-size:14px; font-weight:600; color:#1d2327;">
-						<?php esc_html_e( 'Generate AI Analysis', 'aeo-pugmill' ); ?>
-					</h3>
-					<p style="margin:0; font-size:12px; color:#6b7280;">
-						<?php esc_html_e( 'Ask your AI provider for analysis and recommendations, or submit your bot traffic to the Pugmill AEO Intelligence Network.', 'aeo-pugmill' ); ?>
-					</p>
-				</div>
-				<div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
-				<?php if ( get_option( 'aeopugmill_analytics_opted_in' ) ) : ?>
-				<button id="aeopugmill-send-now" type="button"
-					style="padding:6px 12px; font-size:12px; font-weight:500; background:#2271b1; border:1px solid #2271b1; border-radius:3px; color:#fff; cursor:pointer; white-space:nowrap;">
-					<?php esc_html_e( 'Send to Network', 'aeo-pugmill' ); ?>
-				</button>
-				<span id="aeopugmill-send-now-result" style="font-size:11px;"></span>
-				<?php endif; ?>
+		<div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:24px 0 0;">
 				<?php if ( $has_api_key ) : ?>
 				<button id="aeopugmill-insights-btn" type="button"
 					style="display:inline-flex; align-items:center; gap:6px; padding:7px 16px; font-size:12px; font-weight:600;
@@ -982,15 +965,17 @@ function aeopugmill_render_settings_page() {
 					✨ <?php echo $cached_insights ? esc_html__( 'Refresh Analysis', 'aeo-pugmill' ) : esc_html__( 'Generate AI Analysis', 'aeo-pugmill' ); ?>
 				</button>
 				<?php else : ?>
-				<p style="font-size:12px; color:#9ca3af; margin:0;">
-					<?php esc_html_e( 'Configure an API key to enable AI insights.', 'aeo-pugmill' ); ?>
-				</p>
+				<button type="button" disabled
+					style="display:inline-flex; align-items:center; gap:6px; padding:7px 16px; font-size:12px; font-weight:600;
+					       background:#e5e7eb; color:#9ca3af; border:none; border-radius:4px; cursor:not-allowed; white-space:nowrap;">
+					✨ <?php esc_html_e( 'Generate AI Analysis', 'aeo-pugmill' ); ?>
+					<span style="font-size:9px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; background:#f3e8ff; color:#7c3aed; padding:1px 6px; border-radius:3px; line-height:1.4;">AI</span>
+				</button>
 				<?php endif; ?>
-			</div>
 			</div>
 
 			<?php if ( $cached_insights ) : ?>
-			<div id="aeopugmill-insights-output" style="margin-top:16px; padding-top:16px; border-top:1px solid #e8e0f7;">
+			<div id="aeopugmill-insights-output" class="pugmill-card" style="margin-top:16px;">
 				<div id="aeopugmill-insights-text" style="font-size:14px; color:#374151; line-height:1.7;">
 					<?php
 					$lines  = explode( "\n", $cached_insights['text'] );
@@ -1028,7 +1013,7 @@ function aeopugmill_render_settings_page() {
 				</p>
 			</div>
 			<?php else : ?>
-			<div id="aeopugmill-insights-output" style="display:none; margin-top:16px; padding-top:16px; border-top:1px solid #e8e0f7;">
+			<div id="aeopugmill-insights-output" class="pugmill-card" style="display:none; margin-top:16px;">
 				<div id="aeopugmill-insights-text" style="font-size:14px; color:#374151; line-height:1.7;"></div>
 				<p style="font-size:11px; color:#9ca3af; margin:8px 0 0;">
 					<span id="aeopugmill-insights-status"></span>
@@ -1622,12 +1607,39 @@ function aeopugmill_render_settings_page() {
 		</div>
 		<?php $_bm_first = false; endforeach; ?>
 		</div>
-		<p style="font-size:11px; color:#9ca3af; margin:4px 0 0;">
-			<?php esc_html_e( 'Last 30 days', 'aeo-pugmill' ); ?>
+		<div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:8px; font-size:10px; color:#6b7280;">
+			<span><?php esc_html_e( 'Last 30 days', 'aeo-pugmill' ); ?></span>
 			<?php if ( ! empty( $network_avgs ) ) : ?>
-			&nbsp;&middot;&nbsp; <?php esc_html_e( 'Bar = your site · Dot = network avg (per-category scale)', 'aeo-pugmill' ); ?>
+			<span style="display:inline-flex; align-items:center; gap:4px;">
+				<span style="display:inline-block; width:14px; height:6px; border-radius:2px; background:#7c3aed; flex-shrink:0;"></span>
+				<?php esc_html_e( 'Your site', 'aeo-pugmill' ); ?>
+			</span>
+			<span style="display:inline-flex; align-items:center; gap:4px;">
+				<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#374151; flex-shrink:0;"></span>
+				<?php esc_html_e( 'Network average', 'aeo-pugmill' ); ?>
+			</span>
 			<?php endif; ?>
-		</p>
+			<?php if ( get_option( 'aeopugmill_analytics_opted_in' ) ) :
+				$last_send = get_option( 'aeopugmill_last_network_send' );
+			?>
+			<span style="margin-left:auto; display:inline-flex; align-items:center; gap:6px;">
+				<?php if ( $last_send ) : ?>
+				<span style="color:#9ca3af;"><?php
+					/* translators: %s: human-readable time diff */
+					printf( esc_html__( 'Synced %s ago', 'aeo-pugmill' ), esc_html( human_time_diff( $last_send ) ) );
+				?></span>
+				<?php else : ?>
+				<span style="color:#d1d5db;"><?php esc_html_e( 'Not yet synced', 'aeo-pugmill' ); ?></span>
+				<?php endif; ?>
+				<a href="#" id="aeopugmill-resync-link"
+					style="color:#7c3aed; text-decoration:none; font-weight:600;"
+					title="<?php esc_attr_e( 'Runs automatically every 24 hours', 'aeo-pugmill' ); ?>">
+					<?php esc_html_e( 'Resync now', 'aeo-pugmill' ); ?>
+				</a>
+				<span id="aeopugmill-resync-result" style="font-size:10px;"></span>
+			</span>
+			<?php endif; ?>
+		</div>
 		</div><!-- /.pugmill-card Your Site vs. Network Average -->
 		<?php endif; ?>
 
@@ -2506,14 +2518,15 @@ function aeopugmill_render_settings_page() {
 		</div>
 		<script>
 		( function() {
-			var btn    = document.getElementById( 'aeopugmill-send-now' );
-			var result = document.getElementById( 'aeopugmill-send-now-result' );
-			if ( ! btn ) return;
-			btn.addEventListener( 'click', function() {
-				btn.disabled = true;
-				btn.textContent = '<?php echo esc_js( __( 'Sending…', 'aeo-pugmill' ) ); ?>';
+			var link   = document.getElementById( 'aeopugmill-resync-link' );
+			var result = document.getElementById( 'aeopugmill-resync-result' );
+			if ( ! link ) return;
+			link.addEventListener( 'click', function( e ) {
+				e.preventDefault();
+				link.style.pointerEvents = 'none';
+				link.style.opacity = '0.5';
+				link.textContent = '<?php echo esc_js( __( 'Syncing…', 'aeo-pugmill' ) ); ?>';
 				result.textContent = '';
-				result.style.color = '#9ca3af';
 				var data = new FormData();
 				data.append( 'action', 'aeopugmill_manual_send' );
 				data.append( 'nonce', '<?php echo esc_js( wp_create_nonce( 'aeopugmill_manual_send' ) ); ?>' );
@@ -2521,20 +2534,21 @@ function aeopugmill_render_settings_page() {
 					.then( function( r ) { return r.json(); } )
 					.then( function( json ) {
 						if ( json.success ) {
-							result.textContent = '✓ ' + json.data;
+							result.textContent = '✓';
 							result.style.color = '#16a34a';
 						} else {
-							result.textContent = '✗ ' + json.data;
+							result.textContent = '✗';
 							result.style.color = '#dc2626';
 						}
 					} )
 					.catch( function() {
-						result.textContent = '✗ Request failed';
+						result.textContent = '✗';
 						result.style.color = '#dc2626';
 					} )
 					.finally( function() {
-						btn.disabled = false;
-						btn.textContent = '<?php echo esc_js( __( 'Send to Network', 'aeo-pugmill' ) ); ?>';
+						link.style.pointerEvents = '';
+						link.style.opacity = '';
+						link.textContent = '<?php echo esc_js( __( 'Resync now', 'aeo-pugmill' ) ); ?>';
 					} );
 			} );
 		}() );
@@ -2572,11 +2586,13 @@ function aeopugmill_render_settings_page() {
 							<span id="aeopugmill-site-summary-status" style="margin-left:10px; font-size:13px; color:#666;"></span>
 						</p>
 						<?php else : ?>
-						<p style="margin-top:6px; font-size:12px; color:#9ca3af;">
-							<?php printf(
-								wp_kses( __( 'Add an <a href="%s">API key</a> to draft this with AI.', 'aeo-pugmill' ), array( 'a' => array( 'href' => array() ) ) ),
-								esc_url( admin_url( 'options-general.php?page=aeo-pugmill' ) )
-							); ?>
+						<p style="margin-top:8px;">
+							<button type="button" disabled
+								style="display:inline-flex; align-items:center; gap:6px; padding:7px 16px; font-size:12px; font-weight:600;
+								       background:#e5e7eb; color:#9ca3af; border:none; border-radius:4px; cursor:not-allowed; white-space:nowrap;">
+								✨ <?php esc_html_e( 'Draft with AI', 'aeo-pugmill' ); ?>
+								<span style="font-size:9px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; background:#f3e8ff; color:#7c3aed; padding:1px 6px; border-radius:3px; line-height:1.4;">AI</span>
+							</button>
 						</p>
 						<?php endif; ?>
 					</td>
@@ -2815,13 +2831,20 @@ function aeopugmill_render_settings_page() {
 					data-score="<?php echo esc_attr( (int) $score ); ?>"
 					data-total="<?php echo esc_attr( (int) $total ); ?>"
 					data-has-summary="<?php echo esc_attr( $has_site_summary ? '1' : '0' ); ?>"
-					data-has-org="<?php echo esc_attr( $has_org_name ? '1' : '0' ); ?>"
+					data-has-org="<?php echo esc_attr( (int) $has_org_name ? '1' : '0' ); ?>"
 					data-summary-pct="<?php echo esc_attr( (int) $summary_pct ); ?>"
 					data-qa-pct="<?php echo esc_attr( (int) $qa_pct ); ?>"
 					data-keywords-pct="<?php echo esc_attr( (int) $keywords_pct ); ?>"
 					data-entities-pct="<?php echo esc_attr( (int) $entities_pct ); ?>"
 					style="display:inline-flex; align-items:center; gap:6px; padding:7px 16px; font-size:12px; font-weight:600; background:#7c3aed; color:#fff; border:none; border-radius:4px; cursor:pointer; white-space:nowrap;">
 					✨ <?php esc_html_e( 'Get AI Improvement Tips', 'aeo-pugmill' ); ?>
+				</button>
+				<?php else : ?>
+				<button type="button" disabled
+					style="display:inline-flex; align-items:center; gap:6px; padding:7px 16px; font-size:12px; font-weight:600;
+					       background:#e5e7eb; color:#9ca3af; border:none; border-radius:4px; cursor:not-allowed; white-space:nowrap;">
+					✨ <?php esc_html_e( 'Get AI Improvement Tips', 'aeo-pugmill' ); ?>
+					<span style="font-size:9px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; background:#f3e8ff; color:#7c3aed; padding:1px 6px; border-radius:3px; line-height:1.4;">AI</span>
 				</button>
 				<?php endif; ?>
 			</div>
@@ -3430,7 +3453,7 @@ function aeopugmill_render_settings_page() {
 
 			<?php if ( ! $is_ai_mode ) : ?>
 			<div style="background:#faf5ff; border:1px solid #e9d5ff; border-radius:6px; padding:12px 16px; margin-bottom:20px; font-size:13px; color:#6b21a8;">
-				✨ <strong><?php esc_html_e( 'Generate All is a Pro feature.', 'aeo-pugmill' ); ?></strong>
+				✨ <strong><?php esc_html_e( 'Generate AEO is a Pro feature.', 'aeo-pugmill' ); ?></strong>
 				<?php printf(
 					wp_kses( __( '<a href="%s" target="_blank">Upgrade to AEO Pugmill Pro</a> to generate Summary, Q&amp;A, Entities and Keywords for any post without leaving this page.', 'aeo-pugmill' ), array( 'a' => array( 'href' => array(), 'target' => array() ) ) ),
 					esc_url( 'https://aeopugmill.com/pricing' )
@@ -3482,9 +3505,9 @@ function aeopugmill_render_settings_page() {
 						</th>
 						<th><?php esc_html_e( 'Missing AEO Fields', 'aeo-pugmill' ); ?></th>
 						<th style="width:16%; text-align:center;">
-							<?php esc_html_e( 'Generate All', 'aeo-pugmill' ); ?>
+							<?php esc_html_e( 'Generate AEO', 'aeo-pugmill' ); ?>
 							<?php if ( ! $is_ai_mode ) : ?>
-								<span style="display:block; font-size:10px; font-weight:400; color:#9ca3af;"><?php esc_html_e( 'Pro feature', 'aeo-pugmill' ); ?></span>
+								<span style="display:block; font-size:10px; font-weight:400; color:#9ca3af;"><?php esc_html_e( 'Pro', 'aeo-pugmill' ); ?></span>
 							<?php endif; ?>
 						</th>
 					</tr>
@@ -3513,13 +3536,15 @@ function aeopugmill_render_settings_page() {
 							data-post-id="<?php echo absint( $row->ID ); ?>"
 							data-nonce="<?php echo esc_attr( $audit_nonce ); ?>"
 							style="font-size:12px;">
-							✨ <?php esc_html_e( 'Generate All', 'aeo-pugmill' ); ?>
+							✨ <?php esc_html_e( 'Generate AEO', 'aeo-pugmill' ); ?>
 						</button>
 						<span class="aeopugmill-audit-status" style="display:block; font-size:11px; margin-top:4px; color:#666;"></span>
 						<?php else : ?>
-						<span style="font-size:12px; color:#d1d5db;" title="<?php esc_attr_e( 'Upgrade to Pro to generate AEO fields from this page', 'aeo-pugmill' ); ?>">
-							🔒 <?php esc_html_e( 'Generate All', 'aeo-pugmill' ); ?>
-						</span>
+						<button type="button" disabled class="button"
+							style="display:inline-flex; align-items:center; gap:5px; font-size:12px; background:#e5e7eb; color:#9ca3af; border:none; cursor:not-allowed;">
+							✨ <?php esc_html_e( 'Generate AEO', 'aeo-pugmill' ); ?>
+							<span style="font-size:9px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; background:#f3e8ff; color:#7c3aed; padding:1px 6px; border-radius:3px; line-height:1.4;">Pro</span>
+						</button>
 						<?php endif; ?>
 					</td>
 				</tr>
@@ -3718,13 +3743,13 @@ function aeopugmill_render_settings_page() {
 							status.style.color = '#dc3232';
 						}
 						btn.disabled    = false;
-						btn.textContent = '✨ <?php echo esc_js( __( 'Generate All', 'aeo-pugmill' ) ); ?>';
+						btn.textContent = '✨ <?php echo esc_js( __( 'Generate AEO', 'aeo-pugmill' ) ); ?>';
 					} )
 					.catch( function() {
 						status.textContent = '<?php echo esc_js( __( 'Network error — please try again.', 'aeo-pugmill' ) ); ?>';
 						status.style.color = '#dc3232';
 						btn.disabled    = false;
-						btn.textContent = '✨ <?php echo esc_js( __( 'Generate All', 'aeo-pugmill' ) ); ?>';
+						btn.textContent = '✨ <?php echo esc_js( __( 'Generate AEO', 'aeo-pugmill' ) ); ?>';
 					} );
 				} );
 			} );
@@ -3739,15 +3764,15 @@ function aeopugmill_render_settings_page() {
 		     ════════════════════════════════════════════════════════════ -->
 		<div style="margin-top:24px;">
 			<p style="<?php echo esc_attr( $p_style ); ?>">
-				<?php esc_html_e( 'Generate a summary, Q&A pairs, entities, and keywords for every published post and page. These four fields are bot-facing — they live in JSON-LD schema and /llms.txt, not on the page itself — which is why they can be safely generated in bulk. Human-facing elements like SEO titles, meta descriptions, and excerpts require a human in the loop to review before publishing, so those are only available from the individual post editor.', 'aeo-pugmill' ); ?>
+				<?php esc_html_e( 'Generating a summary, Q&A pairs, entities, and keywords for every published post and page. These four fields are bot-facing — they appear in JSON-LD schema and /llms.txt, not on the page itself — which is why bulk generation is safe. Human-facing elements (SEO titles, meta descriptions, excerpts) are available only from the individual post editor.', 'aeo-pugmill' ); ?>
 			</p>
-			<div style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:6px; padding:12px 16px; margin-bottom:16px; font-size:12px; color:#6b7280; line-height:1.6;">
-				<strong style="color:#374151;"><?php esc_html_e( 'How it works:', 'aeo-pugmill' ); ?></strong>
-				<?php esc_html_e( 'Posts are processed one at a time with a short pause between each request. This prevents your WordPress server from being overwhelmed by simultaneous requests and keeps your AI provider usage within rate limits — most accounts start on lower-tier plans with strict per-minute caps. For large sites, you can run Bulk AEO in multiple sessions: posts that already have AEO data are skipped automatically when you run again.', 'aeo-pugmill' ); ?>
-				<br><br>
-				<strong style="color:#374151;"><?php esc_html_e( 'Check your AI spend first:', 'aeo-pugmill' ); ?></strong>
-				<?php esc_html_e( 'Generating AEO for hundreds of posts can add up quickly. Before running on a large site, review your AI provider\'s usage dashboard so there are no surprises on your bill.', 'aeo-pugmill' ); ?>
-			</div>
+			<p style="<?php echo esc_attr( $p_style ); ?>">
+				<?php esc_html_e( 'Posts are processed one at a time with a pause between requests to stay within server and API rate limits. Posts that already have AEO data are skipped automatically. For large sites, running in multiple sessions works — pick up where you left off.', 'aeo-pugmill' ); ?>
+			</p>
+			<p style="<?php echo esc_attr( $p_style ); ?>">
+				<strong><?php esc_html_e( 'Check your AI spend first.', 'aeo-pugmill' ); ?></strong>
+				<?php esc_html_e( 'Generating AEO for hundreds of posts adds up. Review your provider\'s usage dashboard before running on a large site.', 'aeo-pugmill' ); ?>
+			</p>
 
 			<?php if ( 'ai' !== $mode ) : ?>
 			<!-- Locked state — not Pro -->
@@ -3817,14 +3842,24 @@ function aeopugmill_render_settings_page() {
 				<p id="aeopugmill-bulk-stats" style="font-size:12px; color:#9ca3af; margin:0 0 16px;">Loading…</p>
 
 				<!-- Start button — purple pill, matches sidebar AI buttons -->
+				<?php if ( 'ai' !== $mode ) : ?>
+				<button
+					type="button"
+					disabled
+					style="display:inline-flex; align-items:center; gap:6px; background:#e5e7eb; color:#9ca3af; border:1px solid #d1d5db; border-radius:4px; padding:0 18px; height:32px; font-size:13px; cursor:not-allowed;"
+				>
+					<?php esc_html_e( 'Generate AEO for All Content', 'aeo-pugmill' ); ?>
+					<span style="font-size:9px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; background:#f3e8ff; color:#7c3aed; padding:1px 6px; border-radius:3px; line-height:1.4;">Pro</span>
+				</button>
+				<?php else : ?>
 				<button
 					id="aeopugmill-bulk-start"
 					class="button"
-					style="background:#7c3aed; border-color:#7c3aed; color:#fff; border-radius:4px; padding:0 18px; height:32px; line-height:30px; font-size:13px;<?php echo 'ai' !== $mode ? ' opacity:0.4;' : ''; ?>"
-					<?php echo 'ai' !== $mode ? 'disabled' : ''; ?>
+					style="background:#7c3aed; border-color:#7c3aed; color:#fff; border-radius:4px; padding:0 18px; height:32px; line-height:30px; font-size:13px;"
 				>
 					<?php esc_html_e( 'Generate AEO for All Content', 'aeo-pugmill' ); ?>
 				</button>
+				<?php endif; ?>
 
 				<!-- Progress (hidden until running) -->
 				<div id="aeopugmill-bulk-progress" style="display:none; margin-top:20px;">
