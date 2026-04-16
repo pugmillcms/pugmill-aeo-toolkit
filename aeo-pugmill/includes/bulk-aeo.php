@@ -65,10 +65,11 @@ function aeopugmill_ajax_bulk_aeo_get_queue() {
 
 	// Single query: all published IDs + their AEO meta value in one LEFT JOIN.
 	// Much faster than get_posts( fields=>ids ) + N individual get_post_meta() calls.
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+	// $type_placeholders is built via esc_sql()-mapped post type names from get_post_types().
+	// $order_by is a safelisted 'p.post_date DESC' or 'p.post_date ASC' literal.
+	// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 	$rows = $wpdb->get_results(
 		$wpdb->prepare(
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			"SELECT p.ID, pm.meta_value AS aeo_meta
 			 FROM {$wpdb->posts} p
 			 LEFT JOIN {$wpdb->postmeta} pm
@@ -80,6 +81,7 @@ function aeopugmill_ajax_bulk_aeo_get_queue() {
 		),
 		ARRAY_A
 	);
+	// phpcs:enable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 	$total    = 0;
 	$have_aeo = 0;

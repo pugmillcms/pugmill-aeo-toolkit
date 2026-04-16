@@ -371,7 +371,7 @@ function aeopugmill_render_health_meta_box( $post ) {
 				<circle cx="40" cy="40" r="34" fill="none"
 					stroke="<?php echo esc_attr( $color ); ?>"
 					stroke-width="8"
-					stroke-dasharray="<?php echo round( 213.6 * $score / 100, 1 ); ?> 213.6"
+					stroke-dasharray="<?php echo (float) round( 213.6 * $score / 100, 1 ); ?> 213.6"
 					stroke-linecap="round"/>
 			</svg>
 			<div style="margin-top:-58px; margin-bottom:34px;">

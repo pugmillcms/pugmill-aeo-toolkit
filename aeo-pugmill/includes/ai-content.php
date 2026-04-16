@@ -103,7 +103,7 @@ function aeopugmill_ajax_tone_check() {
 	if ( ! empty( $_POST['draft_content'] ) ) {
 		$content = wp_strip_all_tags( sanitize_textarea_field( wp_unslash( $_POST['draft_content'] ) ) );
 	} else {
-		$content = wp_strip_all_tags( apply_filters( 'the_content', $post->post_content ) );
+		$content = wp_strip_all_tags( apply_filters( 'the_content', $post->post_content ) ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Applying core WP content filter.
 		$content = html_entity_decode( $content, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
 	}
 	$content = mb_substr( $content, 0, AEOPUGMILL_MAX_AI_INPUT );
@@ -247,7 +247,9 @@ function aeopugmill_tone_via_gemini( $api_key, $title, $content ) {
  */
 function aeopugmill_parse_tone_response( $response, $provider ) {
 	if ( is_wp_error( $response ) ) {
-		error_log( 'AEO Pugmill tone check error (' . $provider . '): ' . $response->get_error_message() );
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( 'AEO Pugmill tone check error (' . $provider . '): ' . $response->get_error_message() ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+		}
 		return new WP_Error( 'request_failed', __( 'Could not reach AI provider. Please check your connection and try again.', 'aeo-pugmill' ) );
 	}
 
@@ -257,7 +259,9 @@ function aeopugmill_parse_tone_response( $response, $provider ) {
 
 	if ( 200 !== $code ) {
 		$detail = $data['error']['message'] ?? $body;
-		error_log( 'AEO Pugmill tone check provider error (' . $provider . ' ' . $code . '): ' . $detail );
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( 'AEO Pugmill tone check provider error (' . $provider . ' ' . $code . '): ' . $detail ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+		}
 		if ( 401 === $code ) return new WP_Error( 'provider_error', __( 'Invalid API key. Please check your key in Settings → AEO Pugmill.', 'aeo-pugmill' ) );
 		if ( 429 === $code ) return new WP_Error( 'provider_error', __( 'AI provider rate limit reached. Please wait and try again.', 'aeo-pugmill' ) );
 		if ( 402 === $code ) return new WP_Error( 'provider_error', __( 'Insufficient credits on your AI provider account. Please top up and try again.', 'aeo-pugmill' ) );
@@ -285,7 +289,9 @@ function aeopugmill_parse_tone_response( $response, $provider ) {
 	}
 
 	if ( ! is_array( $decoded ) ) {
-		error_log( 'AEO Pugmill: tone check invalid JSON from ' . $provider . ': ' . substr( $raw_text, 0, 200 ) );
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( 'AEO Pugmill: tone check invalid JSON from ' . $provider . ': ' . substr( $raw_text, 0, 200 ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+		}
 		return new WP_Error( 'invalid_json', __( 'AI returned an unexpected response format. Please try again.', 'aeo-pugmill' ) );
 	}
 
@@ -364,7 +370,9 @@ function aeopugmill_ajax_simplify_draft() {
 		wp_send_json_error( array( 'message' => __( 'Post has no content to rewrite.', 'aeo-pugmill' ) ), 400 );
 	}
 
+	// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in aeopugmill_ai_request_setup().
 	$target_level = sanitize_text_field( wp_unslash( $_POST['target_level'] ?? 'General audience' ) );
+	// phpcs:ignore WordPress.Security.NonceVerification.Missing
 	$notes        = sanitize_textarea_field( wp_unslash( $_POST['notes'] ?? '' ) );
 	$target_level = mb_substr( $target_level, 0, 100 );
 	$notes        = mb_substr( $notes,        0, 300 );

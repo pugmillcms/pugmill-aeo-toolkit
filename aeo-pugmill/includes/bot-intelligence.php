@@ -244,7 +244,7 @@ function aeopugmill_intel_capture() {
 	aeopugmill_intel_tally( $day, $bot, 'request_type', 'html' );
 
 	// URL depth (path segment count, capped at 9 to bound the bucket space).
-	$path  = (string) parse_url( $uri, PHP_URL_PATH );
+	$path  = (string) wp_parse_url( $uri, PHP_URL_PATH );
 	$depth = max( 0, substr_count( rtrim( $path, '/' ), '/' ) );
 	aeopugmill_intel_tally( $day, $bot, 'url_depth', (string) min( $depth, 9 ) );
 

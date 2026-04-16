@@ -232,7 +232,12 @@ function aeopugmill_get_compatibility_data() {
 
 	if ( file_exists( $robots_file ) ) {
 		$data['robots']['has_file'] = true;
-		$content = file_get_contents( $robots_file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+		global $wp_filesystem;
+		if ( empty( $wp_filesystem ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+			WP_Filesystem();
+		}
+		$content = $wp_filesystem->get_contents( $robots_file );
 
 		// Split into directive blocks (blank-line separated)
 		$blocks = preg_split( '/\n\s*\n/', $content );
@@ -484,7 +489,7 @@ function aeopugmill_render_settings_page() {
 		?>
 		<?php $settings_force_open = ( empty( $api_key ) && ! $has_voice && 'free' === $mode ) ? '1' : '0'; ?>
 		<div class="aeo-setup-card" data-card="settings" data-force-open="<?php echo esc_attr( $settings_force_open ); ?>" style="background:#fff; border:1px solid #ddd; border-radius:8px; overflow:hidden; margin-top:24px;">
-			<div class="aeo-setup-header" style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; cursor:pointer; user-select:none;" onclick="aeoToggleCard(this)">
+			<div class="aeo-setup-header" style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; cursor:pointer; user-select:none;">
 				<div style="display:flex; align-items:center; gap:8px;">
 					<span class="aeo-chevron" style="font-size:11px; color:#9ca3af; transition:transform .15s;">&#9660;</span>
 					<span style="font-size:14px; font-weight:600; color:#1d2327;"><?php esc_html_e( 'Preferences', 'aeo-pugmill' ); ?></span>
@@ -566,7 +571,7 @@ function aeopugmill_render_settings_page() {
 					<?php if ( $has_voice ) : ?>
 					<p style="font-size:12px; color:#6b7280; margin:10px 0 2px; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;"><?php echo esc_html( $voice_text ); ?></p>
 					<?php if ( $social_count > 0 ) : ?>
-					<p style="font-size:11px; color:#9ca3af; margin:4px 0 8px;"><?php printf( esc_html( _n( '%d social profile', '%d social profiles', $social_count, 'aeo-pugmill' ) ), $social_count ); ?></p>
+					<p style="font-size:11px; color:#9ca3af; margin:4px 0 8px;"><?php /* translators: %d: number of social profiles */ printf( esc_html( _n( '%d social profile', '%d social profiles', $social_count, 'aeo-pugmill' ) ), (int) $social_count ); ?></p>
 					<?php else : ?>
 					<p style="font-size:11px; color:#d97706; margin:4px 0 8px;"><?php esc_html_e( 'No social profiles added', 'aeo-pugmill' ); ?></p>
 					<?php endif; ?>
@@ -603,10 +608,10 @@ function aeopugmill_render_settings_page() {
 				</div>
 					<?php if ( 'ai' === $mode ) : ?>
 					<?php if ( ! empty( $license_status['customer_email'] ) ) : ?>
-					<p style="font-size:11px; color:#6b7280; margin:8px 0 2px;"><?php printf( wp_kses( __( 'Licensed to <strong>%s</strong>.', 'aeo-pugmill' ), array( 'strong' => array() ) ), esc_html( $license_status['customer_email'] ) ); ?></p>
+					<p style="font-size:11px; color:#6b7280; margin:8px 0 2px;"><?php /* translators: %s: customer email address */ printf( wp_kses( __( 'Licensed to <strong>%s</strong>.', 'aeo-pugmill' ), array( 'strong' => array() ) ), esc_html( $license_status['customer_email'] ) ); ?></p>
 					<?php endif; ?>
 					<?php if ( $expires_ts ) : ?>
-					<p style="font-size:11px; color:#6b7280; margin:2px 0 8px;"><?php printf( esc_html__( 'Renews %s.', 'aeo-pugmill' ), esc_html( date( 'F j, Y', $expires_ts ) ) ); // phpcs:ignore WordPress.DateTime.RestrictedFunctions.date_date ?></p>
+					<p style="font-size:11px; color:#6b7280; margin:2px 0 8px;"><?php /* translators: %s: license renewal date (e.g. "January 1, 2025") */ printf( esc_html__( 'Renews %s.', 'aeo-pugmill' ), esc_html( date( 'F j, Y', $expires_ts ) ) ); // phpcs:ignore WordPress.DateTime.RestrictedFunctions.date_date ?></p>
 					<?php else : ?>
 					<p style="font-size:12px; color:#6b7280; margin:8px 0 8px;"><?php esc_html_e( 'All features unlocked.', 'aeo-pugmill' ); ?></p>
 					<?php endif; ?>
@@ -655,6 +660,12 @@ function aeopugmill_render_settings_page() {
 			chev.style.transform = open ? 'rotate(-90deg)' : '';
 			try { localStorage.setItem( key, open ? '0' : '1' ); } catch(e) {}
 		}
+		/* Attach toggle click handlers to all setup card headers */
+		(function() {
+			document.querySelectorAll( '.aeo-setup-header' ).forEach( function( header ) {
+				header.addEventListener( 'click', function() { aeoToggleCard( header ); } );
+			} );
+		})();
 		/* Restore saved state on load — respect data-force-open for fresh installs */
 		(function() {
 			var cards = document.querySelectorAll( '.aeo-setup-card' );
@@ -747,23 +758,34 @@ function aeopugmill_render_settings_page() {
 		$days            = 30;
 		$summary         = aeopugmill_bot_analytics_summary( $days );
 		$daily           = aeopugmill_bot_analytics_daily( $days );
-		$recent          = aeopugmill_bot_analytics_recent( 50 );
 		$total           = aeopugmill_bot_analytics_total();
 		$by_resource     = aeopugmill_bot_analytics_by_resource( $days );
 		$resource_labels = aeopugmill_resource_type_labels();
 		$resource_cats   = aeopugmill_resource_type_categories();
 		$all_bots        = aeopugmill_bot_config();
-		$top_posts       = aeopugmill_bot_analytics_top_posts( 10 );
 		$intel_signals   = function_exists( 'aeopugmill_intel_get_signals_30d' ) ? aeopugmill_intel_get_signals_30d( $days ) : array();
 
-		// Only render bots that have actual visits in the selected period —
-		// no zero rows. Unknown bots (bot_id = 0) are added as 'Other'.
-		$bots = array_filter( $all_bots, function( $b, $k ) use ( $summary ) {
-			return isset( $summary[ $k ] ) && (int) $summary[ $k ] > 0;
-		}, ARRAY_FILTER_USE_BOTH );
-		// Add 'Other' entry if any unknown bots were logged.
-		if ( isset( $summary['Unknown'] ) && (int) $summary['Unknown'] > 0 ) {
-			$bots['Unknown'] = array( 'label' => 'Other Bots', 'color' => '#94a3b8', 'type' => 'other', 'category' => 'other' );
+		// Build the renderable bot set for the selected period. Known bots
+		// come with curated label/color/category. Any bot_name in $summary
+		// not found in the known config is an unclassified crawler — we
+		// fabricate a display entry for it so it renders in the "Other"
+		// category instead of being silently dropped (v4: classify, don't
+		// filter — identity is preserved end-to-end).
+		$bots = array();
+		foreach ( $summary as $bot_key => $count ) {
+			if ( (int) $count <= 0 ) {
+				continue;
+			}
+			if ( isset( $all_bots[ $bot_key ] ) ) {
+				$bots[ $bot_key ] = $all_bots[ $bot_key ];
+			} else {
+				$bots[ $bot_key ] = array(
+					'label'    => $bot_key,
+					'color'    => '#94a3b8',
+					'type'     => 'other',
+					'category' => 'other',
+				);
+			}
 		}
 
 		$ai_bots       = array_filter( $bots, function( $b ) { return 'ai'       === ( $b['category'] ?? $b['type'] ); } );
@@ -844,6 +866,78 @@ function aeopugmill_render_settings_page() {
 				}
 			}
 		}
+
+		// ── SEO field coverage (effective, with cascade) ─────────────────────
+		// Reports what is actually being emitted as meta/OG tags on rendered
+		// pages, not just what the user has explicitly typed into the SeoPanel.
+		// Cascades mirror includes/on-page-seo.php and includes/json-ld.php:
+		//   meta_desc : _aeopugmill_seo.meta_desc → _aeopugmill_aeo.summary → post_excerpt
+		//   og_desc   : _aeopugmill_seo.og_desc   → meta_desc cascade above
+		//   og_image  : _aeopugmill_seo.og_image  → featured image (_thumbnail_id)
+		//
+		// State detection: if Pugmill is deferring meta output to a detected
+		// SEO plugin (Yoast / Rank Math / etc.), the cascade below is never
+		// actually emitted — that plugin owns the tags. In that case we skip
+		// counting entirely and render an informational "SEO plugin active"
+		// state in the panel, to avoid numbers that contradict the SEO plugin's
+		// own reports.
+		$seo_cov_plugins_detected = function_exists( 'aeopugmill_detected_seo_plugins' ) ? aeopugmill_detected_seo_plugins() : array();
+		$seo_cov_disable_meta     = (bool) get_option( 'aeopugmill_disable_seo_meta', 0 );
+		$seo_cov_deferring        = ! empty( $seo_cov_plugins_detected ) && $seo_cov_disable_meta;
+		$seo_cov_plugin_display   = ! empty( $seo_cov_plugins_detected ) ? reset( $seo_cov_plugins_detected ) : '';
+
+		$cov_seo_meta_desc         = 0;
+		$cov_seo_meta_desc_quality = 0;
+		$cov_seo_og_image          = 0;
+		$cov_seo_og_desc           = 0;
+
+		if ( $cov_total > 0 && ! $seo_cov_deferring ) {
+			// Single LEFT-JOIN query: pulls every published post plus its SEO /
+			// AEO meta rows and its featured-image meta row. Missing rows come
+			// back as NULL — that's the point, we need to walk every post to
+			// evaluate cascades, not just the ones with _aeopugmill_seo set.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$cov_seo_rows = $wpdb->get_results(
+				"SELECT p.ID, p.post_excerpt,
+				        seo.meta_value   AS seo_raw,
+				        aeo.meta_value   AS aeo_raw,
+				        thumb.meta_value AS thumb_id
+				 FROM {$wpdb->posts} p
+				 LEFT JOIN {$wpdb->postmeta} seo   ON seo.post_id   = p.ID AND seo.meta_key   = '_aeopugmill_seo'
+				 LEFT JOIN {$wpdb->postmeta} aeo   ON aeo.post_id   = p.ID AND aeo.meta_key   = '_aeopugmill_aeo'
+				 LEFT JOIN {$wpdb->postmeta} thumb ON thumb.post_id = p.ID AND thumb.meta_key = '_thumbnail_id'
+				 WHERE p.post_status = 'publish'
+				 AND p.post_type IN ('post','page')"
+			);
+			foreach ( (array) $cov_seo_rows as $cov_seo_row ) {
+				$seo = ! empty( $cov_seo_row->seo_raw ) ? json_decode( $cov_seo_row->seo_raw, true ) : null;
+				$aeo = ! empty( $cov_seo_row->aeo_raw ) ? json_decode( $cov_seo_row->aeo_raw, true ) : null;
+				if ( ! is_array( $seo ) ) { $seo = array(); }
+				if ( ! is_array( $aeo ) ) { $aeo = array(); }
+
+				// meta_desc cascade.
+				$md = isset( $seo['meta_desc'] ) ? trim( (string) $seo['meta_desc'] ) : '';
+				if ( '' === $md ) { $md = isset( $aeo['summary'] ) ? trim( (string) $aeo['summary'] ) : ''; }
+				if ( '' === $md ) { $md = trim( (string) $cov_seo_row->post_excerpt ); }
+
+				// og_desc cascade — explicit og_desc, else reuse meta_desc cascade.
+				$ogd = isset( $seo['og_desc'] ) ? trim( (string) $seo['og_desc'] ) : '';
+				if ( '' === $ogd ) { $ogd = $md; }
+
+				// og_image cascade — explicit og_image, else featured image.
+				$og_img_explicit = isset( $seo['og_image'] ) ? trim( (string) $seo['og_image'] ) : '';
+				$has_og_image    = ( '' !== $og_img_explicit ) || ! empty( $cov_seo_row->thumb_id );
+
+				if ( '' !== $md ) {
+					$cov_seo_meta_desc++;
+					$len = mb_strlen( $md );
+					if ( $len >= 120 && $len <= 160 ) { $cov_seo_meta_desc_quality++; }
+				}
+				if ( $has_og_image )  { $cov_seo_og_image++; }
+				if ( '' !== $ogd )    { $cov_seo_og_desc++; }
+			}
+		}
+
 		$cov_none        = max( 0, $cov_total - $cov_full - $cov_partial );
 		$cov_any         = $cov_full + $cov_partial;
 		$cov_any_pct     = $cov_total > 0 ? (int) round( $cov_any     / $cov_total * 100 ) : 0;
@@ -868,13 +962,15 @@ function aeopugmill_render_settings_page() {
 		$network_categories = array();  // category → { total, prior_total, change_pct, sites }
 		$network_coverage   = array();  // content_coverage block from API
 
-		if ( get_option( 'aeopugmill_analytics_opted_in' ) ) {
-			$net_response = wp_remote_get( 'https://www.aeopugmill.com/api/report', array( 'timeout' => 5, 'sslverify' => true ) );
-			if ( ! is_wp_error( $net_response ) ) {
-				$net_data      = json_decode( wp_remote_retrieve_body( $net_response ), true ) ?: array();
-				$network_sites = (int) ( $net_data['sites_contributing'] ?? 0 );
-				if ( $network_sites >= 1 && ! empty( $net_data['last_30_days'] ) ) {
-					foreach ( $net_data['last_30_days'] as $bot => $resources ) {
+		// Fetch the cached network report. aeopugmill_get_network_report() handles
+		// the opted-in check, the 24-hour positive cache (server aggregates daily),
+		// and a short negative cache so an unreachable aeopugmill.com doesn't thrash
+		// every admin page load.
+		$cached_report = function_exists( 'aeopugmill_get_network_report' ) ? aeopugmill_get_network_report() : false;
+		if ( is_array( $cached_report ) ) {
+			$network_sites = (int) ( $cached_report['sites_contributing'] ?? 0 );
+			if ( $network_sites >= 1 && ! empty( $cached_report['last_30_days'] ) ) {
+				foreach ( $cached_report['last_30_days'] as $bot => $resources ) {
 						$network_avgs[ $bot ] = (int) round( array_sum( $resources ) / $network_sites );
 						foreach ( $resources as $slug => $total ) {
 							if ( isset( $network_slug_to_type[ $slug ] ) ) {
@@ -886,24 +982,23 @@ function aeopugmill_render_settings_page() {
 				}
 				// Category-level network trends — remap API keys ('AI Answer Engine' etc.)
 				// to local quadrant keys ('ai', 'training', 'search', 'seo').
-				if ( ! empty( $net_data['categories'] ) ) {
+				if ( ! empty( $cached_report['categories'] ) ) {
 					$net_cat_map = array(
 						'AI Answer Engine' => 'ai',
 						'AI Training'      => 'training',
 						'Search Engine'    => 'search',
 						'SEO Tool'         => 'seo',
 					);
-					foreach ( $net_data['categories'] as $api_cat => $cat_data ) {
+					foreach ( $cached_report['categories'] as $api_cat => $cat_data ) {
 						$local_key = $net_cat_map[ $api_cat ] ?? null;
 						if ( $local_key ) {
 							$network_categories[ $local_key ] = $cat_data;
 						}
 					}
 				}
-				// Capture network content coverage for AEO field comparison.
-				if ( ! empty( $net_data['content_coverage'] ) ) {
-					$network_coverage = $net_data['content_coverage'];
-				}
+			// Capture network content coverage for AEO field comparison.
+			if ( ! empty( $cached_report['content_coverage'] ) ) {
+				$network_coverage = $cached_report['content_coverage'];
 			}
 		}
 
@@ -1006,7 +1101,7 @@ function aeopugmill_render_settings_page() {
 				<p style="font-size:11px; color:#9ca3af; margin:8px 0 0;">
 					<?php
 					/* translators: %s: human time difference */
-					printf( esc_html__( 'Generated %s ago', 'aeo-pugmill' ), human_time_diff( $cached_insights['generated'] ) );
+					printf( esc_html__( 'Generated %s ago', 'aeo-pugmill' ), esc_html( human_time_diff( $cached_insights['generated'] ) ) );
 					?>
 					&nbsp;·&nbsp;
 					<span id="aeopugmill-insights-status"></span>
@@ -1020,7 +1115,6 @@ function aeopugmill_render_settings_page() {
 				</p>
 			</div>
 			<?php endif; ?>
-		</div>
 		<?php endif; /* just_activated welcome vs AI Analysis */ ?>
 
 
@@ -1195,7 +1289,15 @@ function aeopugmill_render_settings_page() {
 
 			<!-- Col 1: Bot Activity ─────────────────────── -->
 			<div class="pugmill-card">
-				<h3><?php esc_html_e( 'Bot Activity', 'aeo-pugmill' ); ?></h3>
+				<div style="display:flex; align-items:baseline; justify-content:space-between;">
+					<h3 style="margin:0;"><?php esc_html_e( 'Bot Activity', 'aeo-pugmill' ); ?></h3>
+					<?php if ( get_option( 'aeopugmill_analytics_opted_in' ) ) : ?>
+					<span style="font-size:10px; color:#6b7280;">
+						<a href="#" id="aeopugmill-resync-link" style="color:#6d28d9; text-decoration:underline;"><?php esc_html_e( 'Resync now', 'aeo-pugmill' ); ?></a>
+						<span id="aeopugmill-resync-result" style="font-weight:700;"></span>
+					</span>
+					<?php endif; ?>
+				</div>
 				<p class="card-sub"><?php esc_html_e( 'Crawler traffic share across the 4 categories.', 'aeo-pugmill' ); ?></p>
 
 				<?php
@@ -1239,91 +1341,79 @@ function aeopugmill_render_settings_page() {
 				$grand_total_c1 = max( 1, array_sum( $cat_totals_c1 ) );
 				?>
 
-				<!-- Stacked category cards: title centered, circle 1/3 | bots 2/3 -->
 				<?php
-				$bubble_max_d = 56;
-				$bubble_min_d = 18;
-				// Sort categories by total visits descending.
+				// Fixed order: AI Answer Engines, Search Engines, SEO Tools, AI Training Crawlers.
 				$sorted_c1 = $cat_order_c1;
-				usort( $sorted_c1, function( $a, $b ) use ( $cat_totals_c1 ) {
-					return $cat_totals_c1[ $b ] - $cat_totals_c1[ $a ];
-				} );
 				?>
-				<div style="display:flex; flex-direction:column; gap:5px;">
+
+				<!-- Unified grouped list — 3-col rows (name | metric | bar) styled like AEO Content Coverage -->
+				<div style="display:flex; flex-direction:column; gap:8px; margin-top:4px;">
 				<?php foreach ( $sorted_c1 as $ck ) :
-					$share        = $cat_totals_c1[ $ck ] / $grand_total_c1;
-					$share_pct_q  = round( $share * 100, 1 );
-					$is_zero_q    = ( $cat_totals_c1[ $ck ] === 0 );
-					$diam         = $share > 0
-						? max( $bubble_min_d, (int) round( sqrt( $share ) * $bubble_max_d ) )
-						: $bubble_min_d;
-					$show_inner   = ( $diam >= 26 );
-					$bots_q       = array();
+					$d_c1      = $cat_totals_c1[ $ck ];
+					$bots_here = array();
 					foreach ( $cat_bots_c1[ $ck ] as $bk => $_ ) {
-						$bots_q[ $bk ] = (int) ( $summary[ $bk ] ?? 0 );
+						$bots_here[ $bk ] = (int) ( $summary[ $bk ] ?? 0 );
 					}
-					arsort( $bots_q );
+					arsort( $bots_here );
+					$net_vals_here = array_map( fn( $bk_c ) => (int) ( $network_avgs[ $bk_c ] ?? 0 ), array_keys( $bots_here ) );
+					$cat_max_here  = max( 1,
+						! empty( $bots_here ) ? max( array_values( $bots_here ) ) : 0,
+						! empty( $net_vals_here ) ? max( $net_vals_here ) : 0
+					);
+					$has_any_visits = ( $d_c1 > 0 );
 				?>
-				<div style="background:<?php echo esc_attr( $cat_bg_c1[ $ck ] ); ?>; border:1px solid <?php echo esc_attr( $cat_border_c1[ $ck ] ); ?>; border-radius:6px; padding:8px 10px;">
-					<!-- Title centered above columns -->
-					<div style="text-align:center; margin-bottom:6px;">
-						<span style="font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:<?php echo esc_attr( $cat_colors[ $ck ] ); ?>;"><?php echo esc_html( $cat_labels_c1[ $ck ] ); ?></span>
+				<div>
+					<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:<?php echo esc_attr( $cat_colors[ $ck ] ); ?>;padding:4px 0 4px;border-bottom:1px solid <?php echo esc_attr( $cat_border_c1[ $ck ] ); ?>;margin-bottom:5px;">
+						<?php echo esc_html( $cat_labels_c1[ $ck ] ); ?>
 					</div>
-					<!-- 1/3 circle | 2/3 bot list -->
-					<div style="display:grid; grid-template-columns:1fr 2fr; gap:8px; align-items:center;">
-						<!-- Circle column -->
-						<div style="display:flex; align-items:center; justify-content:center;">
-							<div style="width:<?php echo (int) $diam; ?>px; height:<?php echo (int) $diam; ?>px; border-radius:50%; <?php if ( $is_zero_q ) : ?>background:transparent; border:2px dashed <?php echo esc_attr( $cat_colors[ $ck ] ); ?>;<?php else : ?>background:<?php echo esc_attr( $cat_colors[ $ck ] ); ?>;<?php endif; ?> display:flex; align-items:center; justify-content:center;">
-								<?php if ( $show_inner ) : ?>
-								<span style="font-size:<?php echo $diam >= 42 ? 12 : 10; ?>px; font-weight:700; color:<?php echo $is_zero_q ? esc_attr( $cat_colors[ $ck ] ) : 'white'; ?>; line-height:1;"><?php echo esc_html( $share_pct_q ); ?>%</span>
-								<?php endif; ?>
+					<?php foreach ( $bots_here as $bk => $bv ) :
+						if ( $bv === 0 ) { continue; }
+						$bi_here    = $cat_bots_c1[ $ck ][ $bk ];
+						$pct_here   = (int) round( $bv / $cat_max_here * 100 );
+						$net_avg_ba = (int) ( $network_avgs[ $bk ] ?? 0 );
+						$avg_pct_ba = $net_avg_ba > 0 ? (int) round( $net_avg_ba / $cat_max_here * 100 ) : null;
+					?>
+					<div style="display:grid;grid-template-columns:minmax(0,1fr) 38px minmax(0,1.4fr);align-items:center;gap:6px;margin-bottom:4px;">
+						<span style="font-size:11px;color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><?php echo esc_html( $bi_here['label'] ); ?></span>
+						<span style="font-size:11px;font-weight:700;color:<?php echo esc_attr( $cat_colors[ $ck ] ); ?>;text-align:right;"><?php echo esc_html( number_format_i18n( $bv ) ); ?></span>
+						<div style="position:relative;">
+							<div style="position:relative;height:16px;border-radius:3px;overflow:hidden;background:#f3f4f6;">
+								<div style="position:absolute;top:50%;transform:translateY(-50%);left:0;width:<?php echo (int) max( 2, $pct_here ); ?>%;height:8px;background:<?php echo esc_attr( $bi_here['color'] ); ?>;border-radius:2px;"></div>
 							</div>
-						</div>
-						<!-- Bot list column -->
-						<div>
-							<?php if ( ! $show_inner ) : ?>
-							<div style="font-size:11px; font-weight:800; color:<?php echo esc_attr( $cat_colors[ $ck ] ); ?>; margin-bottom:3px;"><?php echo esc_html( $share_pct_q ); ?>%</div>
-							<?php endif; ?>
-							<?php
-							$shown_q = 0;
-							foreach ( $bots_q as $bk => $bv ) :
-								if ( $bv === 0 ) continue;
-								if ( $shown_q >= 3 ) break;
-								$shown_q++;
-								$bi_q = $cat_bots_c1[ $ck ][ $bk ];
-							?>
-							<div style="display:flex; align-items:center; gap:4px; font-size:10px; color:#6b7280; margin-bottom:2px;">
-								<span style="width:5px; height:5px; border-radius:50%; background:<?php echo esc_attr( $bi_q['color'] ); ?>; flex-shrink:0;"></span>
-								<span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><?php echo esc_html( $bi_q['label'] ); ?></span>
-								<span style="font-weight:600; color:<?php echo esc_attr( $cat_colors[ $ck ] ); ?>; flex-shrink:0;"><?php echo esc_html( number_format_i18n( $bv ) ); ?></span>
-							</div>
-							<?php endforeach; ?>
-							<?php if ( $is_zero_q ) : ?>
-							<div style="font-size:10px; color:#d1d5db; font-style:italic;"><?php esc_html_e( 'none yet', 'aeo-pugmill' ); ?></div>
+							<?php if ( null !== $avg_pct_ba ) : ?>
+							<div style="position:absolute;top:8px;left:<?php echo (int) max( 0, min( 100, $avg_pct_ba ) ); ?>%;transform:translate(-50%,-50%);width:8px;height:8px;border-radius:50%;background:#374151;border:1.5px solid #fff;" title="<?php echo esc_attr( sprintf( 'Network avg: %s', number_format_i18n( $net_avg_ba ) ) ); ?>"></div>
 							<?php endif; ?>
 						</div>
 					</div>
+					<?php endforeach; ?>
+					<?php if ( ! $has_any_visits ) : ?>
+					<div style="font-size:11px;color:#9ca3af;font-style:italic;padding:2px 0;"><?php esc_html_e( 'No visits recorded', 'aeo-pugmill' ); ?></div>
+					<?php endif; ?>
 				</div>
 				<?php endforeach; ?>
 				</div>
 
-				<div style="margin-top:6px; padding-top:7px; border-top:1px solid #f0f0f0; font-size:10px; color:#9ca3af;">
-					<?php echo esc_html( number_format_i18n( $total_visits ) . ' ' . __( 'total visits (30 days)', 'aeo-pugmill' ) ); ?>
+				<?php if ( get_option( 'aeopugmill_analytics_opted_in' ) ) : ?>
+				<div style="display:flex; align-items:center; gap:5px; margin-top:6px; padding-top:7px; border-top:1px solid #f0f0f0; font-size:10px; color:#6b7280;">
+					<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#374151; flex-shrink:0;"></span>
+					<?php esc_html_e( 'Dot marker = Pugmill network average', 'aeo-pugmill' ); ?>
 				</div>
+				<?php endif; ?>
 			</div>
 
-			<!-- Col 2: AEO Content Coverage ─────────────────── -->
+			<!-- Col 2: AEO + SEO Content Coverage (stacked) ─── -->
+			<div style="display:flex; flex-direction:column; gap:16px;">
 			<div class="pugmill-card">
 				<h3><?php esc_html_e( 'AEO Content Coverage', 'aeo-pugmill' ); ?></h3>
-				<p class="card-sub"><?php esc_html_e( 'AEO and SEO coverage across your published posts.', 'aeo-pugmill' ); ?></p>
-				<div style="display:flex; flex-direction:column; gap:10px; margin-top:4px;">
+				<p class="card-sub"><?php esc_html_e( 'AEO field coverage across your published posts.', 'aeo-pugmill' ); ?></p>
+				<div style="display:flex; flex-direction:column; gap:8px; margin-top:4px;">
 					<?php
 					$radar_fields = array(
 						array( 'section' => __( 'AEO Fields', 'aeo-pugmill' ), 'first' => true ),
-						array( 'label' => __( 'AI Summary',          'aeo-pugmill' ), 'net_key' => 'summary',   'count' => $cov_field_summary,      'pct' => ( $cov_total > 0 ? (int) round( $cov_field_summary      / $cov_total * 100 ) : 0 ) ),
-						array( 'label' => __( 'Summary quality (50+ chars)', 'aeo-pugmill' ), 'net_key' => '', 'count' => $cov_field_summary_long, 'pct' => ( $cov_total > 0 ? (int) round( $cov_field_summary_long / $cov_total * 100 ) : 0 ) ),
-						array( 'label' => __( 'Q&A Pairs (1+)',      'aeo-pugmill' ), 'net_key' => 'questions', 'count' => $cov_field_questions,    'pct' => ( $cov_total > 0 ? (int) round( $cov_field_questions    / $cov_total * 100 ) : 0 ) ),
-						array( 'label' => __( 'Q&A Pairs (3+)',      'aeo-pugmill' ), 'net_key' => '',          'count' => $cov_field_questions_3,  'pct' => ( $cov_total > 0 ? (int) round( $cov_field_questions_3  / $cov_total * 100 ) : 0 ) ),
+						array( 'label' => __( 'AI Summary',          'aeo-pugmill' ), 'net_key' => 'summary',          'count' => $cov_field_summary,      'pct' => ( $cov_total > 0 ? (int) round( $cov_field_summary      / $cov_total * 100 ) : 0 ) ),
+						array( 'label' => __( 'Summary quality (50+ chars)', 'aeo-pugmill' ), 'net_key' => 'summary_quality', 'count' => $cov_field_summary_long, 'pct' => ( $cov_total > 0 ? (int) round( $cov_field_summary_long / $cov_total * 100 ) : 0 ) ),
+						array( 'label' => __( 'Q&A Pairs (1+)',      'aeo-pugmill' ), 'net_key' => 'questions',       'count' => $cov_field_questions,    'pct' => ( $cov_total > 0 ? (int) round( $cov_field_questions    / $cov_total * 100 ) : 0 ) ),
+						array( 'label' => __( 'Q&A Pairs (3+)',      'aeo-pugmill' ), 'net_key' => 'questions_3plus', 'count' => $cov_field_questions_3,  'pct' => ( $cov_total > 0 ? (int) round( $cov_field_questions_3  / $cov_total * 100 ) : 0 ) ),
 						array( 'label' => __( 'Named Entities',      'aeo-pugmill' ), 'net_key' => 'entities',  'count' => $cov_field_entities,     'pct' => ( $cov_total > 0 ? (int) round( $cov_field_entities     / $cov_total * 100 ) : 0 ) ),
 						array( 'label' => __( 'Keywords (5+)',        'aeo-pugmill' ), 'net_key' => 'keywords',  'count' => $cov_field_keywords,     'pct' => ( $cov_total > 0 ? (int) round( $cov_field_keywords     / $cov_total * 100 ) : 0 ) ),
 					);
@@ -1347,31 +1437,17 @@ function aeopugmill_render_settings_page() {
 								$net_pct = (int) $raw;
 							}
 						}
-						// Show comparison row for opted-in sites on fields that have a network key,
-						// even when no data yet — shows "—" so users know it exists.
 						$show_avg = $has_net_key && $opted_in_network;
 					?>
-					<div>
-						<div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11px; margin-bottom:5px;">
-							<span style="color:#374151; font-weight:600;"><?php echo esc_html( $rf['label'] ); ?></span>
-							<span style="color:<?php echo esc_attr( $rc ); ?>; font-weight:700;"><?php echo (int) $rf['pct']; ?>% <span style="color:#9ca3af; font-weight:400; font-size:10px;">(<?php echo esc_html( number_format_i18n( $rf['count'] ) ); ?>)</span></span>
-						</div>
-						<!-- Bullet graph: qualitative zones + feature bar + dot avg marker -->
-						<div style="position:relative; padding-bottom:<?php echo ( $show_avg && null !== $net_pct ) ? '20' : '0'; ?>px;">
-							<div style="position:relative; height:16px; border-radius:3px; overflow:hidden; background:#f3f4f6;">
-								<!-- Solid light background -->
-								<!-- Feature bar — actual site value, narrower, vertically centred -->
+					<div style="display:grid;grid-template-columns:minmax(0,1fr) 64px minmax(0,1.4fr);align-items:center;gap:6px;">
+						<span style="font-size:11px;color:#374151;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="<?php echo esc_attr( $rf['label'] ); ?>"><?php echo esc_html( $rf['label'] ); ?></span>
+						<span style="font-size:11px;text-align:right;color:<?php echo esc_attr( $rc ); ?>;font-weight:700;"><?php echo (int) $rf['pct']; ?>% <span style="color:#9ca3af;font-weight:400;font-size:10px;">(<?php echo esc_html( number_format_i18n( $rf['count'] ) ); ?>)</span></span>
+						<div style="position:relative;">
+							<div style="position:relative;height:16px;border-radius:3px;overflow:hidden;background:#f3f4f6;">
 								<div style="position:absolute;top:50%;transform:translateY(-50%);left:0;width:<?php echo (int) $rf['pct']; ?>%;height:8px;background:<?php echo esc_attr( $rc ); ?>;border-radius:2px;"></div>
 							</div>
 							<?php if ( $show_avg && null !== $net_pct ) : ?>
-							<!-- Dot avg marker — hangs below the track -->
-							<div style="position:absolute; bottom:0; left:<?php echo (int) $net_pct; ?>%; transform:translateX(-50%); display:flex; flex-direction:column; align-items:center;">
-								<div style="width:1px; height:4px; background:#9ca3af;"></div>
-								<div style="width:8px; height:8px; border-radius:50%; background:#374151;"></div>
-								<span style="font-size:9px; color:#374151; font-weight:700; white-space:nowrap; margin-top:2px;"><?php echo (int) $net_pct; ?>%</span>
-							</div>
-							<?php elseif ( $show_avg ) : ?>
-							<div style="text-align:right; margin-top:3px; font-size:9px; color:#d1d5db;"><?php esc_html_e( 'Network avg: ', 'aeo-pugmill' ); ?>&#8212;</div>
+							<div style="position:absolute;top:8px;left:<?php echo (int) $net_pct; ?>%;transform:translate(-50%,-50%);width:8px;height:8px;border-radius:50%;background:#374151;border:1.5px solid #fff;" title="<?php echo esc_attr( sprintf( 'Network avg: %d%%', (int) $net_pct ) ); ?>"></div>
 							<?php endif; ?>
 						</div>
 					</div>
@@ -1390,6 +1466,109 @@ function aeopugmill_render_settings_page() {
 					<?php endif; ?>
 				</div>
 			</div>
+
+			<!-- SEO Content Coverage (stacked below AEO Content Coverage) ── -->
+			<div class="pugmill-card">
+				<h3><?php esc_html_e( 'SEO Content Coverage', 'aeo-pugmill' ); ?></h3>
+				<?php if ( $seo_cov_deferring ) : ?>
+					<?php
+					// ── State B: Pugmill is deferring meta output to an SEO plugin ──
+					// We don't count or display bars because the numbers would conflict
+					// with what the SEO plugin's own reports show.
+					$seo_cov_plugin_slugs = array_keys( $seo_cov_plugins_detected );
+					$seo_cov_first_slug   = $seo_cov_plugin_slugs[0] ?? '';
+					$seo_cov_dash_urls    = array(
+						'yoast'    => admin_url( 'admin.php?page=wpseo_dashboard' ),
+						'rankmath' => admin_url( 'admin.php?page=rank-math' ),
+						'aioseo'   => admin_url( 'admin.php?page=aioseo' ),
+						'tsf'      => admin_url( 'admin.php?page=theseoframework-settings' ),
+						'seopress' => admin_url( 'admin.php?page=seopress-option' ),
+					);
+					$seo_cov_dash_url = $seo_cov_dash_urls[ $seo_cov_first_slug ] ?? '';
+					?>
+					<p class="card-sub"><?php /* translators: %s: SEO plugin name */ printf( esc_html__( 'Pugmill is deferring meta output to %s.', 'aeo-pugmill' ), '<strong>' . esc_html( $seo_cov_plugin_display ) . '</strong>' ); // phpcs:ignore WordPress.Security.EscapeOutput -- <strong> is a literal safe tag; the plugin name is esc_html'd. ?></p>
+					<div style="margin-top:10px; padding:12px; background:#f9fafb; border:1px solid #e5e7eb; border-left:3px solid #0369a1; border-radius:4px; font-size:11px; color:#374151; line-height:1.5;">
+						<?php
+						$seo_cov_plugin_short = esc_html( preg_replace( '/\s+\d.*$/', '', $seo_cov_plugin_display ) );
+						/* translators: %s: SEO plugin name */
+						printf( esc_html__( '%s is managing meta descriptions and Open Graph tags. Pugmill defers here to avoid duplicates.', 'aeo-pugmill' ), $seo_cov_plugin_short ); // phpcs:ignore WordPress.Security.EscapeOutput -- $seo_cov_plugin_short is already esc_html'd above.
+						?>
+						<?php if ( $seo_cov_dash_url ) : ?>
+						<div style="margin-top:8px;">
+							<a href="<?php echo esc_url( $seo_cov_dash_url ); ?>" style="font-size:11px; font-weight:600; color:#0369a1; text-decoration:none;">
+								<?php /* translators: %s: SEO plugin name */ printf( esc_html__( 'Manage in %s →', 'aeo-pugmill' ), $seo_cov_plugin_short ); // phpcs:ignore WordPress.Security.EscapeOutput -- $seo_cov_plugin_short is already esc_html'd above. ?>
+							</a>
+						</div>
+						<?php endif; ?>
+					</div>
+					<div style="margin-top:10px; padding-top:7px; border-top:1px solid #f0f0f0; font-size:10px; color:#9ca3af;">
+						<?php esc_html_e( 'To see Pugmill-measured coverage here instead, disable the "Defer meta output to SEO plugin" toggle in the Compatibility tab.', 'aeo-pugmill' ); ?>
+					</div>
+				<?php elseif ( 0 === $cov_total ) : ?>
+					<p class="card-sub"><?php esc_html_e( 'Effective SEO field coverage across your published posts.', 'aeo-pugmill' ); ?></p>
+					<div style="margin-top:10px; font-size:11px; color:#9ca3af; font-style:italic;">
+						<?php esc_html_e( 'No published posts yet.', 'aeo-pugmill' ); ?>
+					</div>
+				<?php else : ?>
+					<?php
+					// ── State A: Pugmill is the SEO authority (or co-emitting) ──
+					// Bars count effective coverage via cascade. If an SEO plugin is
+					// detected but not being deferred to, flag the double-emit risk.
+					$seo_cov_double_emit = ! empty( $seo_cov_plugins_detected ) && ! $seo_cov_disable_meta;
+					?>
+					<p class="card-sub"><?php esc_html_e( 'Effective SEO field coverage — counts explicit values plus cascade fallbacks (AEO summary, excerpt, featured image).', 'aeo-pugmill' ); ?></p>
+					<div style="display:flex; flex-direction:column; gap:8px; margin-top:4px;">
+						<?php
+						$seo_cov_fields = array(
+							array( 'section' => __( 'SEO Fields', 'aeo-pugmill' ), 'first' => true ),
+							array( 'label' => __( 'Meta Description',             'aeo-pugmill' ), 'count' => $cov_seo_meta_desc,         'pct' => (int) round( $cov_seo_meta_desc         / $cov_total * 100 ) ),
+							array( 'label' => __( 'Meta quality (120–160 chars)', 'aeo-pugmill' ), 'count' => $cov_seo_meta_desc_quality, 'pct' => (int) round( $cov_seo_meta_desc_quality / $cov_total * 100 ) ),
+							array( 'label' => __( 'Open Graph Image',             'aeo-pugmill' ), 'count' => $cov_seo_og_image,          'pct' => (int) round( $cov_seo_og_image          / $cov_total * 100 ) ),
+							array( 'label' => __( 'Open Graph Description',       'aeo-pugmill' ), 'count' => $cov_seo_og_desc,           'pct' => (int) round( $cov_seo_og_desc           / $cov_total * 100 ) ),
+						);
+						foreach ( $seo_cov_fields as $sf ) :
+							if ( isset( $sf['section'] ) ) :
+								$border = empty( $sf['first'] ) ? 'margin-top:4px; padding-top:8px; border-top:1px solid #f0f0f0;' : '';
+								?>
+								<div style="font-size:10px; font-weight:700; color:#0369a1; text-transform:uppercase; letter-spacing:.06em; <?php echo esc_attr( $border ); ?>">
+									<?php echo esc_html( $sf['section'] ); ?>
+								</div>
+								<?php
+								continue;
+							endif;
+							$src = $sf['pct'] >= 75 ? '#16a34a' : ( $sf['pct'] >= 40 ? '#d97706' : '#e11d48' );
+						?>
+						<div style="display:grid;grid-template-columns:minmax(0,1fr) 64px minmax(0,1.4fr);align-items:center;gap:6px;">
+							<span style="font-size:11px;color:#374151;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="<?php echo esc_attr( $sf['label'] ); ?>"><?php echo esc_html( $sf['label'] ); ?></span>
+							<span style="font-size:11px;text-align:right;color:<?php echo esc_attr( $src ); ?>;font-weight:700;"><?php echo (int) $sf['pct']; ?>% <span style="color:#9ca3af;font-weight:400;font-size:10px;">(<?php echo esc_html( number_format_i18n( $sf['count'] ) ); ?>)</span></span>
+							<div style="position:relative;">
+								<div style="position:relative;height:16px;border-radius:3px;overflow:hidden;background:#f3f4f6;">
+									<div style="position:absolute;top:50%;transform:translateY(-50%);left:0;width:<?php echo (int) $sf['pct']; ?>%;height:8px;background:<?php echo esc_attr( $src ); ?>;border-radius:2px;"></div>
+								</div>
+							</div>
+						</div>
+						<?php endforeach; ?>
+					</div>
+					<?php if ( $seo_cov_double_emit ) : ?>
+					<div style="margin-top:10px; padding:8px 10px; background:#fffbeb; border:1px solid #fde68a; border-left:3px solid #d97706; border-radius:4px; font-size:11px; color:#92400e; line-height:1.5;">
+						<strong><?php esc_html_e( 'Heads up:', 'aeo-pugmill' ); ?></strong>
+						<?php
+						$compat_tab_link = '<a href="' . esc_url( $tab_url( 'compatibility' ) ) . '" style="color:#92400e; font-weight:600; text-decoration:underline;">' . esc_html__( 'Compatibility tab', 'aeo-pugmill' ) . '</a>';
+						printf(
+							/* translators: 1: SEO plugin display name, 2: link to the Compatibility tab */
+							esc_html__( 'Detected %1$s, but Pugmill is still emitting meta description and Open Graph tags. This may produce duplicate tags in your page head. Review the %2$s.', 'aeo-pugmill' ),
+							esc_html( $seo_cov_plugin_display ),
+							$compat_tab_link // phpcs:ignore WordPress.Security.EscapeOutput
+						); // phpcs:ignore WordPress.Security.EscapeOutput
+						?>
+					</div>
+					<?php endif; ?>
+					<div style="margin-top:10px; padding-top:7px; border-top:1px solid #f0f0f0; font-size:10px; color:#9ca3af;">
+						<?php echo esc_html( number_format_i18n( $cov_total ) . ' ' . _n( 'post/page total', 'posts/pages total', $cov_total, 'aeo-pugmill' ) ); ?>
+					</div>
+				<?php endif; ?>
+			</div>
+			</div><!-- /col 2 stack -->
 
 			<!-- Col 3: AEO Infrastructure ─────────────────────── -->
 			<div class="pugmill-card">
@@ -1453,339 +1632,166 @@ function aeopugmill_render_settings_page() {
 		<?php endif; ?>
 
 
-		<!-- ── Bot Benchmark List ──────────────────────────────────── -->
-		<?php
-		$benchmark_cats = array(
-			'ai'       => array(
-				'label'    => __( 'AI Answer Engines', 'aeo-pugmill' ),
-				'bots'     => $ai_bots,
-				'accent'   => '#7c3aed',
-				'bg'       => '#faf7ff',
-				'border'   => '#d4c8f0',
-				'zone_lo'  => '#f3effd',
-				'zone_mid' => '#ede8fb',
-				'zone_hi'  => '#e0d8f8',
-			),
-			'search'   => array(
-				'label'    => __( 'Search Engines', 'aeo-pugmill' ),
-				'bots'     => $search_bots,
-				'accent'   => '#0369a1',
-				'bg'       => '#f0f9ff',
-				'border'   => '#bae0fd',
-				'zone_lo'  => '#e8f5fe',
-				'zone_mid' => '#d4ecfc',
-				'zone_hi'  => '#bde0fa',
-			),
-			'training' => array(
-				'label'    => __( 'AI Training Crawlers', 'aeo-pugmill' ),
-				'bots'     => $training_bots,
-				'accent'   => '#0891b2',
-				'bg'       => '#f0fdff',
-				'border'   => '#a5f3fc',
-				'zone_lo'  => '#e0faff',
-				'zone_mid' => '#ccf6fd',
-				'zone_hi'  => '#b0eefa',
-			),
-			'seo'      => array(
-				'label'    => __( 'SEO Tools', 'aeo-pugmill' ),
-				'bots'     => $seo_bots,
-				'accent'   => '#374151',
-				'bg'       => '#f9fafb',
-				'border'   => '#e5e7eb',
-				'zone_lo'  => '#f3f4f6',
-				'zone_mid' => '#eaebee',
-				'zone_hi'  => '#e0e2e6',
-			),
-		);
-		?>
-
-		<?php if ( ! empty( $network_avgs ) || $total_visits > 0 ) : ?>
-		<div class="pugmill-card" style="margin:20px 0 24px;">
-		<h3 style="margin:0 0 4px; font-size:14px; font-weight:600;">
-			<?php esc_html_e( 'Your Site vs. Network Average', 'aeo-pugmill' ); ?>
-			<?php if ( $network_sites > 0 ) : ?>
-			<span style="font-size:11px; font-weight:400; color:#9ca3af; margin-left:6px;">
-				<?php printf( esc_html( _n( '(%d site in network)', '(%d sites in network)', $network_sites, 'aeo-pugmill' ) ), (int) $network_sites ); ?>
-			</span>
-			<?php endif; ?>
-		</h3>
-
-		<div style="border:1px solid #e5e7eb; border-radius:8px; overflow:hidden; margin-bottom:8px;">
-		<?php
-		$_bm_first = true;
-		foreach ( $benchmark_cats as $cat_key => $q ) :
-
-			// Collect per-bot counts, sort descending
-			$q_sorted = array();
-			foreach ( $q['bots'] as $bot_key => $_ ) {
-				$q_sorted[ $bot_key ] = (int) ( $summary[ $bot_key ] ?? 0 );
-			}
-			arsort( $q_sorted );
-
-			// Skip categories with no local data and no network averages
-			$_bm_has_any = false;
-			foreach ( $q_sorted as $bot_key => $cnt ) {
-				if ( $cnt > 0 || isset( $network_avgs[ $bot_key ] ) ) { $_bm_has_any = true; break; }
-			}
-			if ( ! $_bm_has_any ) continue;
-
-			// Category-relative scale (nice-number rounding)
-			$q_max = 1;
-			foreach ( $q_sorted as $bot_key => $cnt ) {
-				$q_max = max( $q_max, $cnt, (int) ( $network_avgs[ $bot_key ] ?? 0 ) );
-			}
-			$_qmag = (int) pow( 10, (int) floor( log10( max( $q_max, 1 ) ) ) );
-			foreach ( array( 1, 2, 5, 10 ) as $_f ) {
-				if ( $_f * $_qmag >= $q_max ) { $q_max = $_f * $_qmag; break; }
-			}
-
-			// Network trend arrow
-			$nc        = $network_categories[ $cat_key ] ?? null;
-			$nc_change = ( $nc && isset( $nc['change_pct'] ) && null !== $nc['change_pct'] ) ? (int) $nc['change_pct'] : null;
-			$nc_arrow  = '';
-			$nc_col    = '#9ca3af';
-			if ( null !== $nc_change ) {
-				if ( $nc_change > 0 )     { $nc_arrow = '&#8593;'; $nc_col = '#16a34a'; }
-				elseif ( $nc_change < 0 ) { $nc_arrow = '&#8595;'; $nc_col = '#dc2626'; }
-				else                      { $nc_arrow = '&#8212;'; $nc_col = '#9ca3af'; }
-			}
-
-			// Category visit total (your site)
-			$cat_visit_total = array_sum( $q_sorted );
-		?>
-		<div style="<?php echo $_bm_first ? '' : 'border-top:1px solid #e5e7eb;'; ?> background:<?php echo esc_attr( $q['bg'] ); ?>;">
-
-			<!-- Category header -->
-			<div style="display:flex; align-items:center; gap:7px; padding:8px 12px 7px; border-bottom:1px solid <?php echo esc_attr( $q['border'] ); ?>;">
-				<span style="width:8px; height:8px; border-radius:50%; background:<?php echo esc_attr( $q['accent'] ); ?>; flex-shrink:0;"></span>
-				<span style="font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:<?php echo esc_attr( $q['accent'] ); ?>; flex:1;"><?php echo esc_html( $q['label'] ); ?></span>
-				<?php if ( $cat_visit_total > 0 ) : ?>
-				<span style="font-size:10px; color:#9ca3af;"><?php echo esc_html( number_format_i18n( $cat_visit_total ) ); ?></span>
-				<?php endif; ?>
-				<?php if ( null !== $nc_change ) : ?>
-				<span style="font-size:10px; font-weight:600; color:<?php echo esc_attr( $nc_col ); ?>; white-space:nowrap; padding-left:6px; border-left:1px solid <?php echo esc_attr( $q['border'] ); ?>;">
-					<?php echo wp_kses_post( $nc_arrow ); ?>&thinsp;<?php echo esc_html( abs( $nc_change ) ); ?>%
-					<span style="font-size:9px; font-weight:400; color:#9ca3af; margin-left:2px;"><?php esc_html_e( 'network', 'aeo-pugmill' ); ?></span>
-				</span>
-				<?php endif; ?>
-			</div>
-
-			<!-- Bot bullet-graph rows -->
-			<div style="padding:7px 12px 4px;">
-			<?php
-			foreach ( $q_sorted as $bot_key => $count ) :
-				if ( $count === 0 && ! isset( $network_avgs[ $bot_key ] ) ) continue;
-				$bot_info = $q['bots'][ $bot_key ];
-				$net_avg  = isset( $network_avgs[ $bot_key ] ) ? (int) $network_avgs[ $bot_key ] : null;
-				$my_pct   = min( 100, (int) round( $count / $q_max * 100 ) );
-				$avg_pct  = ( null !== $net_avg ) ? min( 100, (int) round( $net_avg / $q_max * 100 ) ) : null;
-			?>
-			<div style="margin-bottom:8px;">
-				<!-- Bot name + visit count -->
-				<div style="display:flex; align-items:center; gap:6px; margin-bottom:3px; font-size:11px; color:#374151;">
-					<span style="width:7px; height:7px; border-radius:50%; background:<?php echo esc_attr( $bot_info['color'] ); ?>; flex-shrink:0;"></span>
-					<span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><?php echo esc_html( $bot_info['label'] ); ?></span>
-					<span style="font-weight:600; color:<?php echo esc_attr( $q['accent'] ); ?>; flex-shrink:0;"><?php echo esc_html( number_format_i18n( $count ) ); ?></span>
-				</div>
-				<!-- Bullet graph: your bar + hanging dot for network avg -->
-				<div style="position:relative; padding-bottom:<?php echo ( null !== $avg_pct ) ? '20' : '0'; ?>px;">
-					<div style="position:relative; height:16px; border-radius:3px; overflow:hidden; background:<?php echo esc_attr( $q['zone_lo'] ); ?>;">
-						<div style="position:absolute;top:50%;transform:translateY(-50%);left:0;width:<?php echo (int) $my_pct; ?>%;height:8px;background:<?php echo esc_attr( $bot_info['color'] ); ?>;border-radius:2px;"></div>
-					</div>
-					<?php if ( null !== $avg_pct ) : ?>
-					<div style="position:absolute; bottom:0; left:<?php echo (int) $avg_pct; ?>%; transform:translateX(-50%); display:flex; flex-direction:column; align-items:center;">
-						<div style="width:1px; height:4px; background:#9ca3af;"></div>
-						<div style="width:8px; height:8px; border-radius:50%; background:#374151;"></div>
-						<span style="font-size:9px; color:#374151; font-weight:700; white-space:nowrap; margin-top:1px;"><?php echo esc_html( number_format_i18n( $net_avg ) ); ?></span>
-					</div>
-					<?php endif; ?>
-				</div>
-			</div>
-			<?php endforeach; ?>
-			</div>
-
-		</div>
-		<?php $_bm_first = false; endforeach; ?>
-		</div>
-		<div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:8px; font-size:10px; color:#6b7280;">
-			<span><?php esc_html_e( 'Last 30 days', 'aeo-pugmill' ); ?></span>
-			<?php if ( ! empty( $network_avgs ) ) : ?>
-			<span style="display:inline-flex; align-items:center; gap:4px;">
-				<span style="display:inline-block; width:14px; height:6px; border-radius:2px; background:#7c3aed; flex-shrink:0;"></span>
-				<?php esc_html_e( 'Your site', 'aeo-pugmill' ); ?>
-			</span>
-			<span style="display:inline-flex; align-items:center; gap:4px;">
-				<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#374151; flex-shrink:0;"></span>
-				<?php esc_html_e( 'Network average', 'aeo-pugmill' ); ?>
-			</span>
-			<?php endif; ?>
-			<?php if ( get_option( 'aeopugmill_analytics_opted_in' ) ) :
-				$last_send = get_option( 'aeopugmill_last_network_send' );
-			?>
-			<span style="margin-left:auto; display:inline-flex; align-items:center; gap:6px;">
-				<?php if ( $last_send ) : ?>
-				<span style="color:#9ca3af;"><?php
-					/* translators: %s: human-readable time diff */
-					printf( esc_html__( 'Synced %s ago', 'aeo-pugmill' ), esc_html( human_time_diff( $last_send ) ) );
-				?></span>
-				<?php else : ?>
-				<span style="color:#d1d5db;"><?php esc_html_e( 'Not yet synced', 'aeo-pugmill' ); ?></span>
-				<?php endif; ?>
-				<a href="#" id="aeopugmill-resync-link"
-					style="color:#7c3aed; text-decoration:none; font-weight:600;"
-					title="<?php esc_attr_e( 'Runs automatically every 24 hours', 'aeo-pugmill' ); ?>">
-					<?php esc_html_e( 'Resync now', 'aeo-pugmill' ); ?>
-				</a>
-				<span id="aeopugmill-resync-result" style="font-size:10px;"></span>
-			</span>
-			<?php endif; ?>
-		</div>
-		</div><!-- /.pugmill-card Your Site vs. Network Average -->
-		<?php endif; ?>
 
 
 
 		<!-- Content Reach ───────────────────────────────────────────────────── -->
 		<?php
-		// Build active_types from by_resource data (which columns have any visits)
-		$active_types = array();
-		foreach ( $by_resource as $bot_res ) {
-			foreach ( $bot_res as $type_id => $cnt ) {
-				if ( $cnt > 0 ) {
-					$active_types[ $type_id ] = true;
-				}
-			}
-		}
-		ksort( $active_types );
-
-		// Category label + colour maps (shared by Content Reach and legacy code)
+		// Category label + badge colour maps
 		$cat_labels = array( 'aeo' => 'AEO Endpoints', 'discovery' => 'Discovery', 'crawl' => 'Page Crawls' );
-		$cat_badge  = array( 'aeo' => '#16a34a',        'discovery' => '#2563eb',   'crawl' => '#9ca3af' );
+		$cat_badge  = array( 'aeo' => '#16a34a',       'discovery' => '#2563eb',   'crawl' => '#9ca3af'   );
+		$cat_bg_cr  = array( 'aeo' => '#f0fdf4',       'discovery' => '#eff6ff',   'crawl' => '#f9fafb'   );
 
-		// Column order: AEO group first, then Discovery, then Page Crawls
+		// Fixed column order — all tracked resource types, grouped by category.
 		$col_order_by_cat = array(
-			'aeo'       => array( 1, 2, 3, 4, 7, 8 ),
-			'discovery' => array( 5, 6 ),
-			'crawl'     => array( 0 ),
+			'aeo'       => array( 1, 2, 3, 4, 8 ),      // llms.txt, llms-full, Markdown, Summary, JSON-LD
+			'discovery' => array( 5, 6, 9, 10 ),        // Sitemap, Robots.txt, RSS, Well-Known
+			'crawl'     => array( 0, 7 ),               // HTML, HTML+AEO
+		);
+		$col_order_ordered = array();
+		foreach ( $col_order_by_cat as $_cat => $_ids ) {
+			foreach ( $_ids as $_tid ) { $col_order_ordered[] = $_tid; }
+		}
+
+		// Short column labels for the table (full names shown on hover).
+		$short_labels = array(
+			1  => 'llms.txt',
+			2  => 'llms-full',
+			3  => 'Markdown',
+			4  => 'Summary',
+			8  => 'JSON-LD',
+			5  => 'Sitemap',
+			6  => 'Robots',
+			9  => 'RSS',
+			10 => 'Well-Known',
+			0  => 'HTML',
+			7  => 'HTML+AEO',
 		);
 
-		// Filter to columns that have actual data
-		$active_cols_by_cat = array();
-		foreach ( $col_order_by_cat as $cat => $type_ids ) {
-			foreach ( $type_ids as $type_id ) {
-				if ( isset( $active_types[ $type_id ] ) ) {
-					$active_cols_by_cat[ $cat ][] = $type_id;
+		// Endpoint card metadata — name, URL pattern, and category for each tracked type.
+		$endpoint_meta = array(
+			1  => array( 'group' => 'aeo',       'name' => 'llms.txt',      'url' => '/llms.txt' ),
+			2  => array( 'group' => 'aeo',       'name' => 'llms-full.txt', 'url' => '/llms-full.txt' ),
+			3  => array( 'group' => 'aeo',       'name' => 'Post Markdown', 'url' => '/*/?aeopugmill_llm=1' ),
+			4  => array( 'group' => 'aeo',       'name' => 'Site Summary',  'url' => '/?aeopugmill_llm=1' ),
+			8  => array( 'group' => 'aeo',       'name' => 'AEO JSON-LD',   'url' => '/aeo/*.jsonld' ),
+			5  => array( 'group' => 'discovery', 'name' => 'Sitemap',       'url' => '/sitemap.xml, /wp-sitemap-*.xml' ),
+			6  => array( 'group' => 'discovery', 'name' => 'Robots.txt',    'url' => '/robots.txt' ),
+			9  => array( 'group' => 'discovery', 'name' => 'RSS Feed',      'url' => '/feed/ and sub-feeds' ),
+			10 => array( 'group' => 'discovery', 'name' => 'Well-Known',    'url' => '/.well-known/*, /ads.txt, …' ),
+			0  => array( 'group' => 'crawl',     'name' => 'HTML',          'url' => __( 'Plain post/page crawl', 'aeo-pugmill' ) ),
+			7  => array( 'group' => 'crawl',     'name' => 'HTML + AEO',    'url' => __( 'Posts with AEO metadata', 'aeo-pugmill' ) ),
+		);
+
+		// Aggregate totals per endpoint + identify top bot for each.
+		$endpoint_totals         = array_fill_keys( array_keys( $endpoint_meta ), 0 );
+		$endpoint_top_bot        = array_fill_keys( array_keys( $endpoint_meta ), null );
+		$endpoint_top_bot_count  = array_fill_keys( array_keys( $endpoint_meta ), 0 );
+		foreach ( $by_resource as $bot_key => $types ) {
+			foreach ( $types as $tid => $cnt ) {
+				$tid = (int) $tid;
+				$cnt = (int) $cnt;
+				if ( ! isset( $endpoint_totals[ $tid ] ) ) { continue; }
+				$endpoint_totals[ $tid ] += $cnt;
+				if ( $cnt > $endpoint_top_bot_count[ $tid ] ) {
+					$endpoint_top_bot_count[ $tid ] = $cnt;
+					$endpoint_top_bot[ $tid ]       = $bot_key;
 				}
 			}
 		}
 
-		// Flat ordered list of active columns
-		$active_cols_ordered = array();
-		foreach ( $active_cols_by_cat as $cat => $cols ) {
-			foreach ( $cols as $type_id ) {
-				$active_cols_ordered[] = $type_id;
+		// Metric strip — overall AEO share + AI-bot AEO share.
+		$aeo_ids    = array( 1, 2, 3, 4, 8 );
+		$ms_total   = 0;
+		$ms_aeo     = 0;
+		$ms_ai_all  = 0;
+		$ms_ai_aeo  = 0;
+		foreach ( $by_resource as $bot_key => $types ) {
+			$is_ai = isset( $ai_bots[ $bot_key ] );
+			foreach ( $types as $tid => $cnt ) {
+				$tid = (int) $tid;
+				$cnt = (int) $cnt;
+				$ms_total += $cnt;
+				$is_aeo    = in_array( $tid, $aeo_ids, true );
+				if ( $is_aeo ) { $ms_aeo += $cnt; }
+				if ( $is_ai ) {
+					$ms_ai_all += $cnt;
+					if ( $is_aeo ) { $ms_ai_aeo += $cnt; }
+				}
 			}
 		}
+		$ms_aeo_pct    = $ms_total  > 0 ? round( $ms_aeo    / $ms_total  * 100, 1 ) : null;
+		$ms_ai_aeo_pct = $ms_ai_all > 0 ? round( $ms_ai_aeo / $ms_ai_all * 100, 1 ) : null;
 		?>
-		<?php if ( ! empty( $active_cols_ordered ) ) : ?>
 		<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px 24px; margin-bottom:24px;">
 			<h3 style="margin:0 0 4px; font-size:14px; font-weight:600;">
 				<?php esc_html_e( 'Content Reach', 'aeo-pugmill' ); ?>
 			</h3>
 			<p style="margin:0 0 16px; font-size:12px; color:#666;">
-				<?php esc_html_e( 'Which content types each bot is consuming — last 30 days. AEO endpoints show bots reading your optimised content directly.', 'aeo-pugmill' ); ?>
+				<?php esc_html_e( 'Every endpoint the plugin exposes, with 30-day visit counts. Zero is a real signal — if an endpoint shows no hits, it is either undiscovered or unreachable.', 'aeo-pugmill' ); ?>
 			</p>
 
-			<!-- ── Content diet bars: normalised per bot-category ── -->
-			<?php
-			// Resource type → content group mapping.
-			$type_to_group = array();
-			foreach ( $col_order_by_cat as $grp => $ids ) {
-				foreach ( $ids as $id ) {
-					$type_to_group[ $id ] = $grp;
-				}
-			}
-
-			// Aggregate by_resource into bot-category × content-group totals.
-			$diet_cats = array(
-				'ai'       => array( 'label' => __( 'AI Answer Engines',    'aeo-pugmill' ), 'bots' => $ai_bots ),
-				'search'   => array( 'label' => __( 'Search Engines',       'aeo-pugmill' ), 'bots' => $search_bots ),
-				'seo'      => array( 'label' => __( 'SEO Tools',            'aeo-pugmill' ), 'bots' => $seo_bots ),
-				'training' => array( 'label' => __( 'AI Training Crawlers', 'aeo-pugmill' ), 'bots' => $training_bots ),
-			);
-			$diet_data = array();
-			foreach ( $diet_cats as $dck => $dc ) {
-				$diet_data[ $dck ] = array( 'aeo' => 0, 'discovery' => 0, 'crawl' => 0, 'total' => 0 );
-				foreach ( $dc['bots'] as $bk => $_ ) {
-					if ( ! isset( $by_resource[ $bk ] ) ) continue;
-					foreach ( $by_resource[ $bk ] as $tid => $cnt ) {
-						$grp = $type_to_group[ $tid ] ?? 'crawl';
-						$diet_data[ $dck ][ $grp ] += (int) $cnt;
-						$diet_data[ $dck ]['total'] += (int) $cnt;
-					}
-				}
-			}
-
-			// Content-group colours + labels for legend.
-			$diet_grp_color = array( 'aeo' => '#16a34a', 'discovery' => '#2563eb', 'crawl' => '#d1d5db' );
-			$diet_grp_label = array( 'aeo' => __( 'AEO Endpoints', 'aeo-pugmill' ), 'discovery' => __( 'Discovery', 'aeo-pugmill' ), 'crawl' => __( 'Page Crawls', 'aeo-pugmill' ) );
-			?>
-			<div style="display:flex; flex-direction:column; gap:8px; margin-bottom:20px;">
-				<?php foreach ( $diet_cats as $dck => $dc ) :
-					$dt     = $diet_data[ $dck ]['total'];
-					$aeo_p  = $dt > 0 ? round( $diet_data[ $dck ]['aeo']       / $dt * 100, 1 ) : 0;
-					$disc_p = $dt > 0 ? round( $diet_data[ $dck ]['discovery']  / $dt * 100, 1 ) : 0;
-					$crwl_p = $dt > 0 ? 100 - $aeo_p - $disc_p : 0;
-					$is_empty = ( $dt === 0 );
+			<!-- ── Endpoint cards: compact single-row grid, wraps responsively ── -->
+			<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(80px, 1fr)); gap:6px; margin-bottom:14px;">
+				<?php foreach ( $col_order_ordered as $tid ) :
+					$meta    = $endpoint_meta[ $tid ];
+					$cat_key = $meta['group'];
+					$cnt     = (int) $endpoint_totals[ $tid ];
+					$is_zero = ( $cnt === 0 );
+					// Zero state: darker grey (WCAG-readable), not the near-invisible #d1d5db.
+					$num_col = $is_zero ? '#6b7280' : '#111827';
+					$bg_col  = $is_zero ? '#fafafa' : $cat_bg_cr[ $cat_key ];
+					$br_col  = $is_zero ? '#e5e7eb' : $cat_badge[ $cat_key ] . '55';
 				?>
-				<div>
-					<div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:3px;">
-						<span style="font-size:11px; font-weight:600; color:#374151;"><?php echo esc_html( $dc['label'] ); ?></span>
-						<?php if ( ! $is_empty ) : ?>
-						<span style="font-size:10px; color:#16a34a; font-weight:700;"><?php echo esc_html( $aeo_p ); ?>% AEO</span>
-						<?php else : ?>
-						<span style="font-size:10px; color:#d1d5db; font-style:italic;"><?php esc_html_e( 'no visits', 'aeo-pugmill' ); ?></span>
-						<?php endif; ?>
+				<div title="<?php echo esc_attr( $meta['name'] . ' — ' . $meta['url'] ); ?>"
+				     style="background:<?php echo esc_attr( $bg_col ); ?>;
+				            border:1px solid <?php echo esc_attr( $br_col ); ?>;
+				            border-top:2px solid <?php echo esc_attr( $cat_badge[ $cat_key ] ); ?>;
+				            border-radius:6px; padding:8px 6px; text-align:center;">
+					<div style="font-size:10px; font-weight:600; color:#6b7280; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-bottom:4px;">
+						<?php echo esc_html( $short_labels[ $tid ] ?? $meta['name'] ); ?>
 					</div>
-					<div style="position:relative; height:16px; border-radius:3px; background:#f3f4f6;">
-						<?php if ( ! $is_empty ) : ?>
-						<div style="position:absolute; top:50%; transform:translateY(-50%); left:0; right:0; height:8px; display:flex; border-radius:2px; overflow:hidden;">
-						<?php if ( $aeo_p > 0 ) : ?>
-						<div style="width:<?php echo esc_attr( $aeo_p ); ?>%; background:<?php echo esc_attr( $diet_grp_color['aeo'] ); ?>;"></div>
-						<?php endif; ?>
-						<?php if ( $disc_p > 0 ) : ?>
-						<div style="width:<?php echo esc_attr( $disc_p ); ?>%; background:<?php echo esc_attr( $diet_grp_color['discovery'] ); ?>;"></div>
-						<?php endif; ?>
-						<?php if ( $crwl_p > 0 ) : ?>
-						<div style="width:<?php echo esc_attr( $crwl_p ); ?>%; background:<?php echo esc_attr( $diet_grp_color['crawl'] ); ?>;"></div>
-						<?php endif; ?>
-						</div>
-						<?php endif; ?>
+					<div style="font-size:18px; font-weight:800; color:<?php echo esc_attr( $num_col ); ?>; line-height:1;">
+						<?php echo esc_html( number_format_i18n( $cnt ) ); ?>
 					</div>
 				</div>
 				<?php endforeach; ?>
-				<!-- Legend -->
-				<div style="display:flex; gap:12px; margin-top:2px;">
-					<?php foreach ( $diet_grp_color as $gk => $gc ) : ?>
-					<span style="display:inline-flex; align-items:center; gap:4px; font-size:11px; color:#6b7280;">
-						<span style="width:8px; height:8px; border-radius:2px; background:<?php echo esc_attr( $gc ); ?>; flex-shrink:0;"></span>
-						<?php echo esc_html( $diet_grp_label[ $gk ] ); ?>
-					</span>
-					<?php endforeach; ?>
-				</div>
 			</div>
 
+			<!-- ── Metric strip: AEO share summaries ── -->
+			<div style="display:flex; flex-wrap:wrap; gap:18px; padding:12px 14px; background:#f9fafb; border:1px solid #e5e7eb; border-radius:6px; margin:6px 0 14px; font-size:11px; color:#6b7280;">
+				<span>
+					<strong style="color:#374151;"><?php esc_html_e( '30-day snapshot:', 'aeo-pugmill' ); ?></strong>
+					<?php echo esc_html( number_format_i18n( $ms_total ) ); ?> <?php esc_html_e( 'total bot visits', 'aeo-pugmill' ); ?>
+				</span>
+				<span>
+					<?php if ( null !== $ms_aeo_pct ) : ?>
+					<?php echo esc_html( number_format_i18n( $ms_aeo ) ); ?> <?php esc_html_e( 'hit AEO endpoints', 'aeo-pugmill' ); ?>
+					<strong style="color:#16a34a;">(<?php echo esc_html( $ms_aeo_pct ); ?>%)</strong>
+					<?php else : ?>
+					— <?php esc_html_e( 'AEO share', 'aeo-pugmill' ); ?>
+					<?php endif; ?>
+				</span>
+				<span>
+					<?php if ( null !== $ms_ai_aeo_pct ) : ?>
+					<strong style="color:#7c3aed;"><?php echo esc_html( $ms_ai_aeo_pct ); ?>%</strong>
+					<?php esc_html_e( 'of AI-bot traffic went to AEO', 'aeo-pugmill' ); ?>
+					<?php else : ?>
+					— <?php esc_html_e( 'AI-bot AEO share', 'aeo-pugmill' ); ?>
+					<?php endif; ?>
+				</span>
+			</div>
+
+			<!-- ── Per-bot × endpoint table ── -->
 			<div style="overflow-x:auto;">
 			<table class="widefat" style="font-size:12px; border-collapse:collapse;">
 				<thead>
 					<!-- Group header row -->
 					<tr style="background:#f6f7f7;">
-						<th style="padding:8px 12px; text-align:left; font-weight:600; white-space:nowrap; width:160px; border-bottom:1px solid #e5e7eb; border-right:2px solid #e5e7eb;" rowspan="2">
+						<th style="padding:8px 12px; text-align:left; font-weight:600; white-space:nowrap; width:160px; border-bottom:1px solid #e5e7eb; border-right:2px solid #e5e7eb; position:sticky; left:0; background:#f6f7f7; z-index:2;" rowspan="2">
 							<?php esc_html_e( 'Bot', 'aeo-pugmill' ); ?>
 						</th>
-						<?php foreach ( $active_cols_by_cat as $cat => $cols ) :
-							if ( empty( $cols ) ) continue;
-						?>
+						<?php foreach ( $col_order_by_cat as $cat => $cols ) : ?>
 						<th colspan="<?php echo count( $cols ); ?>"
 							style="padding:6px 12px; text-align:center; font-size:10px; font-weight:700;
 							       text-transform:uppercase; letter-spacing:.06em;
@@ -1800,34 +1806,34 @@ function aeopugmill_render_settings_page() {
 					</tr>
 					<!-- Column name row -->
 					<tr style="background:#f6f7f7;">
-						<?php foreach ( $active_cols_ordered as $type_id ) : ?>
-						<th style="padding:6px 12px; text-align:center; font-weight:500; white-space:nowrap; font-size:11px; color:#555; border-bottom:1px solid #e5e7eb;">
-							<?php echo esc_html( $resource_labels[ $type_id ] ?? '' ); ?>
+						<?php foreach ( $col_order_ordered as $type_id ) : ?>
+						<th title="<?php echo esc_attr( $resource_labels[ $type_id ] ?? '' ); ?>"
+							style="padding:6px 10px; text-align:center; font-weight:500; white-space:nowrap; font-size:11px; color:#555; border-bottom:1px solid #e5e7eb;">
+							<?php echo esc_html( $short_labels[ $type_id ] ?? ( $resource_labels[ $type_id ] ?? '' ) ); ?>
 						</th>
 						<?php endforeach; ?>
 					</tr>
 				</thead>
 				<tbody>
-				<?php foreach ( $bots as $bot_key => $bot_info ) :
-					// Row total across all active columns
+				<?php $bot_row_idx = 0; foreach ( $bots as $bot_key => $bot_info ) :
 					$row_total = 0;
-					foreach ( $active_cols_ordered as $type_id ) {
+					foreach ( $col_order_ordered as $type_id ) {
 						$row_total += (int) ( $by_resource[ $bot_key ][ $type_id ] ?? 0 );
 					}
 					if ( 0 === $row_total ) continue;
-					$row_bg = ( 0 === ( $bot_row_idx ?? 0 ) % 2 ) ? '#fff' : '#f9fafb';
-					$bot_row_idx = ( $bot_row_idx ?? 0 ) + 1;
+					$row_bg = ( 0 === $bot_row_idx % 2 ) ? '#fff' : '#f9fafb';
+					$bot_row_idx++;
 				?>
 				<tr style="background:<?php echo esc_attr( $row_bg ); ?>;">
-					<!-- Bot name with colour dot -->
-					<td style="padding:8px 12px; white-space:nowrap; border-right:2px solid #e5e7eb;">
+					<!-- Sticky bot name column -->
+					<td style="padding:8px 12px; white-space:nowrap; border-right:2px solid #e5e7eb; position:sticky; left:0; background:<?php echo esc_attr( $row_bg ); ?>; z-index:1;">
 						<span style="display:inline-flex; align-items:center; gap:6px; font-size:12px; color:#374151;">
 							<span style="width:8px; height:8px; border-radius:50%; background:<?php echo esc_attr( $bot_info['color'] ); ?>; flex-shrink:0;"></span>
 							<?php echo esc_html( $bot_info['label'] ); ?>
 						</span>
 					</td>
-					<!-- One cell per active content type -->
-					<?php foreach ( $active_cols_ordered as $type_id ) :
+					<!-- One cell per tracked content type -->
+					<?php foreach ( $col_order_ordered as $type_id ) :
 						$cnt         = (int) ( $by_resource[ $bot_key ][ $type_id ] ?? 0 );
 						$net_res_avg = $network_resource_avgs[ $bot_key ][ $type_id ] ?? null;
 						$cell_arrow  = '';
@@ -1842,18 +1848,36 @@ function aeopugmill_render_settings_page() {
 							$cell_arrow = '<span style="font-size:9px; color:#16a34a; margin-left:2px;">&#8593;</span>';
 						}
 					?>
-					<td style="padding:7px 12px; text-align:center; color:<?php echo $cnt > 0 ? esc_attr( $bot_info['color'] ) : '#d1d5db'; ?>; font-weight:<?php echo $cnt > 0 ? '600' : '400'; ?>; white-space:nowrap;">
+					<td style="padding:7px 10px; text-align:center; color:<?php echo $cnt > 0 ? esc_attr( $bot_info['color'] ) : '#d1d5db'; ?>; font-weight:<?php echo $cnt > 0 ? '600' : '400'; ?>; white-space:nowrap;">
 						<?php echo $cnt > 0 ? esc_html( number_format_i18n( $cnt ) ) : '—'; ?>
-						<?php echo $cell_arrow; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped — built from literals ?>
+						<?php echo wp_kses( $cell_arrow, array( 'span' => array( 'style' => array() ) ) ); ?>
 					</td>
 					<?php endforeach; ?>
 					<!-- Row total -->
-					<td style="padding:7px 12px; text-align:center; font-weight:600; color:#374151; border-left:2px solid #e5e7eb;">
+					<td style="padding:7px 10px; text-align:center; font-weight:600; color:#374151; border-left:2px solid #e5e7eb;">
 						<?php echo esc_html( number_format_i18n( $row_total ) ); ?>
 					</td>
 				</tr>
 				<?php endforeach; ?>
 				</tbody>
+				<tfoot>
+					<tr style="background:#f6f7f7; border-top:2px solid #e5e7eb;">
+						<td style="padding:8px 12px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#374151; border-right:2px solid #e5e7eb; position:sticky; left:0; background:#f6f7f7; z-index:1;">
+							<?php esc_html_e( 'Total', 'aeo-pugmill' ); ?>
+						</td>
+						<?php $grand_total = 0; foreach ( $col_order_ordered as $type_id ) :
+							$col_total    = (int) $endpoint_totals[ $type_id ];
+							$grand_total += $col_total;
+						?>
+						<td style="padding:8px 10px; text-align:center; font-weight:700; color:<?php echo $col_total > 0 ? '#374151' : '#d1d5db'; ?>; white-space:nowrap;">
+							<?php echo $col_total > 0 ? esc_html( number_format_i18n( $col_total ) ) : '—'; ?>
+						</td>
+						<?php endforeach; ?>
+						<td style="padding:8px 10px; text-align:center; font-weight:800; color:#111827; border-left:2px solid #e5e7eb;">
+							<?php echo esc_html( number_format_i18n( $grand_total ) ); ?>
+						</td>
+					</tr>
+				</tfoot>
 			</table>
 			</div>
 			<?php if ( ! empty( $network_avgs ) ) : ?>
@@ -1862,7 +1886,6 @@ function aeopugmill_render_settings_page() {
 			</p>
 			<?php endif; ?>
 		</div>
-		<?php endif; ?>
 
 		<!-- Crawl Intelligence ───────────────────────────────────────────────── -->
 		<?php
@@ -2040,7 +2063,7 @@ function aeopugmill_render_settings_page() {
 					$url_total = $url_clean + $url_param;
 					if ( $url_total > 0 ) {
 						$url_is_clean = $url_param / $url_total <= 0.2;
-						$url_lbl = $url_is_clean ? '✓ Clean' : '⚠ Mixed';
+						$url_lbl = $url_is_clean ? 'Clean' : 'Mixed';
 						$url_col = $url_is_clean ? '#16a34a' : '#d97706';
 					} else {
 						$url_lbl = '—';
@@ -2115,83 +2138,8 @@ function aeopugmill_render_settings_page() {
 			</table>
 			</div>
 			<p style="font-size:11px; color:#9ca3af; margin:8px 0 0;">
-				<?php esc_html_e( 'Dominant value shown per signal. Each cell uses color and a label together to indicate status. Thresholds: Fact Density — High / Medium / Low structured content. URL Type — ✓ Clean (clean URLs) / ⚠ Mixed (many parameterized URLs). 404 Rate — Low < 3%, Moderate 3–99%, High ≥10%. Avg ms — Fast < 500ms, Moderate 500–999ms, Slow ≥1s.', 'aeo-pugmill' ); ?>
+				<?php esc_html_e( 'Dominant value shown per signal. Each cell uses color and a label together to indicate status. Thresholds: Fact Density — High / Medium / Low structured content. URL Type — Clean (clean URLs) / Mixed (many parameterized URLs). 404 Rate — Low < 3%, Moderate 3–99%, High ≥10%. Avg ms — Fast < 500ms, Moderate 500–999ms, Slow ≥1s.', 'aeo-pugmill' ); ?>
 			</p>
-		</div>
-		<?php endif; ?>
-
-		<!-- Top Posts by AI visits ──────────────────────────────────────────── -->
-		<?php if ( ! empty( $top_posts ) ) : ?>
-		<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px 24px; margin-bottom:24px;">
-			<h3 style="margin:0 0 4px; font-size:14px; font-weight:600;"><?php esc_html_e( 'Top Posts', 'aeo-pugmill' ); ?></h3>
-			<p style="margin:0 0 14px; font-size:12px; color:#666;">
-				<?php esc_html_e( 'Most-visited content by bots — last 7 days. ★ marks posts where a bot read your AEO markdown endpoint directly.', 'aeo-pugmill' ); ?>
-			</p>
-			<?php
-			// Find max visits for bar scaling.
-			$tp_max = 1;
-			foreach ( $top_posts as $tp_row ) {
-				$tp_max = max( $tp_max, (int) $tp_row['total'] );
-			}
-			?>
-			<table class="widefat" style="font-size:12px; border-collapse:collapse;">
-				<thead>
-					<tr style="background:#f6f7f7;">
-						<th style="padding:8px 12px; text-align:left; font-weight:600;"><?php esc_html_e( 'URL', 'aeo-pugmill' ); ?></th>
-						<th style="padding:8px 12px; text-align:center; font-weight:600; width:60px;"><?php esc_html_e( 'Visits', 'aeo-pugmill' ); ?></th>
-						<th style="padding:8px 12px; text-align:left; font-weight:600; width:120px;"></th>
-						<th style="padding:8px 12px; text-align:left; font-weight:600;"><?php esc_html_e( 'By Bot', 'aeo-pugmill' ); ?></th>
-					</tr>
-				</thead>
-				<tbody>
-				<?php foreach ( $top_posts as $i => $post_row ) :
-					$tp_bar_pct = min( 100, (int) round( $post_row['total'] / $tp_max * 100 ) );
-				?>
-				<tr style="background:<?php echo 0 === $i % 2 ? '#fff' : '#f9fafb'; ?>;">
-					<td style="padding:8px 12px; word-break:break-all; font-size:11px;">
-						<?php if ( $post_row['aeo'] ) : ?>
-						<span style="color:#16a34a; font-weight:700; margin-right:4px;" title="<?php esc_attr_e( 'AEO markdown endpoint was read', 'aeo-pugmill' ); ?>">★</span>
-						<?php endif; ?>
-						<a href="<?php echo esc_url( home_url( $post_row['url'] ) ); ?>" target="_blank" rel="noopener"
-						   style="font-family:monospace; color:#1d2327; text-decoration:none;"
-						   onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">
-							<?php echo esc_html( $post_row['url'] ); ?>
-						</a>
-						<?php
-						$post_id = url_to_postid( home_url( $post_row['url'] ) );
-						if ( $post_id ) :
-						?>
-						<a href="<?php echo esc_url( get_edit_post_link( $post_id ) ); ?>"
-						   style="margin-left:6px; font-size:10px; color:#7c3aed; text-decoration:none; white-space:nowrap;"
-						   title="<?php esc_attr_e( 'Edit post', 'aeo-pugmill' ); ?>">
-							<?php esc_html_e( 'Edit', 'aeo-pugmill' ); ?> ›
-						</a>
-						<?php endif; ?>
-					</td>
-					<td style="padding:8px 12px; text-align:center; font-weight:700; color:#374151;">
-						<?php echo esc_html( number_format_i18n( $post_row['total'] ) ); ?>
-					</td>
-					<td style="padding:8px 6px;">
-						<div style="position:relative; height:16px; border-radius:3px; background:#f3f4f6;">
-							<div style="position:absolute;top:50%;transform:translateY(-50%);left:0;width:<?php echo (int) $tp_bar_pct; ?>%;height:8px;background:#7c3aed;border-radius:2px;"></div>
-						</div>
-					</td>
-					<td style="padding:8px 12px;">
-						<span style="display:flex; flex-wrap:wrap; gap:4px;">
-						<?php foreach ( $post_row['bots'] as $bot_name => $cnt ) :
-							$bc = isset( $bots[ $bot_name ] ) ? $bots[ $bot_name ]['color'] : '#9ca3af';
-						?>
-						<span style="display:inline-flex; align-items:center; gap:3px; font-size:11px; padding:1px 6px; border-radius:9999px; background:<?php echo esc_attr( $bc ); ?>1a; color:<?php echo esc_attr( $bc ); ?>; font-weight:600;">
-							<span style="width:6px; height:6px; border-radius:50%; background:<?php echo esc_attr( $bc ); ?>;"></span>
-							<?php echo esc_html( $bot_name ); ?> <?php echo esc_html( $cnt ); ?>
-						</span>
-						<?php endforeach; ?>
-						</span>
-					</td>
-				</tr>
-				<?php endforeach; ?>
-				</tbody>
-			</table>
 		</div>
 		<?php endif; ?>
 
@@ -2225,68 +2173,6 @@ function aeopugmill_render_settings_page() {
 			<?php endif; ?>
 		</div>
 
-		<!-- Recent visits table -->
-		<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:20px 24px; margin-bottom:32px;">
-			<h3 style="margin:0 0 14px; font-size:14px; font-weight:600;">
-				<?php esc_html_e( 'Recent Visits', 'aeo-pugmill' ); ?>
-				<span style="font-weight:normal; color:#9ca3af; font-size:12px; margin-left:6px;">
-					<?php esc_html_e( 'last 50', 'aeo-pugmill' ); ?>
-				</span>
-			</h3>
-
-			<?php if ( empty( $recent ) ) : ?>
-			<p style="color:#9ca3af; font-size:13px;"><?php esc_html_e( 'No visits recorded yet.', 'aeo-pugmill' ); ?></p>
-			<?php else : ?>
-			<table class="widefat striped" style="font-size:13px;">
-				<thead>
-					<tr>
-						<th style="width:110px;"><?php esc_html_e( 'Bot', 'aeo-pugmill' ); ?></th>
-						<th style="width:130px;"><?php esc_html_e( 'Type', 'aeo-pugmill' ); ?></th>
-						<th><?php esc_html_e( 'URL', 'aeo-pugmill' ); ?></th>
-						<th style="width:160px;"><?php esc_html_e( 'Time', 'aeo-pugmill' ); ?></th>
-					</tr>
-				</thead>
-				<tbody>
-					<?php foreach ( $recent as $visit ) :
-						$bot_color = isset( $bots[ $visit['bot'] ] ) ? $bots[ $visit['bot'] ]['color'] : '#9ca3af';
-					?>
-					<?php
-					$r_cat   = $resource_cats[ $visit['resource_type'] ] ?? 'crawl';
-					$r_badge = array( 'aeo' => '#16a34a', 'discovery' => '#2563eb', 'crawl' => '#9ca3af' );
-					$r_bg    = array( 'aeo' => '#f0fdf4', 'discovery' => '#eff6ff', 'crawl' => '#f9fafb' );
-					?>
-					<tr>
-						<td>
-							<span style="display:inline-flex; align-items:center; gap:6px;">
-								<span style="width:8px; height:8px; border-radius:50%; background:<?php echo esc_attr( $bot_color ); ?>; flex-shrink:0;"></span>
-								<?php echo esc_html( $visit['bot'] ); ?>
-							</span>
-						</td>
-						<td>
-							<span style="display:inline-block; padding:2px 7px; border-radius:3px; font-size:11px; font-weight:600;
-							      background:<?php echo esc_attr( $r_bg[ $r_cat ] ); ?>;
-							      color:<?php echo esc_attr( $r_badge[ $r_cat ] ); ?>;">
-								<?php echo esc_html( $visit['resource_label'] ); ?>
-							</span>
-						</td>
-						<td style="font-family:monospace; font-size:12px; word-break:break-all;">
-							<?php
-							$display_url = strlen( $visit['url'] ) > 80
-								? substr( $visit['url'], 0, 80 ) . '…'
-								: $visit['url'];
-							echo esc_html( $display_url );
-							?>
-						</td>
-						<td style="color:#666; white-space:nowrap;">
-							<?php echo esc_html( wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $visit['visited_at'] ) ); ?>
-						</td>
-					</tr>
-					<?php endforeach; ?>
-				</tbody>
-			</table>
-			<?php endif; ?>
-		</div>
-
 		<!-- Download Data ───────────────────────────────────────────────────── -->
 		<div style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:16px 24px; margin-bottom:24px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
 			<span style="font-size:13px; font-weight:600; color:#374151; flex:0 0 auto;"><?php esc_html_e( 'Download Data', 'aeo-pugmill' ); ?></span>
@@ -2295,12 +2181,7 @@ function aeopugmill_render_settings_page() {
 			          background:#f6f7f7; color:#374151; border:1px solid #ddd; border-radius:4px; text-decoration:none;">
 				⬇ <?php esc_html_e( 'Daily Aggregates CSV', 'aeo-pugmill' ); ?>
 			</a>
-			<a href="<?php echo esc_url( admin_url( 'admin-ajax.php?action=aeopugmill_export_csv_recent&nonce=' . $export_nonce ) ); ?>"
-			   style="display:inline-flex; align-items:center; gap:5px; padding:6px 14px; font-size:12px; font-weight:600;
-			          background:#f6f7f7; color:#374151; border:1px solid #ddd; border-radius:4px; text-decoration:none;">
-				⬇ <?php esc_html_e( 'Recent Visits CSV', 'aeo-pugmill' ); ?>
-			</a>
-			<span style="font-size:11px; color:#9ca3af;"><?php esc_html_e( 'Daily data retained for 90 days. Recent visits retained for 7 days.', 'aeo-pugmill' ); ?></span>
+			<span style="font-size:11px; color:#9ca3af;"><?php esc_html_e( 'Daily aggregates retained for 90 days.', 'aeo-pugmill' ); ?></span>
 		</div>
 
 		<!-- Footer note -->
@@ -2501,23 +2382,33 @@ function aeopugmill_render_settings_page() {
 					printf(
 						/* translators: %d: number of contributing sites */
 						esc_html__( 'Network averages from %d participating sites', 'aeo-pugmill' ),
-						$network_sites
+						(int) $network_sites
 					);
 				} else {
 					esc_html_e( 'Pugmill AEO Intelligence Network — network averages appear once 10+ sites contribute', 'aeo-pugmill' );
 				}
 			?></span>
 			<span style="color:#ddd;">|</span>
-			<form method="post" action="options.php" style="margin:0; padding:0;">
+			<form id="aeopugmill-leave-network-form" method="post" action="options.php" style="margin:0; padding:0;">
 				<?php settings_fields( 'aeopugmill_analytics' ); ?>
 				<input type="hidden" name="aeopugmill_analytics_opted_in" value="0">
-				<button type="submit" onclick="return confirm('<?php echo esc_js( __( 'Leave the Pugmill AEO Intelligence Network? This will also disable Bot Analytics — your historical data stays on your site but you will no longer see crawler or spider activity.', 'aeo-pugmill' ) ); ?>')" style="background:none; border:none; padding:0; color:#dc2626; font-size:12px; cursor:pointer; text-decoration:underline;">
+				<button type="submit" style="background:none; border:none; padding:0; color:#dc2626; font-size:12px; cursor:pointer; text-decoration:underline;">
 					<?php esc_html_e( 'Leave network', 'aeo-pugmill' ); ?>
 				</button>
 			</form>
 		</div>
 		<script>
 		( function() {
+			/* Confirm before leaving the intelligence network */
+			var leaveForm = document.getElementById( 'aeopugmill-leave-network-form' );
+			if ( leaveForm ) {
+				leaveForm.addEventListener( 'submit', function( e ) {
+					if ( ! window.confirm( <?php echo wp_json_encode( __( 'Leave the Pugmill AEO Intelligence Network? This will also disable Bot Analytics — your historical data stays on your site but you will no longer see crawler or spider activity.', 'aeo-pugmill' ) ); ?> ) ) {
+						e.preventDefault();
+					}
+				} );
+			}
+
 			var link   = document.getElementById( 'aeopugmill-resync-link' );
 			var result = document.getElementById( 'aeopugmill-resync-result' );
 			if ( ! link ) return;
@@ -2674,246 +2565,6 @@ function aeopugmill_render_settings_page() {
 		</script>
 		<?php endif; ?>
 
-		<?php
-		// ── llms.txt Completeness Score ───────────────────────────────────────
-		global $wpdb;
-
-		$post_ids = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-			"SELECT ID FROM {$wpdb->posts}
-			 WHERE post_status = 'publish'
-			 AND post_type IN ('post', 'page')
-			 ORDER BY post_modified DESC
-			 LIMIT 500"
-		);
-		$total = count( $post_ids );
-
-		$with_summary  = 0;
-		$with_qa       = 0;
-		$with_keywords = 0;
-		$with_entities = 0;
-
-		if ( $total > 0 ) {
-			// Single query for all AEO meta — avoids N+1 per-post reads.
-			$ids_in = implode( ',', array_map( 'intval', $post_ids ) );
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared
-			$rows = $wpdb->get_results(
-				"SELECT meta_value FROM {$wpdb->postmeta}
-				 WHERE meta_key = '_aeopugmill_aeo'
-				 AND post_id IN ({$ids_in})"
-			);
-			foreach ( (array) $rows as $row ) {
-				$aeo = json_decode( $row->meta_value, true );
-				if ( ! is_array( $aeo ) ) { continue; }
-				if ( ! empty( $aeo['summary'] ) )   { $with_summary++; }
-				if ( ! empty( $aeo['questions'] ) )  { $with_qa++; }
-				if ( ! empty( $aeo['keywords'] ) )   { $with_keywords++; }
-				if ( ! empty( $aeo['entities'] ) )   { $with_entities++; }
-			}
-		}
-
-		$has_site_summary = '' !== get_option( 'aeopugmill_site_summary', '' );
-		$has_org_name     = '' !== get_option( 'aeopugmill_org_name', '' );
-		$summary_pct      = $total > 0 ? round( $with_summary  / $total * 100 ) : 0;
-		$qa_pct           = $total > 0 ? round( $with_qa       / $total * 100 ) : 0;
-		$keywords_pct     = $total > 0 ? round( $with_keywords / $total * 100 ) : 0;
-		$entities_pct     = $total > 0 ? round( $with_entities / $total * 100 ) : 0;
-
-		$score  = 0;
-		$score += $has_site_summary ? 20 : 0;
-		$score += $has_org_name     ? 5  : 0;
-		$score += (int) round( $summary_pct  / 100 * 30 );
-		$score += (int) round( $qa_pct       / 100 * 20 );
-		$score += (int) round( $keywords_pct / 100 * 15 );
-		$score += (int) round( $entities_pct / 100 * 10 );
-
-		$score_color = $score >= 80 ? '#46b450' : ( $score >= 50 ? '#d97706' : '#cc1818' );
-		$score_label = $score >= 80
-			? __( 'Strong', 'aeo-pugmill' )
-			: ( $score >= 50 ? __( 'Developing', 'aeo-pugmill' ) : __( 'Needs Work', 'aeo-pugmill' ) );
-
-		/**
-		 * Render one coverage bar row.
-		 *
-		 * @param string $label   Human label.
-		 * @param int    $pct     Percentage filled (0–100).
-		 * @param int    $count   Posts with this field set.
-		 * @param int    $total   Total published posts.
-		 */
-		$coverage_row = function( $label, $pct, $count, $total ) {
-			$bar_color = $pct >= 70 ? '#7c3aed' : ( $pct >= 40 ? '#d97706' : '#cc1818' );
-			?>
-			<div style="margin:10px 0;">
-				<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
-					<span style="font-size:12px; color:#374151;"><?php echo esc_html( $label ); ?></span>
-					<span style="font-size:12px; color:#6b7280;"><?php echo esc_html( $count . '/' . $total . ' (' . $pct . '%)' ); ?></span>
-				</div>
-				<div style="height:6px; background:#e5e7eb; border-radius:9999px; overflow:hidden;">
-					<div style="height:100%; width:<?php echo esc_attr( $pct ); ?>%; background:<?php echo esc_attr( $bar_color ); ?>; border-radius:9999px;"></div>
-				</div>
-			</div>
-			<?php
-		};
-		?>
-
-		<div style="background:#faf7ff; border:1px solid #d4c8f0; border-radius:8px; padding:20px 24px; margin:24px 0 0;">
-			<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;">
-				<div>
-					<h3 style="margin:0 0 4px; font-size:14px; font-weight:600; color:#1d2327;">
-						<?php esc_html_e( 'llms.txt Quality Score', 'aeo-pugmill' ); ?>
-					</h3>
-					<p style="margin:0; font-size:12px; color:#6b7280;">
-						<?php
-						printf(
-							/* translators: %d: number of posts analyzed */
-							esc_html__( 'Based on %d published posts. Higher scores mean richer content for AI crawlers.', 'aeo-pugmill' ),
-							(int) $total
-						);
-						?>
-					</p>
-				</div>
-				<div style="text-align:right; flex-shrink:0;">
-					<span style="font-size:28px; font-weight:700; color:<?php echo esc_attr( $score_color ); ?>; line-height:1;"><?php echo (int) $score; ?></span>
-					<span style="font-size:14px; color:#9ca3af;">/100</span>
-					<p style="margin:2px 0 0; font-size:11px; font-weight:600; color:<?php echo esc_attr( $score_color ); ?>; text-transform:uppercase; letter-spacing:.05em;">
-						<?php echo esc_html( $score_label ); ?>
-					</p>
-				</div>
-			</div>
-
-			<div style="margin-top:16px; padding-top:16px; border-top:1px solid #e8e0f7; display:grid; grid-template-columns:1fr 1fr 3fr; gap:0 24px;">
-				<div>
-					<p style="font-size:11px; font-weight:700; color:#7c3aed; text-transform:uppercase; letter-spacing:.06em; margin:0 0 8px;">
-						<?php esc_html_e( 'Site Level', 'aeo-pugmill' ); ?>
-					</p>
-					<p style="font-size:12px; margin:4px 0; color:#374151;">
-						<?php echo $has_site_summary ? '✓' : '✗'; ?>
-						<?php esc_html_e( 'Site summary', 'aeo-pugmill' ); ?>
-					</p>
-					<p style="font-size:12px; margin:4px 0; color:#374151;">
-						<?php echo $has_org_name ? '✓' : '✗'; ?>
-						<?php esc_html_e( 'Organization name', 'aeo-pugmill' ); ?>
-					</p>
-				</div>
-				<div>
-					<p style="font-size:11px; font-weight:700; color:#7c3aed; text-transform:uppercase; letter-spacing:.06em; margin:0 0 8px;">
-						<?php esc_html_e( 'How this is scored', 'aeo-pugmill' ); ?>
-					</p>
-					<ul style="margin:0; padding:0; list-style:none; font-size:11px; color:#6b7280;">
-						<li style="padding:2px 0;"><?php esc_html_e( 'Site summary — 20 pts', 'aeo-pugmill' ); ?></li>
-						<li style="padding:2px 0;"><?php esc_html_e( 'Post summaries — up to 30 pts', 'aeo-pugmill' ); ?></li>
-						<li style="padding:2px 0;"><?php esc_html_e( 'Organization name — 5 pts', 'aeo-pugmill' ); ?></li>
-						<li style="padding:2px 0;"><?php esc_html_e( 'Q&A pairs — up to 20 pts', 'aeo-pugmill' ); ?></li>
-						<li style="padding:2px 0;"><?php esc_html_e( 'Keywords — up to 15 pts', 'aeo-pugmill' ); ?></li>
-						<li style="padding:2px 0;"><?php esc_html_e( 'Entities — up to 10 pts', 'aeo-pugmill' ); ?></li>
-					</ul>
-				</div>
-				<div>
-					<p style="font-size:11px; font-weight:700; color:#7c3aed; text-transform:uppercase; letter-spacing:.06em; margin:0 0 6px;">
-						<?php esc_html_e( 'Post Coverage', 'aeo-pugmill' ); ?>
-					</p>
-					<?php if ( $total > 0 ) : ?>
-					<?php $coverage_row( __( 'Summaries', 'aeo-pugmill' ),  $summary_pct,  $with_summary,  $total ); ?>
-					<?php $coverage_row( __( 'Q&A pairs', 'aeo-pugmill' ),  $qa_pct,       $with_qa,       $total ); ?>
-					<?php $coverage_row( __( 'Keywords',  'aeo-pugmill' ),  $keywords_pct, $with_keywords, $total ); ?>
-					<?php $coverage_row( __( 'Entities',  'aeo-pugmill' ),  $entities_pct, $with_entities, $total ); ?>
-					<?php else : ?>
-					<p style="font-size:12px; color:#9ca3af;"><?php esc_html_e( 'No published posts yet.', 'aeo-pugmill' ); ?></p>
-					<?php endif; ?>
-				</div>
-			</div>
-
-			<div style="margin-top:16px; padding-top:16px; border-top:1px solid #e8e0f7;">
-				<p style="font-size:12px; color:#6b7280; margin:0 0 12px; line-height:1.5;">
-					<?php esc_html_e( 'AI answer engines read /llms.txt to understand your site. Richer metadata means more accurate AI-generated answers and summaries that attribute content back to you.', 'aeo-pugmill' ); ?>
-				</p>
-				<?php if ( $ai_available ) : ?>
-				<button id="aeopugmill-improve-llms-btn" type="button"
-					data-score="<?php echo esc_attr( (int) $score ); ?>"
-					data-total="<?php echo esc_attr( (int) $total ); ?>"
-					data-has-summary="<?php echo esc_attr( $has_site_summary ? '1' : '0' ); ?>"
-					data-has-org="<?php echo esc_attr( (int) $has_org_name ? '1' : '0' ); ?>"
-					data-summary-pct="<?php echo esc_attr( (int) $summary_pct ); ?>"
-					data-qa-pct="<?php echo esc_attr( (int) $qa_pct ); ?>"
-					data-keywords-pct="<?php echo esc_attr( (int) $keywords_pct ); ?>"
-					data-entities-pct="<?php echo esc_attr( (int) $entities_pct ); ?>"
-					style="display:inline-flex; align-items:center; gap:6px; padding:7px 16px; font-size:12px; font-weight:600; background:#7c3aed; color:#fff; border:none; border-radius:4px; cursor:pointer; white-space:nowrap;">
-					✨ <?php esc_html_e( 'Get AI Improvement Tips', 'aeo-pugmill' ); ?>
-				</button>
-				<?php else : ?>
-				<button type="button" disabled
-					style="display:inline-flex; align-items:center; gap:6px; padding:7px 16px; font-size:12px; font-weight:600;
-					       background:#e5e7eb; color:#9ca3af; border:none; border-radius:4px; cursor:not-allowed; white-space:nowrap;">
-					✨ <?php esc_html_e( 'Get AI Improvement Tips', 'aeo-pugmill' ); ?>
-					<span style="font-size:9px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; background:#f3e8ff; color:#7c3aed; padding:1px 6px; border-radius:3px; line-height:1.4;">AI</span>
-				</button>
-				<?php endif; ?>
-			</div>
-		</div>
-
-		<?php if ( $ai_available ) : ?>
-		<div id="aeopugmill-improve-llms-output" style="display:none; margin-top:12px; padding:16px 20px; background:#f9f6ff; border:1px solid #d4c8f0; border-radius:8px;">
-			<p style="font-size:11px; font-weight:700; color:#7c3aed; text-transform:uppercase; letter-spacing:.06em; margin:0 0 10px;">
-				<?php esc_html_e( 'AI Improvement Tips', 'aeo-pugmill' ); ?>
-			</p>
-			<div id="aeopugmill-improve-llms-text" style="font-size:13px; color:#1d2327; line-height:1.6;"></div>
-		</div>
-		<script>
-		(function() {
-			var btn    = document.getElementById( 'aeopugmill-improve-llms-btn' );
-			var output = document.getElementById( 'aeopugmill-improve-llms-output' );
-			var text   = document.getElementById( 'aeopugmill-improve-llms-text' );
-			if ( ! btn || ! output || ! text ) { return; }
-
-			btn.addEventListener( 'click', function() {
-				btn.disabled  = true;
-				btn.classList.add( 'aeopugmill-loading' );
-				btn.innerHTML = '<?php echo esc_js( __( 'Analyzing…', 'aeo-pugmill' ) ); ?>';
-				output.style.display = 'block';
-				text.innerHTML = '<span style="color:#9ca3af;font-size:13px;"><?php echo esc_js( __( 'Asking AI to review your score…', 'aeo-pugmill' ) ); ?></span>';
-
-				var body = new URLSearchParams( {
-					action:       'aeopugmill_improve_llms_score',
-					nonce:        <?php echo wp_json_encode( wp_create_nonce( 'aeopugmill_improve_llms_score' ) ); ?>,
-					score:        btn.dataset.score,
-					total:        btn.dataset.total,
-					has_summary:  btn.dataset.hasSummary,
-					has_org:      btn.dataset.hasOrg,
-					summary_pct:  btn.dataset.summaryPct,
-					qa_pct:       btn.dataset.qaPct,
-					keywords_pct: btn.dataset.keywordsPct,
-					entities_pct: btn.dataset.entitiesPct,
-				} );
-
-				fetch( <?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>, {
-					method:      'POST',
-					credentials: 'same-origin',
-					headers:     { 'Content-Type': 'application/x-www-form-urlencoded' },
-					body:        body.toString(),
-				} )
-				.then( function( r ) { return r.json(); } )
-				.then( function( data ) {
-					if ( data.success && data.data && data.data.text ) {
-						var tips = data.data.text.split( /\n\n+/ ).filter( Boolean );
-						text.innerHTML = tips.map( function( t, i ) {
-							return '<p style="margin:' + ( i === 0 ? '0' : '10px' ) + ' 0 0; font-size:13px; color:#1d2327; line-height:1.6;"><strong>' + ( i + 1 ) + '.</strong> ' + t.trim().replace( /</g, '&lt;' ).replace( />/g, '&gt;' ) + '</p>';
-						} ).join( '' );
-					} else {
-						text.innerHTML = '<span style="color:#dc3232;font-size:13px;">' + ( ( data.data && data.data.message ) || '<?php echo esc_js( __( 'Something went wrong. Please try again.', 'aeo-pugmill' ) ); ?>' ) + '</span>';
-					}
-				} )
-				.catch( function() {
-					text.innerHTML = '<span style="color:#dc3232;font-size:13px;"><?php echo esc_js( __( 'Request failed. Please try again.', 'aeo-pugmill' ) ); ?></span>';
-				} )
-				.finally( function() {
-					btn.disabled  = false;
-					btn.classList.remove( 'aeopugmill-loading' );
-					btn.innerHTML = '✨ <?php echo esc_js( __( 'Get AI Improvement Tips', 'aeo-pugmill' ) ); ?>';
-				} );
-			} );
-		}());
-		</script>
-		<?php endif; ?>
-
 		<?php elseif ( 'compatibility' === $active_tab ) : ?>
 		<!-- ════════════════════════════════════════════════════════════
 		     COMPATIBILITY TAB — AEO-centric layout
@@ -2937,6 +2588,7 @@ function aeopugmill_render_settings_page() {
 			<strong style="font-size:13px;">⚠ <?php esc_html_e( 'SEO Plugin Detected', 'aeo-pugmill' ); ?></strong><br>
 			<span style="color:#555; font-size:13px;">
 			<?php printf(
+				/* translators: %s: active SEO plugin name */
 				esc_html__( '%s is active. AEO Pugmill focuses on AEO — the AI layer that SEO plugins don\'t cover. Review the settings below to avoid duplicate output.', 'aeo-pugmill' ),
 				esc_html( aeopugmill_seo_plugin_names() )
 			); ?>
@@ -2963,6 +2615,7 @@ function aeopugmill_render_settings_page() {
 		<p style="<?php echo esc_attr( $p_style ); ?> margin-top:0;">
 			<?php if ( $has_seo_plugin ) : ?>
 			<?php printf(
+				/* translators: %s: active SEO plugin name */
 				esc_html__( 'The outputs below are also generated by %s. Disable AEO Pugmill\'s versions to avoid duplicate tags in your page source. Your AEO content is always saved — only the &lt;head&gt; output changes.', 'aeo-pugmill' ),
 				esc_html( aeopugmill_seo_plugin_names() )
 			); ?>
@@ -3069,6 +2722,7 @@ function aeopugmill_render_settings_page() {
 		<?php if ( $has_seo_plugin ) : ?>
 		<div style="margin-top:14px; padding:10px 14px; background:#f0faf0; border:1px solid #c3e6c3; border-radius:4px; font-size:12px; color:#1e6e2e;">
 			&#128161; <?php printf(
+				/* translators: %s: active SEO plugin name */
 				esc_html__( 'Recommended: Disable Meta Description, Open Graph Tags, Twitter Cards, Article JSON-LD, and Breadcrumb Schema — let %s handle them. AEO Pugmill will still output its unique AEO additions (FAQPage, entity graph, citations) alongside it.', 'aeo-pugmill' ),
 				esc_html( aeopugmill_seo_plugin_names() )
 			); ?>
@@ -3175,8 +2829,9 @@ function aeopugmill_render_settings_page() {
 					<?php else : ?>
 					<span style="font-weight:600; font-size:13px; color:#333;">
 						<?php printf(
+							/* translators: %d: number of sitemap conflicts detected */
 							esc_html( _n( '%d conflict detected', '%d conflicts detected', count( $compat['sitemap_conflicts'] ), 'aeo-pugmill' ) ),
-							count( $compat['sitemap_conflicts'] )
+							(int) count( $compat['sitemap_conflicts'] )
 						); ?>
 					</span>
 					<?php endif; ?>
@@ -3215,8 +2870,9 @@ function aeopugmill_render_settings_page() {
 					<?php else : ?>
 					<span style="font-weight:600; font-size:13px; color:#333;">
 						<?php printf(
+							/* translators: %d: number of llms.txt conflicts detected */
 							esc_html( _n( '%d conflict detected', '%d conflicts detected', count( $compat['llms_txt_conflicts'] ), 'aeo-pugmill' ) ),
-							count( $compat['llms_txt_conflicts'] )
+							(int) count( $compat['llms_txt_conflicts'] )
 						); ?>
 					</span>
 					<?php endif; ?>
@@ -3278,7 +2934,8 @@ function aeopugmill_render_settings_page() {
 				><?php echo esc_textarea( get_option( 'aeopugmill_robots_txt_custom', '' ) ); ?></textarea>
 				<p class="description" style="margin-top:6px;">
 					<?php printf(
-						wp_kses( __( 'Live robots.txt: <a href="%s" target="_blank">%s</a>', 'aeo-pugmill' ), array( 'a' => array( 'href' => array(), 'target' => array() ) ) ),
+						/* translators: 1: URL of robots.txt, 2: display text for robots.txt link */
+						wp_kses( __( 'Live robots.txt: <a href="%1$s" target="_blank">%2$s</a>', 'aeo-pugmill' ), array( 'a' => array( 'href' => array(), 'target' => array() ) ) ),
 						esc_url( home_url( '/robots.txt' ) ),
 						esc_html( home_url( '/robots.txt' ) )
 					); ?>
@@ -3322,7 +2979,8 @@ function aeopugmill_render_settings_page() {
 			<strong><?php esc_html_e( '⚠ AI crawlers blocked in robots.txt', 'aeo-pugmill' ); ?></strong><br>
 			<span style="color:#555; font-size:13px;">
 			<?php printf(
-				esc_html__( 'The following AI crawlers are explicitly blocked: %s. Remove or adjust these Disallow rules to improve AEO discoverability.', 'aeo-pugmill' ),
+				/* translators: %s: comma-separated list of blocked AI crawler names (e.g. "GPTBot, ClaudeBot") */
+				wp_kses( __( 'The following AI crawlers are explicitly blocked: %s. Remove or adjust these Disallow rules to improve AEO discoverability.', 'aeo-pugmill' ), array( 'strong' => array() ) ),
 				'<strong>' . esc_html( implode( ', ', $compat['robots']['blocked_bots'] ) ) . '</strong>'
 			); ?>
 			</span>
@@ -3377,7 +3035,7 @@ function aeopugmill_render_settings_page() {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$orderby = isset( $_GET['orderby'] ) && 'score' === $_GET['orderby'] ? 'score' : 'date';
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$order   = isset( $_GET['order'] ) && 'asc' === strtolower( $_GET['order'] ) ? 'ASC' : 'DESC';
+		$order = isset( $_GET['order'] ) && 'asc' === strtolower( sanitize_key( wp_unslash( $_GET['order'] ) ) ) ? 'ASC' : 'DESC';
 
 		// ── Post type filter ──────────────────────────────────────────────────────
 		global $wpdb;
@@ -3415,26 +3073,30 @@ function aeopugmill_render_settings_page() {
 		};
 
 		// ── Count query ───────────────────────────────────────────────────────────
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared
+		// $pt_in is built from get_post_types() names mapped through esc_sql(); safe for interpolation.
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$total_posts = (int) $wpdb->get_var(
 			"SELECT COUNT( DISTINCT p.ID )
 			 FROM {$wpdb->posts} p
 			 WHERE p.post_status = 'publish'
 			   AND p.post_type IN ('{$pt_in}')"
 		);
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 		// ── Main query ────────────────────────────────────────────────────────────
-		// Only fetch what's needed for display. The stored score is used for
-		// ORDER BY only — scores are never rendered from this value. Every row
-		// always shows a placeholder on initial render; AJAX calculates and
-		// replaces all scores fresh on page load (same logic as the post editor
-		// sidebar), so stale stored values never appear in the UI.
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared
+		// Fetches the stored AEO score alongside post data. Scores are written to
+		// post meta on every save_post (via aeo-meta.php). Rows with no stored score
+		// (posts never saved since the plugin was installed) render a "—" placeholder;
+		// the user can click ↻ Recalc or visit the post editor to generate a score.
+		// $pt_in uses esc_sql(); $order_clause is built from safelisted 'ASC'/'DESC' only.
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$audit_rows = $wpdb->get_results( $wpdb->prepare(
 			"SELECT p.ID, p.post_title, p.post_type,
-			        ts.meta_value AS total_score_raw
+			        ts.meta_value  AS total_score_raw,
+			        aeo.meta_value AS aeo_raw
 			 FROM {$wpdb->posts} p
-			 LEFT JOIN {$wpdb->postmeta} ts ON ts.post_id = p.ID AND ts.meta_key = '_aeopugmill_score'
+			 LEFT JOIN {$wpdb->postmeta} ts  ON ts.post_id  = p.ID AND ts.meta_key  = '_aeopugmill_score'
+			 LEFT JOIN {$wpdb->postmeta} aeo ON aeo.post_id = p.ID AND aeo.meta_key = '_aeopugmill_aeo'
 			 WHERE p.post_status = 'publish'
 			   AND p.post_type IN ('{$pt_in}')
 			 ORDER BY {$order_clause}
@@ -3442,6 +3104,7 @@ function aeopugmill_render_settings_page() {
 			$per_page,
 			$offset
 		) );
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 		$total_pages = (int) ceil( $total_posts / $per_page );
 
@@ -3455,6 +3118,7 @@ function aeopugmill_render_settings_page() {
 			<div style="background:#faf5ff; border:1px solid #e9d5ff; border-radius:6px; padding:12px 16px; margin-bottom:20px; font-size:13px; color:#6b21a8;">
 				✨ <strong><?php esc_html_e( 'Generate AEO is a Pro feature.', 'aeo-pugmill' ); ?></strong>
 				<?php printf(
+					/* translators: %s: URL to the pricing/upgrade page */
 					wp_kses( __( '<a href="%s" target="_blank">Upgrade to AEO Pugmill Pro</a> to generate Summary, Q&amp;A, Entities and Keywords for any post without leaving this page.', 'aeo-pugmill' ), array( 'a' => array( 'href' => array(), 'target' => array() ) ) ),
 					esc_url( 'https://aeopugmill.com/pricing' )
 				); ?>
@@ -3486,8 +3150,6 @@ function aeopugmill_render_settings_page() {
 			</div>
 			<?php endif; ?>
 
-			<div id="pugmill-page-score-status" style="font-size:12px; color:#6b7280; margin-bottom:8px; min-height:18px;"></div>
-
 			<?php if ( empty( $audit_rows ) ) : ?>
 				<p style="color:#666;"><?php esc_html_e( 'No published posts found.', 'aeo-pugmill' ); ?></p>
 			<?php else : ?>
@@ -3513,8 +3175,41 @@ function aeopugmill_render_settings_page() {
 					</tr>
 				</thead>
 				<tbody>
-				<?php foreach ( $audit_rows as $row ) :
+				<?php
+				// Derive badge colour from stored score — mirrors health.php thresholds exactly.
+				$score_color = function( $n ) {
+					if ( $n >= 90 ) return '#46b450';
+					if ( $n >= 70 ) return '#00a0d2';
+					if ( $n >= 40 ) return '#ffb900';
+					return '#dc3232';
+				};
+				foreach ( $audit_rows as $row ) :
 					$edit_url = get_edit_post_link( $row->ID );
+					$s_raw    = $row->total_score_raw;
+					$s_val    = ( null !== $s_raw && '' !== $s_raw ) ? (int) $s_raw : null;
+					$s_color  = null !== $s_val ? $score_color( $s_val ) : null;
+
+					// Derive missing AEO fields from stored meta — no extra query needed.
+					$aeo_defaults = array( 'summary' => '', 'questions' => array(), 'entities' => array(), 'keywords' => array() );
+					$aeo_decoded  = ! empty( $row->aeo_raw ) ? json_decode( $row->aeo_raw, true ) : null;
+					$aeo_data     = ( is_array( $aeo_decoded ) ) ? wp_parse_args( $aeo_decoded, $aeo_defaults ) : $aeo_defaults;
+
+					$missing_fields = array();
+					if ( empty( trim( $aeo_data['summary'] ) ) ) {
+						$missing_fields[] = 'Summary';
+					}
+					$qa_count = count( array_filter( $aeo_data['questions'], function( $q ) { return ! empty( $q['q'] ) && ! empty( $q['a'] ); } ) );
+					if ( $qa_count < 1 ) {
+						$missing_fields[] = 'Q&amp;A';
+					}
+					$entity_count = count( array_filter( $aeo_data['entities'], function( $e ) { return ! empty( $e['name'] ); } ) );
+					if ( $entity_count < 1 ) {
+						$missing_fields[] = 'Entities';
+					}
+					$kw_list = array_values( array_filter( $aeo_data['keywords'], 'strlen' ) );
+					if ( count( $kw_list ) < 5 ) {
+						$missing_fields[] = 'Keywords';
+					}
 				?>
 				<tr data-post-id="<?php echo absint( $row->ID ); ?>">
 					<td>
@@ -3524,10 +3219,44 @@ function aeopugmill_render_settings_page() {
 					</td>
 					<td style="color:#666; font-size:12px;"><?php echo esc_html( $row->post_type ); ?></td>
 					<td style="text-align:center;" class="pugmill-score-cell">
-						<span class="pugmill-score-pulse" style="display:inline-block; width:36px; height:20px; border-radius:999px; background:#e5e7eb; animation:pugmill-pulse 1.4s ease-in-out infinite;"></span>
+						<?php if ( null !== $s_val ) : ?>
+							<span class="pugmill-score-pill" style="display:inline-block;padding:2px 10px;border-radius:999px;background:<?php echo esc_attr( $s_color ); ?>1a;color:<?php echo esc_attr( $s_color ); ?>;font-size:12px;font-weight:700;"><?php echo absint( $s_val ); ?></span>
+						<?php else : ?>
+							<span class="pugmill-score-null" style="color:#9ca3af;font-size:12px;" title="<?php esc_attr_e( 'Edit this post or click the refresh icon to generate a score', 'aeo-pugmill' ); ?>">—</span>
+						<?php endif; ?>
+						<button type="button"
+							class="button-link aeopugmill-audit-recalc"
+							data-post-id="<?php echo absint( $row->ID ); ?>"
+							title="<?php esc_attr_e( 'Recalculate score', 'aeo-pugmill' ); ?>"
+							style="margin-left:4px;color:#9ca3af;background:none;border:none;padding:0;cursor:pointer;vertical-align:middle;line-height:1;">
+							<span class="dashicons dashicons-update-alt" style="font-size:14px;width:14px;height:14px;margin-top:-1px;"></span>
+						</button>
 					</td>
 					<td class="pugmill-missing-cell">
-						<span class="pugmill-score-pulse" style="display:inline-block; width:120px; height:18px; border-radius:4px; background:#e5e7eb; animation:pugmill-pulse 1.4s ease-in-out infinite;"></span>
+						<?php if ( empty( $missing_fields ) ) : ?>
+							<span style="color:#46b450;font-size:12px;">&#10003; <?php esc_html_e( 'All AEO fields complete', 'aeo-pugmill' ); ?></span>
+						<?php elseif ( $can_generate_fields && ! empty( $api_key ) ) : ?>
+							<?php foreach ( $missing_fields as $mf ) : ?>
+								<button type="button" class="pugmill-field-gen" data-field="<?php echo esc_attr( $mf ); ?>"
+									style="display:inline-block;margin:2px 3px 2px 0;padding:1px 8px;border-radius:4px;background:#fee2e2;color:#b91c1c;font-size:11px;font-weight:600;border:none;cursor:pointer;"
+									title="<?php esc_attr_e( 'Click to generate', 'aeo-pugmill' ); ?>">
+									<?php echo esc_html( $mf ); ?>
+								</button>
+							<?php endforeach; ?>
+						<?php elseif ( $can_generate_fields ) : ?>
+							<?php foreach ( $missing_fields as $mf ) : ?>
+								<button type="button" disabled
+									style="display:inline-flex;align-items:center;gap:4px;margin:2px 3px 2px 0;padding:1px 8px;border-radius:4px;background:#e5e7eb;color:#9ca3af;font-size:11px;font-weight:600;border:none;cursor:not-allowed;"
+									title="<?php esc_attr_e( 'Add an AI API key in Settings to generate this field', 'aeo-pugmill' ); ?>">
+									<?php echo esc_html( $mf ); ?>
+									<span style="font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;background:#f3e8ff;color:#7c3aed;padding:1px 5px;border-radius:3px;line-height:1.4;">AI</span>
+								</button>
+							<?php endforeach; ?>
+						<?php else : ?>
+							<?php foreach ( $missing_fields as $mf ) : ?>
+								<span style="display:inline-block;margin:2px 3px 2px 0;padding:1px 8px;border-radius:4px;background:#fee2e2;color:#b91c1c;font-size:11px;font-weight:600;"><?php echo esc_html( $mf ); ?></span>
+							<?php endforeach; ?>
+						<?php endif; ?>
 					</td>
 					<td style="text-align:center;">
 						<?php if ( $is_ai_mode ) : ?>
@@ -3558,26 +3287,20 @@ function aeopugmill_render_settings_page() {
 				if ( 'score' === $orderby ) $page_base .= '&orderby=score&order=' . strtolower( $order );
 				$page_base .= '&audit_page=%#%';
 				echo '<div style="margin-top:16px;">';
-				echo paginate_links( array(
+				echo wp_kses_post( paginate_links( array(
 					'base'      => $page_base,
 					'format'    => '',
 					'current'   => $current_page,
 					'total'     => $total_pages,
 					'prev_text' => '&laquo; ' . __( 'Previous', 'aeo-pugmill' ),
 					'next_text' => __( 'Next', 'aeo-pugmill' ) . ' &raquo;',
-				) );
+				) ) );
 				echo '</div>';
 			endif; ?>
 
 			<?php endif; ?>
 		</div>
 
-		<style>
-		@keyframes pugmill-pulse {
-			0%, 100% { opacity: 1; }
-			50%       { opacity: 0.4; }
-		}
-		</style>
 		<script>
 		( function() {
 			var ajaxUrl  = <?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>;
@@ -3598,6 +3321,7 @@ function aeopugmill_render_settings_page() {
 			<?php else : ?>
 			var canGenerateFields = false;
 			<?php endif; ?>
+			var hasApiKey = <?php echo wp_json_encode( ! empty( $api_key ) ); ?>;
 
 			// ── Shared: update a row with calculated score data ─────────────────────
 			function applyScoreToRow( row, data ) {
@@ -3605,21 +3329,29 @@ function aeopugmill_render_settings_page() {
 				var missingCell = row.querySelector( '.pugmill-missing-cell' );
 				var color       = data.color;
 
-				// Score pill
+				// Score pill + recalc icon
 				if ( scoreCell ) {
-					scoreCell.innerHTML = '<span class="pugmill-score-pill" style="display:inline-block;padding:2px 10px;border-radius:999px;background:' + color + '1a;color:' + color + ';font-size:12px;font-weight:700;">' + data.score + '</span>';
+					var postId = row.dataset.postId;
+					scoreCell.innerHTML =
+						'<span class="pugmill-score-pill" style="display:inline-block;padding:2px 10px;border-radius:999px;background:' + color + '1a;color:' + color + ';font-size:12px;font-weight:700;">' + data.score + '</span>' +
+						'<button type="button" class="button-link aeopugmill-audit-recalc" data-post-id="' + postId + '" title="<?php echo esc_js( __( 'Recalculate score', 'aeo-pugmill' ) ); ?>" style="margin-left:4px;color:#9ca3af;background:none;border:none;padding:0;cursor:pointer;vertical-align:middle;line-height:1;"><span class="dashicons dashicons-update-alt" style="font-size:14px;width:14px;height:14px;margin-top:-1px;"></span></button>';
 				}
 
 				// Missing field tags
 				if ( missingCell ) {
 					if ( ! data.missing || data.missing.length === 0 ) {
 						missingCell.innerHTML = '<span style="color:#46b450;font-size:12px;">✓ <?php echo esc_js( __( 'All AEO fields complete', 'aeo-pugmill' ) ); ?></span>';
-					} else if ( canGenerateFields ) {
+					} else if ( canGenerateFields && hasApiKey ) {
 						// Clickable generate buttons for each missing field
 						missingCell.innerHTML = data.missing.map( function( f ) {
 							return '<button type="button" class="pugmill-field-gen" data-field="' + f + '" style="display:inline-block;margin:2px 3px 2px 0;padding:1px 8px;border-radius:4px;background:#fee2e2;color:#b91c1c;font-size:11px;font-weight:600;border:none;cursor:pointer;" title="<?php echo esc_js( __( 'Click to generate', 'aeo-pugmill' ) ); ?>">' + f + '</button>';
 						} ).join( '' );
 						attachFieldGenListeners( row );
+					} else if ( canGenerateFields && ! hasApiKey ) {
+						// Disabled — no API key configured
+						missingCell.innerHTML = data.missing.map( function( f ) {
+							return '<button type="button" disabled style="display:inline-flex;align-items:center;gap:4px;margin:2px 3px 2px 0;padding:1px 8px;border-radius:4px;background:#e5e7eb;color:#9ca3af;font-size:11px;font-weight:600;border:none;cursor:not-allowed;" title="<?php echo esc_js( __( 'Add an AI API key in Settings to generate this field', 'aeo-pugmill' ) ); ?>">' + f + '<span style="font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;background:#f3e8ff;color:#7c3aed;padding:1px 5px;border-radius:3px;line-height:1.4;">AI</span></button>';
+						} ).join( '' );
 					} else {
 						missingCell.innerHTML = data.missing.map( function( f ) {
 							return '<span style="display:inline-block;margin:2px 3px 2px 0;padding:1px 8px;border-radius:4px;background:#fee2e2;color:#b91c1c;font-size:11px;font-weight:600;">' + f + '</span>';
@@ -3679,17 +3411,21 @@ function aeopugmill_render_settings_page() {
 				} );
 			}
 
-			// ── 1. Recalculate scores for all visible rows on page load ────────────
-			// Mirrors the sidebar calculation — scores here always match the post editor.
-			var allRows    = Array.from( document.querySelectorAll( 'tr[data-post-id]' ) );
-			var pageStatus = document.getElementById( 'pugmill-page-score-status' );
+			// ── Per-row ↻ Recalc icon ──────────────────────────────────────────────
+			// Uses event delegation so icons re-rendered by applyScoreToRow still work.
+			document.addEventListener( 'click', function( e ) {
+				var btn = e.target.closest( '.aeopugmill-audit-recalc' );
+				if ( ! btn ) { return; }
 
-			if ( allRows.length > 0 ) {
-				var allIds = allRows.map( function( r ) { return r.dataset.postId; } );
-				if ( pageStatus ) pageStatus.textContent = '<?php echo esc_js( __( 'Calculating scores…', 'aeo-pugmill' ) ); ?>';
+				var postId = btn.dataset.postId;
+				var row    = btn.closest( 'tr' );
+				if ( ! postId || ! row ) { return; }
+
+				btn.disabled = true;
+				btn.style.opacity = '0.4';
 
 				var body = new URLSearchParams( { action: 'aeopugmill_calculate_scores', nonce: scoreNonce } );
-				allIds.forEach( function( id ) { body.append( 'post_ids[]', id ); } );
+				body.append( 'post_ids[]', postId );
 
 				fetch( ajaxUrl, {
 					method:  'POST',
@@ -3698,18 +3434,19 @@ function aeopugmill_render_settings_page() {
 				} )
 				.then( function( r ) { return r.json(); } )
 				.then( function( res ) {
-					if ( res.success ) {
-						Object.keys( res.data ).forEach( function( postId ) {
-							var row = document.querySelector( 'tr[data-post-id="' + postId + '"]' );
-							if ( row ) applyScoreToRow( row, res.data[ postId ] );
-						} );
+					if ( res.success && res.data[ postId ] ) {
+						applyScoreToRow( row, res.data[ postId ] );
+						// btn is replaced by applyScoreToRow — no need to restore
+					} else {
+						btn.disabled = false;
+						btn.style.opacity = '';
 					}
-					if ( pageStatus ) pageStatus.textContent = '';
 				} )
 				.catch( function() {
-					if ( pageStatus ) pageStatus.textContent = '';
+					btn.disabled = false;
+					btn.style.opacity = '';
 				} );
-			}
+			} );
 
 			<?php if ( $is_ai_mode ) : ?>
 			// ── 3. Per-row Generate All ─────────────────────────────────────────────
@@ -3731,12 +3468,21 @@ function aeopugmill_render_settings_page() {
 					.then( function( r ) { return r.json(); } )
 					.then( function( res ) {
 						if ( res.success ) {
-							status.textContent = '✓ Generated';
+							status.textContent = '✓ <?php echo esc_js( __( 'Generated', 'aeo-pugmill' ) ); ?>';
 							status.style.color = '#46b450';
-							// Turn missing tags green.
-							row.querySelectorAll( '.pugmill-missing-cell span, .pugmill-missing-cell button' ).forEach( function( tag ) {
-								tag.style.background = '#dcfce7';
-								tag.style.color      = '#15803d';
+							// Refresh score pill and missing-fields breakdown for this row.
+							var recalcBody = new URLSearchParams( { action: 'aeopugmill_calculate_scores', nonce: scoreNonce } );
+							recalcBody.append( 'post_ids[]', postId );
+							fetch( ajaxUrl, {
+								method:  'POST',
+								headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+								body:    recalcBody.toString(),
+							} )
+							.then( function( r ) { return r.json(); } )
+							.then( function( res2 ) {
+								if ( res2.success && res2.data[ postId ] ) {
+									applyScoreToRow( row, res2.data[ postId ] );
+								}
 							} );
 						} else {
 							status.textContent = ( res.data && res.data.message ) ? res.data.message : '<?php echo esc_js( __( 'Generation failed.', 'aeo-pugmill' ) ); ?>';
@@ -3754,6 +3500,13 @@ function aeopugmill_render_settings_page() {
 				} );
 			} );
 			<?php endif; ?>
+
+			// ── Wire up field-gen buttons rendered server-side on page load ────────
+			if ( canGenerateFields && hasApiKey ) {
+				document.querySelectorAll( 'tr[data-post-id]' ).forEach( function( row ) {
+					attachFieldGenListeners( row );
+				} );
+			}
 
 		}() );
 		</script>

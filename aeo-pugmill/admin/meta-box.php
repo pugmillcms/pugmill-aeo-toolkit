@@ -148,7 +148,7 @@ function aeopugmill_save_meta_box( $post_id ) {
 	}
 	// wp_unslash() before nonce verification — nonce is alphanumeric so slashes
 	// won't affect validity, but this is correct per WPCS for all $_POST access.
-	if ( ! wp_verify_nonce( wp_unslash( $_POST['aeopugmill_nonce'] ), 'aeopugmill_save_aeo' ) ) {
+	if ( ! wp_verify_nonce( wp_unslash( $_POST['aeopugmill_nonce'] ), 'aeopugmill_save_aeo' ) ) { // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Nonce is validated via wp_verify_nonce; sanitization would corrupt it.
 		return;
 	}
 	if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
@@ -167,8 +167,9 @@ function aeopugmill_save_meta_box( $post_id ) {
 
 	// Q&A pairs
 	$questions = array();
+	// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Array sanitized per-element inside the foreach.
 	if ( ! empty( $_POST['aeopugmill_questions'] ) && is_array( $_POST['aeopugmill_questions'] ) ) {
-		foreach ( wp_unslash( $_POST['aeopugmill_questions'] ) as $qa ) {
+		foreach ( wp_unslash( $_POST['aeopugmill_questions'] ) as $qa ) { // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 			$q = sanitize_text_field( $qa['q'] ?? '' );
 			$a = sanitize_textarea_field( $qa['a'] ?? '' );
 			if ( ! empty( $q ) && ! empty( $a ) ) {
@@ -180,8 +181,9 @@ function aeopugmill_save_meta_box( $post_id ) {
 	// Entities
 	$entities      = array();
 	$allowed_types = array( 'Thing', 'Person', 'Organization', 'Product', 'Place', 'Event', 'Technology', 'DefinedTerm' );
+	// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Array sanitized per-element inside the foreach.
 	if ( ! empty( $_POST['aeopugmill_entities'] ) && is_array( $_POST['aeopugmill_entities'] ) ) {
-		foreach ( wp_unslash( $_POST['aeopugmill_entities'] ) as $entity ) {
+		foreach ( wp_unslash( $_POST['aeopugmill_entities'] ) as $entity ) { // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 			$name = sanitize_text_field( $entity['name'] ?? '' );
 			$type = sanitize_text_field( $entity['type'] ?? 'Thing' );
 			$desc = sanitize_text_field( $entity['description'] ?? '' );

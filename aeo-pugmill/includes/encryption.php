@@ -38,7 +38,9 @@ function aeopugmill_encrypt( $plaintext ) {
 	}
 
 	if ( ! function_exists( 'openssl_encrypt' ) ) {
-		error_log( 'AEO Pugmill: OpenSSL is not available on this server. API and license keys cannot be saved securely and will not be stored.' );
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( 'AEO Pugmill: OpenSSL is not available on this server. API and license keys cannot be saved securely and will not be stored.' ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+		}
 		add_action( 'admin_notices', 'aeopugmill_notice_openssl_unavailable' );
 		return '';
 	}
@@ -48,7 +50,9 @@ function aeopugmill_encrypt( $plaintext ) {
 	$cipher = openssl_encrypt( $plaintext, 'aes-256-cbc', $key, OPENSSL_RAW_DATA, $iv );
 
 	if ( false === $cipher ) {
-		error_log( 'AEO Pugmill: Encryption failed.' );
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( 'AEO Pugmill: Encryption failed.' ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+		}
 		return $plaintext;
 	}
 
@@ -71,6 +75,7 @@ function aeopugmill_decrypt( $ciphertext ) {
 		return $ciphertext;
 	}
 
+	// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- Decoding AES-256-CBC ciphertext. Not obfuscated code.
 	$raw = base64_decode( $ciphertext, true );
 	if ( false === $raw || strlen( $raw ) < 17 ) {
 		// Not base64 — likely a legacy plaintext value; return as-is

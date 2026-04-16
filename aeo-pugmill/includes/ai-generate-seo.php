@@ -186,7 +186,7 @@ function aeopugmill_ajax_suggest_schema() {
 	}
 
 	$title   = get_the_title( $post );
-	$content = wp_strip_all_tags( apply_filters( 'the_content', $post->post_content ) );
+	$content = wp_strip_all_tags( apply_filters( 'the_content', $post->post_content ) ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Applying core WP content filter.
 	$content = html_entity_decode( $content, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
 	$content = mb_substr( $content, 0, AEOPUGMILL_MAX_AI_INPUT );
 

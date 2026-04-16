@@ -1,0 +1,39 @@
+# Files and directories excluded from the distributable plugin zip.
+# Used by build scripts and documents what never ships to end users.
+
+# macOS metadata
+.DS_Store
+
+# Node / build tooling
+node_modules/
+package.json
+package-lock.json
+vitest.config.js
+
+# Build artifacts
+build-backup/
+
+# Source maps and test files
+src/__tests__/
+src/scoring.test.js
+
+# PHP test suite
+tests/
+
+# Development documentation
+requirements.md
+
+# Redundant license file (keep license.txt, not the bare LICENSE)
+LICENSE
+
+# Empty directories
+public/
+
+# Plugin artwork — uploaded to SVN assets/ separately, not shipped inside the plugin zip
+assets/
+
+# Self-hosted update checker — wporg version uses native WP update infra
+includes/update-checker.php
+
+# This file itself
+.distignore

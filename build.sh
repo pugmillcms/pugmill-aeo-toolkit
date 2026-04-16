@@ -22,12 +22,18 @@ rm -f "$ZIP_NAME"
 
 zip -r "$ZIP_NAME" "$PLUGIN_DIR" \
   --exclude "$PLUGIN_DIR/node_modules/*" \
-  --exclude "$PLUGIN_DIR/src/*" \
+  --exclude "$PLUGIN_DIR/src/__tests__/*" \
+  --exclude "$PLUGIN_DIR/src/scoring.test.js" \
   --exclude "$PLUGIN_DIR/build-backup/*" \
   --exclude "$PLUGIN_DIR/tests/*" \
   --exclude "$PLUGIN_DIR/package.json" \
   --exclude "$PLUGIN_DIR/package-lock.json" \
   --exclude "$PLUGIN_DIR/requirements.md" \
+  --exclude "$PLUGIN_DIR/LICENSE" \
+  --exclude "$PLUGIN_DIR/assets/pugmill-logo.svg" \
+  --exclude "$PLUGIN_DIR/public" \
+  --exclude "$PLUGIN_DIR/public/*" \
+  --exclude "$PLUGIN_DIR/.distignore" \
   --exclude "$PLUGIN_DIR/.DS_Store" \
   --exclude "*/.DS_Store" \
   --exclude "$PLUGIN_DIR/vitest.config.js"

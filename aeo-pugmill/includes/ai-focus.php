@@ -59,7 +59,9 @@ add_action( 'wp_ajax_aeopugmill_swap_focus_passage', 'aeopugmill_ajax_swap_focus
 function aeopugmill_ajax_swap_focus_passage() {
 	$r = aeopugmill_ai_request_setup( 'aeopugmill_swap_focus_passage', 'Swap Focus' );
 
+	// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in aeopugmill_ai_request_setup().
 	$passage        = sanitize_textarea_field( wp_unslash( $_POST['passage']        ?? '' ) );
+	// phpcs:ignore WordPress.Security.NonceVerification.Missing
 	$recommendation = sanitize_textarea_field( wp_unslash( $_POST['recommendation'] ?? '' ) );
 
 	if ( empty( $passage ) || empty( $recommendation ) ) {

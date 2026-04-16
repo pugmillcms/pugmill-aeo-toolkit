@@ -107,7 +107,9 @@ Only suggest content that is genuinely topically relevant. Fewer than 3 suggesti
 	// Prefer draft_content (current editor state) over the saved DB version so this
 	// works correctly without requiring a save first. Falls through without validation
 	// for classic-editor posts (no block structure).
+	// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in aeopugmill_ai_request_setup().
 	$raw_blocks = ! empty( $_POST['draft_content'] )
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Nonce verified above; content sanitized downstream.
 		? wp_unslash( $_POST['draft_content'] )
 		: $r['post']->post_content;
 	$para_texts = aeopugmill_get_paragraph_block_texts( $raw_blocks );
@@ -158,6 +160,7 @@ add_action( 'wp_ajax_aeopugmill_social_draft', 'aeopugmill_ajax_social_draft' );
 
 function aeopugmill_ajax_social_draft() {
 	$r        = aeopugmill_ai_request_setup( 'aeopugmill_social_draft', 'Social Draft' );
+	// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in aeopugmill_ai_request_setup().
 	$platform = sanitize_text_field( wp_unslash( $_POST['platform'] ?? '' ) );
 
 	$allowed = array( 'linkedin', 'x', 'facebook', 'substack' );

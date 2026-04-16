@@ -157,7 +157,7 @@ function aeopugmill_build_article_node( $post_id, $post, $aeo, $seo ) {
 	if ( ! $is_page ) {
 		$article['datePublished']    = get_the_date( 'c', $post );
 		$article['mainEntityOfPage'] = array( '@type' => 'WebPage', '@id' => $permalink );
-		$article['wordCount']        = str_word_count( strip_tags( $post->post_content ) );
+		$article['wordCount']        = str_word_count( wp_strip_all_tags( $post->post_content ) );
 		$cats = get_the_category( $post_id );
 		if ( $cats ) {
 			$article['articleSection'] = $cats[0]->name;
@@ -523,7 +523,7 @@ function aeopugmill_output_singular_meta_tags() {
 	}
 
 	// Reading time estimate — surfaces in Twitter/X link previews.
-	$word_count   = str_word_count( strip_tags( $post->post_content ) );
+	$word_count   = str_word_count( wp_strip_all_tags( $post->post_content ) );
 	$reading_time = max( 1, (int) round( $word_count / 200 ) );
 	echo '<meta name="twitter:label1" content="Reading time">' . "\n";
 	echo '<meta name="twitter:data1" content="' . esc_attr( $reading_time . ' min' ) . '">' . "\n";

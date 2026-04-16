@@ -1,8 +1,8 @@
-# WP Pugmill — Product Requirements
+# AEO Pugmill — Product Requirements
 
-**Plugin slug:** wp-pugmill
-**Current version:** 1.0.0
-**readme.txt stable tag:** 1.0.0
+**Plugin slug:** aeo-pugmill
+**Current version:** 1.1.0
+**readme.txt stable tag:** 1.1.0
 **Author:** Janzen Works
 **License:** GPLv2 or later
 
@@ -10,7 +10,7 @@
 
 ## Overview
 
-WP Pugmill is a WordPress plugin for Answer Engine Optimization (AEO) — structuring content so AI answer engines like ChatGPT, Perplexity, and Gemini can discover, understand, and cite it. It ships as a single plugin with three auto-detected operating modes.
+AEO Pugmill is a WordPress plugin for Answer Engine Optimization (AEO) — structuring content so AI answer engines like ChatGPT, Perplexity, and Gemini can discover, understand, and cite it. It ships as a single plugin with three auto-detected operating modes.
 
 ---
 
@@ -20,10 +20,10 @@ WP Pugmill is a WordPress plugin for Answer Engine Optimization (AEO) — struct
 Full manual AEO toolkit. No account or API key required.
 
 ### AI Connector (BYOK)
-User supplies their own API key (Anthropic Claude, OpenAI GPT-4o, or Google Gemini). Unlocks all AI generation features. Requires a valid Lemon Squeezy license key from wppugmill.com.
+User supplies their own API key (Anthropic Claude, OpenAI GPT-4o, or Google Gemini). Unlocks all AI generation features. Requires a valid Lemon Squeezy license key from aeopugmill.com.
 
 ### Pro *(planned)*
-AI generation powered by WP Pugmill token infrastructure — no API key needed. Includes bulk generation, site-wide AEO dashboard, author voice training. License key auto-activates.
+AI generation powered by AEO Pugmill token infrastructure — no API key needed. Includes bulk generation, site-wide AEO dashboard, author voice training. License key auto-activates.
 
 ---
 
@@ -35,12 +35,12 @@ Available in all modes. Renders as a `PluginDocumentSettingPanel` in the Gutenbe
 
 | Field | Meta key | Description |
 |---|---|---|
-| AI Summary | `_wppugmill_aeo` → `summary` | 2–3 sentence AI-optimized summary for AI crawlers |
-| Q&A Pairs | `_wppugmill_aeo` → `questions` | Array of `{q, a}` objects; generates FAQPage JSON-LD |
-| Named Entities | `_wppugmill_aeo` → `entities` | Array of `{name, type, description, same_as}` objects. `same_as` is optional; accepts Wikipedia/Wikidata URLs only (server-validated). |
-| Keywords | `_wppugmill_aeo` → `keywords` | Array of strings (5–15 terms) |
+| AI Summary | `_aeopugmill_aeo` → `summary` | 2–3 sentence AI-optimized summary for AI crawlers |
+| Q&A Pairs | `_aeopugmill_aeo` → `questions` | Array of `{q, a}` objects; generates FAQPage JSON-LD |
+| Named Entities | `_aeopugmill_aeo` → `entities` | Array of `{name, type, description, same_as}` objects. `same_as` is optional; accepts Wikipedia/Wikidata URLs only (server-validated). |
+| Keywords | `_aeopugmill_aeo` → `keywords` | Array of strings (5–15 terms) |
 
-All AEO data is stored as a single JSON blob in post meta key `_wppugmill_aeo` (via `wppugmill_save_aeo()` / `wppugmill_get_aeo()` in `includes/aeo-meta.php`).
+All AEO data is stored as a single JSON blob in post meta key `_aeopugmill_aeo` (via `aeopugmill_save_aeo()` / `aeopugmill_get_aeo()` in `includes/aeo-meta.php`).
 
 Entity `type` values (maps to schema.org types in JSON-LD output):
 
@@ -63,7 +63,7 @@ Entity `type` values (maps to schema.org types in JSON-LD output):
 
 ### 2. On-Page SEO
 
-Available in all modes. All fields stored as JSON in post meta key `_wppugmill_seo`.
+Available in all modes. All fields stored as JSON in post meta key `_aeopugmill_seo`.
 
 SEO meta shape (`SEO_DEFAULTS` in `src/hooks.js`):
 ```
@@ -88,10 +88,10 @@ Available in all modes. Injected server-side — no frontend JavaScript. All out
 
 **Singular posts (BlogPosting):**
 - `headline`, `url`, `datePublished`, `dateModified`, `wordCount`, `articleSection`
-- `description` — cascade: `_wppugmill_seo.meta_desc` → `_wppugmill_aeo.summary` → excerpt
+- `description` — cascade: `_aeopugmill_seo.meta_desc` → `_aeopugmill_aeo.summary` → excerpt
 - `image` — `ImageObject` with `width`/`height` from attachment metadata
-- `publisher` — `Organization` or configured `wppugmill_org_type` with logo `ImageObject`
-- `author` — `Person` with `sameAs` array from `wppugmill_author_same_as` option
+- `publisher` — `Organization` or configured `aeopugmill_org_type` with logo `ImageObject`
+- `author` — `Person` with `sameAs` array from `aeopugmill_author_same_as` option
 - `mentions` — array of typed entity objects (see entity type map above)
 - `keywords` — comma-joined keyword string
 
@@ -109,7 +109,7 @@ Available in all modes. Injected server-side — no frontend JavaScript. All out
 - `VideoObject` — name, description, uploadDate, duration, thumbnailUrl, embedUrl
 - `Review` — item type (Book, Movie, Product, Software, Course, Game, Music, Restaurant), item name, author/creator, star rating, review body. Outputs `Review` + `Rating` JSON-LD node eligible for Google rich snippets.
 
-Extended schema data stored in `_wppugmill_schema` meta key (JSON). Shape:
+Extended schema data stored in `_aeopugmill_schema` meta key (JSON). Shape:
 ```json
 {
   "type": "HowTo",
@@ -122,9 +122,9 @@ Extended schema data stored in `_wppugmill_schema` meta key (JSON). Shape:
 }
 ```
 
-**Home page / front page:** `WebSite` (with `SearchAction` potentialAction) + `Organization` (when `wppugmill_org_name` is set).
+**Home page / front page:** `WebSite` (with `SearchAction` potentialAction) + `Organization` (when `aeopugmill_org_name` is set).
 
-JSON-LD can be disabled site-wide via `wppugmill_disable_json_ld` option (compatibility setting).
+JSON-LD can be disabled site-wide via `aeopugmill_disable_json_ld` option (compatibility setting).
 
 ---
 
@@ -134,9 +134,9 @@ Available in all modes. Implementation: `includes/llms-txt.php`.
 
 - `/llms.txt` — site overview, top posts, AEO summary excerpts (1-hour transient cache)
 - `/llms-full.txt` — full content, paginated (1-hour transient cache)
-- Per-post `?wppugmill_llm=1` markdown endpoint for AI crawlers
+- Per-post `?aeopugmill_llm=1` markdown endpoint for AI crawlers
 - `<link rel="alternate" type="text/markdown">` header on every post ("Invisible Handshake")
-- llms.txt can be disabled site-wide via `wppugmill_disable_llms_txt` option
+- llms.txt can be disabled site-wide via `aeopugmill_disable_llms_txt` option
 
 ---
 
@@ -152,26 +152,40 @@ Available in all modes. Implementation: `includes/sitemap.php`.
 
 ### 6. robots.txt Customization
 
-Available in all modes. Settings page allows adding custom directives appended to WordPress-generated robots.txt. Stored in `wppugmill_robots_txt_custom` option.
+Available in all modes. Settings page allows adding custom directives appended to WordPress-generated robots.txt. Stored in `aeopugmill_robots_txt_custom` option.
 
 ---
 
 ### 7. Bot Analytics
 
-Available in all modes. Implementation: `includes/bot-analytics.php`, `admin/bot-analytics-page.php`.
+Available in all modes. Implementation: `includes/bot-analytics.php`, admin UI lives in `admin/settings-page.php` under the **Bot Analytics** tab.
 
-- Tracks AI crawler visits: GPTBot, ClaudeBot, PerplexityBot, Googlebot, and others
-- Per-bot visit counts and trend data stored in a custom DB table (`wppugmill_bot_analytics`)
-- Table created on plugin activation; daily prune scheduled via WP-Cron (`wppugmill_daily_prune`)
-- Dedicated Bot Analytics admin page
-- 7-box symmetric dashboard grid: one summary card (30-day totals + AI%/Search% split) followed by six per-bot cards per row
+**Schema (v4 — opaque bot names):**
+- Single aggregate table `{prefix}aeopugmill_bot_daily` with PK `(day, bot_name VARCHAR(64), resource_type TINYINT)` and a `(bot_name, day)` lookup index
+- One row per (day × bot × resource type); `count` upserted on every visit
+- `AEOPUGMILL_BOT_DB_VERSION = '4'` — v4 is a clean break from the old `bot_id TINYINT` schema. On upgrade the plugin DROPs the legacy `bot_daily`, `bot_recent`, and `bot_visits` tables and recreates `bot_daily` with the new shape. Historical local data is lost; the network-side aggregate is the source of truth.
+- Retention: 90 days, daily prune scheduled via WP-Cron (`aeopugmill_bot_analytics_prune`)
+- No `bot_recent` ring buffer — the Recent Visits admin table was removed in 1.1.0
+
+**Capture pipeline:**
+- Single `shutdown:1` hook (`aeopugmill_capture_bot_visit`) — replaced the dual-phase `init:99` stash + `template_redirect:1` finalize pattern used in v3. At shutdown `$wp_query` is fully populated so `is_singular()` works and resource type 7 (AEO Post) is detected in one place.
+- `aeopugmill_detect_ai_bot()` matches the UA against `aeopugmill_bot_fingerprints()` (ordered map — more-specific needles like `Google-Extended` beat broader ones like `Googlebot`)
+- `aeopugmill_detect_unknown_bot()` catches unfingerprinted crawlers via keyword heuristics (`bot`, `spider`, `crawl`, `curl`, `wget`, `python-requests`, etc.) and rejects anything that looks like a browser (`Mozilla` + `Chrome`/`Safari`/`Firefox`)
+- `aeopugmill_normalize_bot_name()` passes canonical names through verbatim but lowercases + strips control chars + clamps unknowns to 64 chars, so `AhrefsBot` and `ahrefs.com` don't linger as separate rows after fingerprint matching
+
+**Resource types** (`aeopugmill_resource_type_labels()`):
+`0` HTML Page · `1` llms.txt · `2` llms-full.txt · `3` Post Markdown · `4` Site Summary · `5` Sitemap · `6` Robots.txt · `7` AEO Post (HTML with FAQPage / entity JSON-LD) · `8` AEO JSON-LD (standalone `.jsonld`) · `9` RSS/Atom Feed · `10` Well-Known / ads.txt / security.txt
+
+**Admin UI:**
+- Dedicated Bot Analytics tab in the plugin settings page
 - Content Reach table with network comparison arrows (↑ above average, ↓ below average)
-- Top Posts section with live post links and edit shortcuts
-- Download Data export (CSV)
+- Download Data export (daily aggregate CSV)
+- Top Posts, Recent Visits table, and Recent Visits CSV export were **removed in 1.1.0** — the network aggregate carries this signal now
 
-**Pugmill AEO Intelligence Network:**
-- Fetches anonymised per-bot, per-resource-type averages from `pugmill.dev/api/report`
-- Resource types: `html(0)`, `llms_txt(1)`, `llms_full(2)`, `post_markdown(3)`, `site_summary(4)`, `sitemap(5)`, `robots_txt(6)`
+**Pugmill AEO Intelligence Network (opt-in):**
+- Daily sender (`aeopugmill_intelligence_send`) posts an HMAC-signed payload to `aeopugmill.com/api/ingest` with `schema_ver: 4`
+- Payload shape: `{ site_id, date, plugin_version, aeo_tier, bots: { [bot_name]: { [resource_type]: count, ... } }, signals, ... }` — bot keys are the opaque captured names, **no allowlist drops and no `'Other'` collapse**. Every distinct UA-derived name is preserved end-to-end; the server's `bot_taxonomy` classifies on receipt and auto-registers unknown names with `category = 'unknown'`.
+- Fetches network averages from `aeopugmill.com/api/report`; the response includes `bot_categories`, `category_labels`, `unclassified`, and `new_crawlers` blocks (v4 shape)
 - Network ratios drive Content Reach arrows and the AI Insights Network Benchmark section
 - AI Insights report structured in five sections: Bot Activity, Traffic Trend, Network Benchmark, Content Coverage, Recommendations
 
@@ -179,7 +193,7 @@ Available in all modes. Implementation: `includes/bot-analytics.php`, `admin/bot
 
 ### 8. AEO Audit
 
-Available in all modes. Triggered from the Audit panel in the block editor sidebar. Pre-saves the post before running (so audit reads current content). Implementation: `includes/audit.php` (REST endpoint `GET /wp-json/wp-pugmill/v1/audit/{post_id}`).
+Available in all modes. Triggered from the Audit panel in the block editor sidebar. Pre-saves the post before running (so audit reads current content). Implementation: `includes/audit.php` (REST endpoint `GET /wp-json/aeo-pugmill/v1/audit/{post_id}`).
 
 **Audit checks (12 total):**
 
@@ -206,8 +220,8 @@ Notes:
 
 **AI fixes (AI Connector mode only):**
 
-- `keywords_in_content` → `wppugmill_fix_keyword_coverage` — suggests revised passage; "Apply Fix" swaps it into the editor
-- `has_headings` → `wppugmill_suggest_headings` — suggests a heading; "Insert Heading" adds it as a new Gutenberg block
+- `keywords_in_content` → `aeopugmill_fix_keyword_coverage` — suggests revised passage; "Apply Fix" swaps it into the editor
+- `has_headings` → `aeopugmill_suggest_headings` — suggests a heading; "Insert Heading" adds it as a new Gutenberg block
 - `featured_image_alt` → "Generate Alt Text" — calls vision API; saves to media library or applies to block attribute
 - All other fixable checks have a "Generate" button (calls respective individual generator AJAX action)
 
@@ -219,16 +233,16 @@ All AI generation pre-saves the post before sending content to the AI provider. 
 
 #### Generate AEO Fields (individual)
 Separate AJAX actions for each field. All available in AI Connector mode (license required):
-- `wppugmill_generate_summary` → returns `{summary}`
-- `wppugmill_generate_qa` → returns `{questions: [{q, a}]}`
-- `wppugmill_generate_entities` → returns `{entities: [{name, type, description}]}`
-- `wppugmill_generate_keywords` → returns `{keywords: [...]}`
+- `aeopugmill_generate_summary` → returns `{summary}`
+- `aeopugmill_generate_qa` → returns `{questions: [{q, a}]}`
+- `aeopugmill_generate_entities` → returns `{entities: [{name, type, description}]}`
+- `aeopugmill_generate_keywords` → returns `{keywords: [...]}`
 
 #### Generate All AEO (combined)
-`wppugmill_generate_aeo` AJAX action — one-click generation of all AEO fields in a single AI call.
+`aeopugmill_generate_aeo` AJAX action — one-click generation of all AEO fields in a single AI call.
 
 #### SEO Generate
-`wppugmill_generate_seo` AJAX action — generates SEO title and meta description.
+`aeopugmill_generate_seo` AJAX action — generates SEO title and meta description.
 
 #### Rewrite from Draft
 Rewrites post body into Answer Unit structure (Primary Question → Direct Answer → Context → Supporting Details). Populates AEO fields and replaces Gutenberg editor blocks. Auto-saves after apply.
@@ -252,23 +266,23 @@ Identifies weakest AEO passage. "Get Rewrite" generates improved version. "Swap 
 Suggests internal links from existing site content. "Insert" wraps matched passage in anchor tag. Auto-saves after each insert.
 
 #### Excerpt Generator
-`wppugmill_generate_excerpt` — generates a compelling 1–2 sentence excerpt (max 160 chars) from post title and content. Reads from current draft — no save required.
+`aeopugmill_generate_excerpt` — generates a compelling 1–2 sentence excerpt (max 160 chars) from post title and content. Reads from current draft — no save required.
 
 #### Social Media Draft
-`wppugmill_social_draft` — platform-optimised copy for LinkedIn (700 chars), X (280), Facebook (500), Substack Notes (300). Uses AEO metadata as primary signal. Hard-limit backstop trims to word boundary and appends ellipsis if AI still exceeds the limit. Reads from current draft — no save required.
+`aeopugmill_social_draft` — platform-optimised copy for LinkedIn (700 chars), X (280), Facebook (500), Substack Notes (300). Uses AEO metadata as primary signal. Hard-limit backstop trims to word boundary and appends ellipsis if AI still exceeds the limit. Reads from current draft — no save required.
 
 #### Alt Text Generation (Vision)
-`wppugmill_generate_alt_text` — generates alt text for featured or first image.
+`aeopugmill_generate_alt_text` — generates alt text for featured or first image.
 - Media library images: saves to `_wp_attachment_image_alt`
 - External images (HTTPS): URL passed directly to vision API
 - External images (HTTP): fetched server-side, base64-encoded, then sent
 - After generation: `wp.data.dispatch('core').invalidateResolution('getMedia', [id])` to bust cache
 
 #### Suggest Schema
-`wppugmill_suggest_schema` — AI analyses post content and suggests the most appropriate extended schema type with pre-filled fields. If no extended type is needed, returns a notice.
+`aeopugmill_suggest_schema` — AI analyses post content and suggests the most appropriate extended schema type with pre-filled fields. If no extended type is needed, returns a notice.
 
 #### HowTo Steps from Content
-`wppugmill_generate_howto_steps` — AI drafts step list from post content for HowTo schema.
+`aeopugmill_generate_howto_steps` — AI drafts step list from post content for HowTo schema.
 
 ---
 
@@ -276,7 +290,7 @@ Suggests internal links from existing site content. "Insert" wraps matched passa
 
 Available in AI Connector mode. Conversational assistant in the editor sidebar. Implementation: `includes/agent.php`.
 
-- REST endpoint: `POST /wp-json/wp-pugmill/v1/chat`
+- REST endpoint: `POST /wp-json/aeo-pugmill/v1/chat`
 - Request: `{ post_id: int, messages: [{role, content}, ...] }`
 - Response: `{ message: string, actions: [{id, params}, ...] }`
 - Injects live post context (AEO, SEO, health, audit) into system prompt at session start
@@ -346,14 +360,14 @@ Operations using `draft_content` (no pre-save):
 - Dev server: `npm run start`
 - Key components: `MainPanel`, `PrePublishPanel`, `SchemaBuilder`, `SeoPanel`, `AuditPanel`, `AiInput`, `ScoreDisplay`, `GooglePreview`
 - Key hooks: `useAeoMeta()`, `useSeoMeta()`, `useSchemaData()`
-- Plugin settings injected via `wp_localize_script` in `admin/editor-assets.php` as `window.wppugmill`
+- Plugin settings injected via `wp_localize_script` in `admin/editor-assets.php` as `window.aeopugmill`
 
 ### Meta Keys
 | Key | Content |
 |---|---|
-| `_wppugmill_aeo` | JSON: `{summary, questions, entities, keywords}` |
-| `_wppugmill_seo` | JSON: `{title, meta_desc, canonical, noindex, nofollow, og_title, og_desc, og_image}` |
-| `_wppugmill_schema` | JSON: `{type, howto, product, event, local_business, video}` |
+| `_aeopugmill_aeo` | JSON: `{summary, questions, entities, keywords}` |
+| `_aeopugmill_seo` | JSON: `{title, meta_desc, canonical, noindex, nofollow, og_title, og_desc, og_image}` |
+| `_aeopugmill_schema` | JSON: `{type, howto, product, event, local_business, video}` |
 
 All three registered via `register_post_meta` with `show_in_rest: true` on all public post types.
 
@@ -372,8 +386,8 @@ All three registered via `register_post_meta` with `show_in_rest: true` on all p
 | OpenAI | gpt-4o | `api.openai.com` |
 | Google | gemini-1.5-pro | `generativelanguage.googleapis.com` |
 
-- Max AI input: 8,000 characters (~2K tokens) — `WPPUGMILL_MAX_AI_INPUT`
-- Rate limit: configurable per-user per-hour (50 / 100 / 200; default 50) — `wppugmill_ai_rate_limit` option
+- Max AI input: 8,000 characters (~2K tokens) — `AEOPUGMILL_MAX_AI_INPUT`
+- Rate limit: configurable per-user per-hour (50 / 100 / 200; default 50) — `aeopugmill_ai_rate_limit` option
 - Rate limit implemented via WordPress transients keyed to user ID
 
 ### License Validation
@@ -381,9 +395,9 @@ All three registered via `register_post_meta` with `show_in_rest: true` on all p
 - License key + unique site instance ID sent on activation only
 - Free mode users make zero external connections
 
-### Auto-Updates
-- Plugin Update Checker (`lib/plugin-update-checker/`) pointing to `github.com/michaelsjanzen/wppugmill`
-- Uses release asset zip (not GitHub's auto-generated zipball) via `enableReleaseAssets()`
+### Distribution
+- Manual zip upload to WordPress sites; preparing for WordPress.org plugin directory submission
+- Build zip via `./build.sh` from the repo root — reads version from plugin header, runs `npm run build`, and packages distribution files
 
 ### Caching
 - llms.txt endpoints: 1-hour transient cache
@@ -402,7 +416,7 @@ All three registered via `register_post_meta` with `show_in_rest: true` on all p
 
 ## Non-Goals
 
-- Not a replacement for Yoast, RankMath — WP Pugmill is AEO-focused and complements existing SEO tools
+- Not a replacement for Yoast, RankMath — AEO Pugmill is AEO-focused and complements existing SEO tools
 - Does not collect or store visitor data
 - Does not modify or proxy AI provider APIs — connects directly from WP server to provider
 
@@ -414,23 +428,23 @@ All three registered via `register_post_meta` with `show_in_rest: true` on all p
 Add `citation` array to `BlogPosting` schema for external grounding.
 
 **Free tier (auto-extracted from post content, no UI):**
-- In `wppugmill_output_singular_json_ld()`: scan `$post->post_content` for external `<a href>` tags; filter to off-domain links with meaningful anchor text; build `citation` array of `{@type: 'WebPage', name, url}` objects
+- In `aeopugmill_output_singular_json_ld()`: scan `$post->post_content` for external `<a href>` tags; filter to off-domain links with meaningful anchor text; build `citation` array of `{@type: 'WebPage', name, url}` objects
 
 **AI Connector tier (manual + AI-suggested, planned):**
-- New `citations` array in `_wppugmill_aeo` meta
+- New `citations` array in `_aeopugmill_aeo` meta
 - Manual Citations panel in AEO editor
-- `wppugmill_suggest_citations` AJAX action — AI identifies factual claims and suggests Wikipedia/authoritative URIs
+- `aeopugmill_suggest_citations` AJAX action — AI identifies factual claims and suggests Wikipedia/authoritative URIs
 
 ---
 
 ## Pre-Submission Checklist (WordPress.org)
 
-- [ ] Remove `WPPUGMILL_DEV_MODE` bypass from `wppugmill_mode()` in `wp-pugmill.php` (lines 40-43)
-- [ ] Remove `define('WPPUGMILL_DEV_MODE', true)` from Local Sites `wp-config.php`
-- [ ] Confirm `WPPUGMILL_VERSION` constant matches plugin header (both should be `1.0.0`)
-- [ ] Confirm `readme.txt` stable tag matches current version (`1.0.0`)
+- [ ] Remove `AEOPUGMILL_DEV_MODE` bypass from `aeopugmill_mode()` in `aeo-pugmill.php` (lines 40-43)
+- [ ] Remove `define('AEOPUGMILL_DEV_MODE', true)` from Local Sites `wp-config.php`
+- [ ] Confirm `AEOPUGMILL_VERSION` constant matches plugin header (both should be `1.1.0`)
+- [ ] Confirm `readme.txt` stable tag matches current version (`1.1.0`)
 - [ ] Confirm build is current (`npm run build`) — `build/index.js` matches `src/`
-- [ ] Run `npm test` — all 117 tests must pass
+- [ ] Run full test suite — **250 tests must pass**: `php tests/test-plugin.php` (110), `php tests/test-encryption.php` (23), `npm test` (117)
 
 ---
 

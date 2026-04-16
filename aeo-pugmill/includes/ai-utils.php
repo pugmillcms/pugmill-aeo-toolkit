@@ -60,7 +60,9 @@ function aeopugmill_decode_ai_json( $raw, $provider ) {
 		}
 	}
 	if ( ! is_array( $decoded ) ) {
-		error_log( 'AEO Pugmill: invalid JSON from ' . $provider . ': ' . substr( $raw, 0, 200 ) );
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( 'AEO Pugmill: invalid JSON from ' . $provider . ': ' . substr( $raw, 0, 200 ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+		}
 		return new WP_Error( 'invalid_json', __( 'AI returned an unexpected response format. Please try again.', 'aeo-pugmill' ) );
 	}
 	return $decoded;

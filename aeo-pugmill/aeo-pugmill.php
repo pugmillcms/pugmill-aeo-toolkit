@@ -3,7 +3,7 @@
  * Plugin Name: AEO Pugmill
  * Plugin URI:  https://aeopugmill.com
  * Description: The AEO plugin for WordPress. Structures your content for AI answer engines — FAQPage schema, entity graph, citations, bot analytics, and llms.txt. Works alongside Yoast, RankMath, and AIOSEO.
- * Version:     1.0.7
+ * Version:     1.1.1
  * Author:      Janzen Works
  * Author URI:  https://janzenworks.com
  * License:     GPL-2.0-or-later
@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 // the full PHP generation time for bot requests.
 define( 'AEOPUGMILL_REQUEST_START', microtime( true ) );
 
-define( 'AEOPUGMILL_VERSION',         '1.0.7' );
+define( 'AEOPUGMILL_VERSION',         '1.1.1' );
 define( 'AEOPUGMILL_PLUGIN_DIR',      plugin_dir_path( __FILE__ ) );
 define( 'AEOPUGMILL_PLUGIN_URL',      plugin_dir_url( __FILE__ ) );
 define( 'AEOPUGMILL_PLUGIN_FILE',     __FILE__ );
@@ -79,6 +79,13 @@ require_once AEOPUGMILL_PLUGIN_DIR . 'includes/health.php';
 require_once AEOPUGMILL_PLUGIN_DIR . 'includes/bot-analytics.php';
 require_once AEOPUGMILL_PLUGIN_DIR . 'includes/bot-intelligence.php';
 require_once AEOPUGMILL_PLUGIN_DIR . 'includes/bulk-aeo.php';
+
+// Self-hosted update checker — checks aeopugmill.com for new versions.
+// This file is included ONLY in the direct-download distribution and is
+// removed from the wordpress.org submission.
+if ( file_exists( AEOPUGMILL_PLUGIN_DIR . 'includes/update-checker.php' ) ) {
+	require_once AEOPUGMILL_PLUGIN_DIR . 'includes/update-checker.php';
+}
 
 // Load admin UI
 if ( is_admin() ) {

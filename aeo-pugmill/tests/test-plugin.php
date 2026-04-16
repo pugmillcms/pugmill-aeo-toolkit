@@ -247,6 +247,7 @@ function aeopugmill_get_aeo( int $post_id ): array {
 require_once AEOPUGMILL_PLUGIN_DIR . 'includes/rate-limit.php';
 require_once AEOPUGMILL_PLUGIN_DIR . 'includes/ai-utils.php';
 require_once AEOPUGMILL_PLUGIN_DIR . 'includes/on-page-seo.php';
+require_once AEOPUGMILL_PLUGIN_DIR . 'includes/bot-analytics.php';
 
 // ═════════════════════════════════════════════════════════════════════════
 // TEST SUITE
@@ -604,6 +605,159 @@ assert_equal( 'invalid JSON returns default noindex', false, $seo_broken['noinde
 
 // Reset
 $GLOBALS['_mock_seo_raw'] = '';
+
+// ── 8. Bot analytics — v4 schema & pure helpers ───────────────────────────
+
+section( '8. AEOPUGMILL_BOT_DB_VERSION is v4' );
+
+assert_equal( 'BOT_DB_VERSION constant is "4"', '4', AEOPUGMILL_BOT_DB_VERSION );
+
+section( '8a. aeopugmill_normalize_bot_name — canonical names pass through' );
+
+assert_equal( 'Known bot "ChatGPT" returned verbatim',    'ChatGPT',    aeopugmill_normalize_bot_name( 'ChatGPT' ) );
+assert_equal( 'Known bot "Googlebot" returned verbatim',  'Googlebot',  aeopugmill_normalize_bot_name( 'Googlebot' ) );
+assert_equal( 'Known bot "AhrefsBot" returned verbatim',  'AhrefsBot',  aeopugmill_normalize_bot_name( 'AhrefsBot' ) );
+
+section( '8b. aeopugmill_normalize_bot_name — unknown names collapsed to lowercase' );
+
+assert_equal( 'Unknown "MysteryBot" lowercased',          'mysterybot', aeopugmill_normalize_bot_name( 'MysteryBot' ) );
+assert_equal( 'Unknown "CrawlerZ" and "crawlerz" collide on same key',
+	aeopugmill_normalize_bot_name( 'CrawlerZ' ),
+	aeopugmill_normalize_bot_name( 'crawlerz' )
+);
+assert_equal( 'Whitespace trimmed before lowercasing',    'ahrefs.com', aeopugmill_normalize_bot_name( '  ahrefs.com  ' ) );
+
+section( '8c. aeopugmill_normalize_bot_name — empty and control-char handling' );
+
+assert_equal( 'Empty string → "unknown"',                 'unknown', aeopugmill_normalize_bot_name( '' ) );
+assert_equal( 'Whitespace-only → "unknown"',              'unknown', aeopugmill_normalize_bot_name( "   \t  " ) );
+assert_equal( 'Control chars stripped from unknown',      'bot',     aeopugmill_normalize_bot_name( "bot\x00\x01" ) );
+
+section( '8d. aeopugmill_normalize_bot_name — clamp to 64 chars' );
+
+$long_name    = str_repeat( 'a', 200 );
+$normalized   = aeopugmill_normalize_bot_name( $long_name );
+assert_true( '200-char unknown name clamped to ≤ 64 chars',
+	strlen( $normalized ) <= 64
+);
+assert_equal( 'Clamped name is exactly 64 chars',          64, strlen( $normalized ) );
+
+section( '8e. aeopugmill_detect_ai_bot — canonical UA fingerprints' );
+
+assert_equal( 'GPTBot UA → "ChatGPT"',
+	'ChatGPT',
+	aeopugmill_detect_ai_bot( 'Mozilla/5.0 AppleWebKit/537.36 (compatible; GPTBot/1.0; +https://openai.com/gptbot)' )
+);
+assert_equal( 'ClaudeBot UA → "Claude"',
+	'Claude',
+	aeopugmill_detect_ai_bot( 'Mozilla/5.0 (compatible; ClaudeBot/1.0; +claudebot@anthropic.com)' )
+);
+assert_equal( 'Google-Extended beats Googlebot ordering',
+	'Gemini',
+	aeopugmill_detect_ai_bot( 'Mozilla/5.0 (compatible; Google-Extended; +http://www.google.com/bot.html)' )
+);
+assert_equal( 'Googlebot UA → "Googlebot"',
+	'Googlebot',
+	aeopugmill_detect_ai_bot( 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)' )
+);
+assert_equal( 'AhrefsBot UA → "AhrefsBot"',
+	'AhrefsBot',
+	aeopugmill_detect_ai_bot( 'Mozilla/5.0 (compatible; AhrefsBot/7.0; +http://ahrefs.com/robot/)' )
+);
+assert_equal( 'Perplexity-User UA → "Perplexity"',
+	'Perplexity',
+	aeopugmill_detect_ai_bot( 'Mozilla/5.0 (compatible; Perplexity-User/1.0; +https://perplexity.ai)' )
+);
+
+section( '8f. aeopugmill_detect_ai_bot — non-matches return false' );
+
+assert_equal( 'Empty UA → false',           false, aeopugmill_detect_ai_bot( '' ) );
+assert_equal( 'Chrome UA → false',          false, aeopugmill_detect_ai_bot( 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' ) );
+assert_equal( 'Unknown crawler → false',    false, aeopugmill_detect_ai_bot( 'Mozilla/5.0 (compatible; MysteryBot/1.0)' ) );
+
+section( '8g. aeopugmill_detect_unknown_bot — heuristic catches unfingerprinted crawlers' );
+
+assert_equal( 'curl/8.4 → "curl"',
+	'curl',
+	aeopugmill_detect_unknown_bot( 'curl/8.4.0' )
+);
+assert_equal( 'python-requests → "python-requests"',
+	'python-requests',
+	aeopugmill_detect_unknown_bot( 'python-requests/2.31.0' )
+);
+assert_equal( 'Mozilla-wrapped bot without embedded URL → inner token',
+	'MysteryBot',
+	aeopugmill_detect_unknown_bot( 'Mozilla/5.0 (compatible; MysteryBot/1.0)' )
+);
+assert_equal( 'UA with embedded URL prefers domain',
+	'example.com',
+	aeopugmill_detect_unknown_bot( 'SomeCrawler/2.0 (+https://example.com/about)' )
+);
+
+section( '8h. aeopugmill_detect_unknown_bot — browsers rejected' );
+
+assert_equal( 'Chrome desktop → false',
+	false,
+	aeopugmill_detect_unknown_bot( 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' )
+);
+assert_equal( 'Firefox → false',
+	false,
+	aeopugmill_detect_unknown_bot( 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0' )
+);
+assert_equal( 'Empty UA → false',
+	false,
+	aeopugmill_detect_unknown_bot( '' )
+);
+
+section( '8i. aeopugmill_parse_bot_name_from_ua — leading token fallback' );
+
+assert_equal( 'Leading token extracted',
+	'curl',
+	aeopugmill_parse_bot_name_from_ua( 'curl/8.4.0' )
+);
+assert_equal( 'Mozilla parenthetical → inner token',
+	'XBot',
+	aeopugmill_parse_bot_name_from_ua( 'Mozilla/5.0 (compatible; XBot/1.0)' )
+);
+assert_equal( 'Embedded URL → domain',
+	'ahrefs.com',
+	aeopugmill_parse_bot_name_from_ua( 'AhrefsBot/7.0 (+https://ahrefs.com/robot/)' )
+);
+
+section( '8j. aeopugmill_detect_resource_type — URI classification' );
+
+// detect_resource_type reads $_SERVER and $_GET directly; populate those.
+function _rt( string $uri, array $get = [] ): int {
+	$_SERVER['REQUEST_URI'] = $uri;
+	$_GET = $get;
+	return aeopugmill_detect_resource_type();
+}
+function home_url( string $path = '' ): string { return 'https://example.com' . $path; }
+
+assert_equal( 'Plain post URL → 0 (HTML)',                 0,  _rt( '/hello-world/' ) );
+assert_equal( '/llms.txt → 1',                             1,  _rt( '/llms.txt' ) );
+assert_equal( '/llms-full.txt → 2 (checked before llms.txt)', 2, _rt( '/llms-full.txt' ) );
+assert_equal( '?aeopugmill_llm=1 on post → 3 (post markdown)',
+	3,
+	_rt( '/hello-world/?aeopugmill_llm=1', [ 'aeopugmill_llm' => '1' ] )
+);
+assert_equal( '?aeopugmill_llm=1 on home → 4 (site summary)',
+	4,
+	_rt( '/?aeopugmill_llm=1', [ 'aeopugmill_llm' => '1' ] )
+);
+assert_equal( '/sitemap.xml → 5',                          5,  _rt( '/sitemap.xml' ) );
+assert_equal( '/wp-sitemap-posts-post-1.xml → 5',          5,  _rt( '/wp-sitemap-posts-post-1.xml' ) );
+assert_equal( '/robots.txt → 6',                           6,  _rt( '/robots.txt' ) );
+assert_equal( '/aeo/foo.jsonld → 8',                       8,  _rt( '/aeo/foo.jsonld' ) );
+assert_equal( '/feed/ → 9',                                9,  _rt( '/feed/' ) );
+assert_equal( '/tag/foo/feed/ → 9',                        9,  _rt( '/tag/foo/feed/' ) );
+assert_equal( '/.well-known/security.txt → 10',            10, _rt( '/.well-known/security.txt' ) );
+assert_equal( '/ads.txt → 10',                             10, _rt( '/ads.txt' ) );
+assert_equal( '/security.txt → 10',                        10, _rt( '/security.txt' ) );
+
+// Reset to avoid polluting later tests.
+$_SERVER['REQUEST_URI'] = '';
+$_GET = [];
 
 // ── Summary ───────────────────────────────────────────────────────────────
 
