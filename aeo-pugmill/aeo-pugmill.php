@@ -3,7 +3,7 @@
  * Plugin Name: AEO Pugmill
  * Plugin URI:  https://aeopugmill.com
  * Description: The AEO plugin for WordPress. Structures your content for AI answer engines — FAQPage schema, entity graph, citations, bot analytics, and llms.txt. Works alongside Yoast, RankMath, and AIOSEO.
- * Version:     1.1.1
+ * Version:     1.1.2
  * Author:      Janzen Works
  * Author URI:  https://janzenworks.com
  * License:     GPL-2.0-or-later
@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 // the full PHP generation time for bot requests.
 define( 'AEOPUGMILL_REQUEST_START', microtime( true ) );
 
-define( 'AEOPUGMILL_VERSION',         '1.1.1' );
+define( 'AEOPUGMILL_VERSION',         '1.1.2' );
 define( 'AEOPUGMILL_PLUGIN_DIR',      plugin_dir_path( __FILE__ ) );
 define( 'AEOPUGMILL_PLUGIN_URL',      plugin_dir_url( __FILE__ ) );
 define( 'AEOPUGMILL_PLUGIN_FILE',     __FILE__ );
@@ -71,6 +71,7 @@ require_once AEOPUGMILL_PLUGIN_DIR . 'includes/aeo-meta.php';
 require_once AEOPUGMILL_PLUGIN_DIR . 'includes/on-page-seo.php';
 require_once AEOPUGMILL_PLUGIN_DIR . 'includes/json-ld.php';
 require_once AEOPUGMILL_PLUGIN_DIR . 'includes/llms-txt.php';
+require_once AEOPUGMILL_PLUGIN_DIR . 'includes/rss.php';
 require_once AEOPUGMILL_PLUGIN_DIR . 'includes/sitemap.php';
 require_once AEOPUGMILL_PLUGIN_DIR . 'includes/settings.php';
 require_once AEOPUGMILL_PLUGIN_DIR . 'includes/rest-api.php';

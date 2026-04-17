@@ -222,6 +222,17 @@ function aeopugmill_register_settings() {
 		},
 		'default' => 0,
 	) );
+	// AEO RSS enrichment — suppress if another plugin is already enriching the feed.
+	register_setting( 'aeopugmill_settings', 'aeopugmill_disable_rss_enrichment', array(
+		'sanitize_callback' => function( $value ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing
+			if ( ! isset( $_POST['aeopugmill_disable_rss_enrichment'] ) ) {
+				return get_option( 'aeopugmill_disable_rss_enrichment', 0 );
+			}
+			return ! empty( $value ) ? 1 : 0;
+		},
+		'default' => 0,
+	) );
 	register_setting( 'aeopugmill_settings', 'aeopugmill_disable_robots_append', array(
 		'sanitize_callback' => function( $value ) {
 			// phpcs:ignore WordPress.Security.NonceVerification.Missing

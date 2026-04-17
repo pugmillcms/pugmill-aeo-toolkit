@@ -113,6 +113,7 @@ function aeopugmill_active_outputs() {
 	$disable_json_ld    = (bool) get_option( 'aeopugmill_disable_json_ld', 0 );
 	$disable_breadcrumb = (bool) get_option( 'aeopugmill_disable_breadcrumbs', 0 );
 	$disable_meta       = (bool) get_option( 'aeopugmill_disable_seo_meta', 0 );
+	$disable_rss        = (bool) get_option( 'aeopugmill_disable_rss_enrichment', 0 );
 
 	if ( ! $disable_json_ld ) {
 		$active[] = 'article_json_ld';
@@ -125,6 +126,48 @@ function aeopugmill_active_outputs() {
 		$active[] = 'meta_description';
 		$active[] = 'open_graph';
 	}
+	if ( ! $disable_rss ) {
+		$active[] = 'rss_enrichment';
+	}
 
 	return $active;
+}
+
+/**
+ * Detect whether a known SEO plugin is actively enriching the RSS feed.
+ *
+ * Yoast SEO and Rank Math can inject content before/after each RSS item.
+ * Our enrichment is purely additive (new namespace + new elements) so there
+ * is no true XML conflict, but the admin should know both plugins are active
+ * on the feed so they can make an informed decision.
+ *
+ * @return array<string, string> Keyed by plugin slug, valued by display name.
+ *                               Empty array when no RSS-modifying plugin is detected.
+ */
+function aeopugmill_detected_rss_plugins() {
+	$found = array();
+
+	// Yoast SEO — enriches RSS when rssbefore or rssafter options are non-empty.
+	if ( defined( 'WPSEO_VERSION' ) ) {
+		$wpseo = get_option( 'wpseo', array() );
+		if ( ! empty( $wpseo['rssbefore'] ) || ! empty( $wpseo['rssafter'] ) ) {
+			$found['yoast'] = 'Yoast SEO';
+		}
+	}
+
+	// Rank Math — has dedicated RSS content options.
+	if ( defined( 'RANK_MATH_VERSION' ) ) {
+		$rm_before = get_option( 'rank_math_rss_before_content', '' );
+		$rm_after  = get_option( 'rank_math_rss_after_content', '' );
+		if ( ! empty( $rm_before ) || ! empty( $rm_after ) ) {
+			$found['rankmath'] = 'Rank Math';
+		}
+	}
+
+	// All in One SEO — check if active (it always modifies RSS when enabled).
+	if ( defined( 'AIOSEO_VERSION' ) ) {
+		$found['aioseo'] = 'All in One SEO';
+	}
+
+	return $found;
 }

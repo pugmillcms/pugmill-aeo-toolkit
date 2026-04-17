@@ -30,6 +30,7 @@ function aeopugmill_get_compatibility_data() {
 		'llms_txt_conflicts' => array(),
 		'sitemap_conflicts'  => array(), // array of [ 'name' => string, 'instruction' => string ]
 		'robots_conflicts'   => array(), // array of [ 'name' => string, 'instruction' => string ]
+		'rss_conflicts'      => array(), // array of plugin display names modifying the RSS feed
 		'robots'             => array(
 			'discourage'   => false,
 			'has_file'     => false,
@@ -264,6 +265,14 @@ function aeopugmill_get_compatibility_data() {
 				}
 			}
 		}
+	}
+
+	// ── RSS enrichment conflicts ──────────────────────────────────────────
+	// Purely informational — our enrichment is additive (new namespace elements)
+	// so there is no XML conflict, but the admin should know both are active.
+	$rss_plugins = aeopugmill_detected_rss_plugins();
+	foreach ( $rss_plugins as $display_name ) {
+		$data['rss_conflicts'][] = $display_name;
 	}
 
 	return $data;
@@ -2573,10 +2582,11 @@ function aeopugmill_render_settings_page() {
 		$compat               = aeopugmill_get_compatibility_data();
 		$detected_seo         = aeopugmill_detected_seo_plugins();
 		$has_seo_plugin       = ! empty( $detected_seo );
-		$disable_robots       = (int) get_option( 'aeopugmill_disable_robots_append', 0 );
-		$disable_json_ld      = (int) get_option( 'aeopugmill_disable_json_ld', 0 );
-		$disable_seo_meta     = (int) get_option( 'aeopugmill_disable_seo_meta', 0 );
-		$disable_breadcrumbs  = (int) get_option( 'aeopugmill_disable_breadcrumbs', 0 );
+		$disable_robots          = (int) get_option( 'aeopugmill_disable_robots_append', 0 );
+		$disable_json_ld         = (int) get_option( 'aeopugmill_disable_json_ld', 0 );
+		$disable_seo_meta        = (int) get_option( 'aeopugmill_disable_seo_meta', 0 );
+		$disable_breadcrumbs     = (int) get_option( 'aeopugmill_disable_breadcrumbs', 0 );
+		$disable_rss_enrichment  = (int) get_option( 'aeopugmill_disable_rss_enrichment', 0 );
 		?>
 
 		<!-- ── SEO Plugin Status ─────────────────────────────────────── -->
@@ -2674,6 +2684,13 @@ function aeopugmill_render_settings_page() {
 				'option'      => 'aeopugmill_disable_breadcrumbs',
 				'current_val' => $disable_breadcrumbs,
 			),
+			array(
+				'label'       => __( 'AEO RSS Enrichment', 'aeo-pugmill' ),
+				'desc'        => __( 'xmlns:aeo namespace + summary, entity, Q&A elements per item', 'aeo-pugmill' ),
+				'option'      => 'aeopugmill_disable_rss_enrichment',
+				'current_val' => $disable_rss_enrichment,
+				'rss_note'    => ! empty( $compat['rss_conflicts'] ),
+			),
 		);
 		?>
 		<?php
@@ -2682,12 +2699,13 @@ function aeopugmill_render_settings_page() {
 			$is_disabled  = ! $is_linked && (bool) $row['current_val'];
 			$status_style = $is_disabled ? 'color:#6b7280; text-decoration:line-through;' : 'color:#111827;';
 			$rowspan      = ! empty( $row['group_size'] ) ? ' rowspan="' . (int) $row['group_size'] . '"' : '';
+			$has_rss_note = ! empty( $row['rss_note'] );
 			$badge_text   = $is_disabled
 				? esc_html__( 'Suppressed', 'aeo-pugmill' )
-				: ( $has_seo_plugin ? esc_html__( 'Active — overlap', 'aeo-pugmill' ) : esc_html__( 'Active', 'aeo-pugmill' ) );
+				: ( $has_rss_note ? esc_html__( 'Active — additive', 'aeo-pugmill' ) : ( $has_seo_plugin ? esc_html__( 'Active — overlap', 'aeo-pugmill' ) : esc_html__( 'Active', 'aeo-pugmill' ) ) );
 			$badge_color  = $is_disabled
 				? '#6b7280'
-				: ( $has_seo_plugin ? '#d97706' : '#16a34a' );
+				: ( $has_rss_note ? '#0369a1' : ( $has_seo_plugin ? '#d97706' : '#16a34a' ) );
 			$in_group      = ! empty( $row['group_size'] ) || $is_linked;
 		$close_group   = ! empty( $row['group_end'] );
 		$border_bottom = ( $in_group && ! $close_group ) ? 'border-bottom:none;' : 'border-bottom:1px solid #f3f4f6;';
@@ -2699,7 +2717,12 @@ function aeopugmill_render_settings_page() {
 			</td>
 			<?php if ( ! $is_linked ) : ?>
 			<td style="padding:10px 0; vertical-align:middle;"<?php echo $rowspan; // phpcs:ignore ?>>
-				<?php echo $plugin_badge; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+				<?php if ( $has_rss_note ) : ?>
+					<span style="background:#e0f2fe; border:1px solid #7dd3fc; border-radius:3px; padding:2px 8px; font-size:11px; font-weight:600; color:#0369a1;"><?php echo esc_html( implode( ', ', $compat['rss_conflicts'] ) ); ?></span>
+					<span style="display:block; font-size:10px; color:#6b7280; margin-top:2px;"><?php esc_html_e( 'Additive — no XML conflict', 'aeo-pugmill' ); ?></span>
+				<?php else : ?>
+					<?php echo $plugin_badge; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+				<?php endif; ?>
 			</td>
 			<td style="padding:10px 0; vertical-align:middle;"<?php echo $rowspan; // phpcs:ignore ?>>
 				<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
