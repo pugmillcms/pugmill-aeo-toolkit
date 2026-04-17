@@ -82,7 +82,7 @@ foreach ( $aeopugmill_users as $aeopugmill_user_id ) {
 
 $aeopugmill_meta_keys = array( '_aeopugmill_aeo', '_aeopugmill_seo', '_aeopugmill_schema', '_aeopugmill_score', '_aeopugmill_content_score' );
 foreach ( $aeopugmill_meta_keys as $aeopugmill_meta_key ) {
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Uninstall-only cleanup; slow query is acceptable here.
 	$wpdb->delete( $wpdb->postmeta, array( 'meta_key' => $aeopugmill_meta_key ), array( '%s' ) );
 }
 

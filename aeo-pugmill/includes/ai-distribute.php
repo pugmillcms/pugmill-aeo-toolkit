@@ -56,15 +56,20 @@ function aeopugmill_ajax_internal_links() {
 		wp_send_json_error( array( 'message' => __( 'Post has no content to analyze.', 'aeo-pugmill' ) ), 400 );
 	}
 
-	// Build index of other published posts for the prompt
+	// Build index of other published posts for the prompt.
+	// Fetch one extra and filter the current post after the query — avoids
+	// exclusionary parameters (post__not_in / exclude) which add a slow subquery.
 	$other_posts = get_posts( array(
 		'post_type'      => array( 'post', 'page' ),
 		'post_status'    => 'publish',
-		'posts_per_page' => 40,
-		'exclude'        => array( $r['post']->ID ),
+		'posts_per_page' => 41,
 		'orderby'        => 'date',
 		'order'          => 'DESC',
 	) );
+	$other_posts = array_values( array_filter( $other_posts, function( $p ) use ( $r ) {
+		return $p->ID !== $r['post']->ID;
+	} ) );
+	$other_posts = array_slice( $other_posts, 0, 40 );
 
 	if ( empty( $other_posts ) ) {
 		wp_send_json_error( array( 'message' => __( 'No other published posts found to link to.', 'aeo-pugmill' ) ), 400 );
