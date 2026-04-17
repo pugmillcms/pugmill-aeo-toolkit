@@ -13,7 +13,7 @@ PLUGIN_FILE="$PLUGIN_DIR/aeo-pugmill.php"
 # ── Read version from plugin header ───────────────────────────────────────────
 VERSION=$(grep -m1 '^\s*\* Version:' "$PLUGIN_FILE" | sed 's/.*Version:[[:space:]]*//' | tr -d '[:space:]')
 ZIP_WPORG="aeo-pugmill-${VERSION}.zip"
-ZIP_SELF="aeo-pugmill-${VERSION}-self-hosted.zip"
+ZIP_SELF="aeo-pugmill.zip"
 
 echo "Building AEO Pugmill v${VERSION}..."
 
@@ -49,4 +49,4 @@ echo "Done: $ZIP_WPORG  (WordPress.org submission)"
 # ── Self-hosted zip (includes update-checker.php) ─────────────────────────────
 rm -f "$ZIP_SELF"
 zip -r "$ZIP_SELF" "$PLUGIN_DIR" "${EXCLUDES[@]}"
-echo "Done: $ZIP_SELF  (self-hosted / website)"
+echo "Done: $ZIP_SELF  (self-hosted / website — fixed filename for updater)"
