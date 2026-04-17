@@ -167,10 +167,10 @@ Plus llms.txt, per-post Markdown endpoints, and a bot analytics dashboard.
 == Changelog ==
 
 = 1.1.2 =
-* **AEO RSS Feed**: The plugin now adds an `xmlns:aeo` namespace to your RSS 2.0 feed and injects `<aeo:summary>`, `<aeo:entity>`, and `<aeo:qa>` elements per post. AI crawlers consuming the feed receive the full AEO metadata alongside post content. Purely additive — does not modify `content:encoded` or existing feed elements. Can be disabled from the Compatibility tab.
+* **RSS+AEO Feed**: The plugin now adds an `xmlns:aeo` namespace to your RSS 2.0 feed and injects `<aeo:summary>`, `<aeo:entity>`, and `<aeo:qa>` elements per post. AI crawlers consuming the feed receive the full AEO metadata alongside post content. Purely additive — does not modify `content:encoded` or existing feed elements. Can be disabled from the Compatibility tab.
 * **llms.txt autodiscovery**: Added `<link rel="alternate" type="text/plain">` tags in `<head>` for `/llms.txt` and `/llms-full.txt`, and an HTTP `Link:` header on every page load, so AI crawlers find the AEO content index without guessing the URL.
-* **Reclassified resource types**: RSS Feed and HTML+AEO (posts with embedded AEO metadata) are now grouped under AEO Endpoints in the Content Reach dashboard — both carry AEO content and are treated as AEO signals in bot analytics and the AI Insights report.
-* **Compatibility tab**: New "AEO RSS Enrichment" row in the Overlapping Outputs table with a disable toggle and informational notice when another plugin is also modifying the RSS feed.
+* **Reclassified resource types**: RSS+AEO and HTML+AEO (posts with embedded AEO metadata) are now grouped under AEO Endpoints in the Content Reach dashboard — both carry AEO content and are treated as AEO signals in bot analytics and the AI Insights report.
+* **Compatibility tab**: New "RSS+AEO Enrichment" row in the Overlapping Outputs table with a disable toggle and informational notice when another plugin is also modifying the RSS feed.
 
 = 1.1.1 =
 * **Code quality**: WordPress.org Plugin Check compliance — output escaping, input sanitization, i18n translators comments, `wp_parse_url`/`wp_strip_all_tags` substitutions, and `error_log` calls gated on `WP_DEBUG`. No functional changes.

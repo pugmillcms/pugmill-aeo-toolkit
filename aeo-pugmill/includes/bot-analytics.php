@@ -105,7 +105,7 @@ function aeopugmill_resource_type_labels() {
 		6  => 'Robots.txt',
 		7  => 'AEO Post',
 		8  => 'AEO JSON-LD',
-		9  => 'AEO RSS',
+		9  => 'RSS+AEO',
 		10 => 'Well-Known',
 	);
 }
@@ -927,7 +927,7 @@ If crawl_signals data is present in the site data: interpret what the bots are a
 If network_benchmark data is present: for each bot, state whether this site is well above average, above average, at average, below average, or well below average compared to the Pugmill AEO Intelligence Network (the ratio field tells you: ≥ 2.0 = well above, ≥ 1.1 = above, 0.9–1.1 = at average, ≥ 0.5 = below, < 0.5 = well below). For every bot listed in zero_visit_bots (bots the network sees but this site has zero visits from), name them and say the typical site gets N visits — this is a gap. If no network_benchmark data is present, skip this section entirely.
 
 ## Content Coverage
-Which resource types in content_reach are hit most, and any patterns worth noting. Compare the mix: heavy HTML Page hits with little AEO Post activity means bots are landing on non-AEO content — an optimization gap. Heavy AEO Post, RSS Feed, or AEO endpoint hits means bots are reaching enriched content. Call out ignored sections, repeat visits on specific posts, or bots that only touch pure discovery signals (Well-Known, Robots.txt, Sitemap) without reading any content.
+Which resource types in content_reach are hit most, and any patterns worth noting. Compare the mix: heavy HTML Page hits with little AEO Post activity means bots are landing on non-AEO content — an optimization gap. Heavy AEO Post, RSS+AEO, or AEO endpoint hits means bots are reaching enriched content. Call out ignored sections, repeat visits on specific posts, or bots that only touch pure discovery signals (Well-Known, Robots.txt, Sitemap) without reading any content.
 
 ## Recommendations
 Give 3–5 specific, prioritized actions. Use aeo_field_coverage to identify gaps: if posts_with_aeo is much less than posts_total, recommend running Bulk AEO Generation; if qa_pairs is low relative to ai_summary, recommend adding Q&A pairs to existing posts; if named_entities or keywords lag behind ai_summary, call that out specifically. For any bot that is below average or a zero-visit gap, give a targeted fix. Where crawl_signals reveal a pattern, turn it into a recommendation (e.g., if bots are mostly reading short posts, recommend expanding key posts to 1500+ words; if freshness skews stale, recommend updating top posts). If content_reach shows high HTML Page hits but low AEO Post hits, the bots are crawling non-enriched pages — recommend extending AEO coverage to the specific posts they are landing on. Use this bot-specific guidance: ChatGPT — enrich llms.txt with Q&A pairs and AEO summaries, ChatGPT reads it directly; Perplexity — prioritize AEO summaries on high-traffic posts, Perplexity cites in real-time so freshness matters; ClaudeBot — keep sitemap current and add AEO markup to all posts; Gemini — Schema.org JSON-LD is key (watch AEO JSON-LD hits in content_reach); Bingbot — clean sitemaps and solid meta descriptions; if AEO conversion rate is under 10%, recommend running Bulk AEO Generation on top posts first. Only mention bots present in the data or identified as network gaps.

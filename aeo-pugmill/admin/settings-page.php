@@ -1163,7 +1163,7 @@ function aeopugmill_render_settings_page() {
 		// Pugmill exclusive
 		if ( ! $llms_off_g )   { $gauge_pugmill++; } else { $gauge_disabled++; } // llms.txt
 		if ( ! $llms_off_g )   { $gauge_pugmill++; } else { $gauge_disabled++; } // llms-full.txt
-		if ( ! $rss_off_g )    { $gauge_pugmill++; } else { $gauge_disabled++; } // AEO RSS Feed
+		if ( ! $rss_off_g )    { $gauge_pugmill++; } else { $gauge_disabled++; } // RSS+AEO Feed
 		$gauge_pugmill += 4; // per-post markdown, site summary, bot analytics, FAQPage schema
 		if ( ! $robots_off_g ) { $gauge_pugmill++; } else { $gauge_disabled++; } // robots.txt
 		$gauge_pugmill += 2; // citations, entity graph
@@ -1450,7 +1450,7 @@ function aeopugmill_render_settings_page() {
 						array( 'label' => __( 'Q&A Pairs (3+)',      'aeo-pugmill' ), 'net_key' => 'questions_3plus', 'count' => $cov_field_questions_3,  'pct' => ( $cov_total > 0 ? (int) round( $cov_field_questions_3  / $cov_total * 100 ) : 0 ) ),
 						array( 'label' => __( 'Named Entities',      'aeo-pugmill' ), 'net_key' => 'entities',  'count' => $cov_field_entities,     'pct' => ( $cov_total > 0 ? (int) round( $cov_field_entities     / $cov_total * 100 ) : 0 ) ),
 						array( 'label' => __( 'Keywords (5+)',        'aeo-pugmill' ), 'net_key' => 'keywords',  'count' => $cov_field_keywords,     'pct' => ( $cov_total > 0 ? (int) round( $cov_field_keywords     / $cov_total * 100 ) : 0 ) ),
-						array( 'section' => __( 'AEO RSS Feed', 'aeo-pugmill' ) ),
+						array( 'section' => __( 'RSS+AEO Feed', 'aeo-pugmill' ) ),
 						array( 'label' => __( 'Posts emitting AEO feed elements', 'aeo-pugmill' ), 'net_key' => null, 'count' => $cov_any, 'pct' => $cov_any_pct, 'rss_disabled' => $rss_off_g ),
 					);
 					$opted_in_network = (bool) get_option( 'aeopugmill_analytics_opted_in' );
@@ -1620,7 +1620,7 @@ function aeopugmill_render_settings_page() {
 						'items'   => array(
 							array( 'name' => 'llms.txt',      'type' => $llms_off_g   ? 'off' : 'pm' ),
 							array( 'name' => 'llms-full.txt', 'type' => $llms_off_g   ? 'off' : 'pm' ),
-							array( 'name' => 'AEO RSS Feed',  'type' => $rss_off_g    ? 'off' : 'pm' ),
+							array( 'name' => 'RSS+AEO Feed',  'type' => $rss_off_g    ? 'off' : 'pm' ),
 							array( 'name' => 'robots.txt',    'type' => $robots_off_g ? 'off' : 'pm' ),
 							array( 'name' => 'Post Markdown', 'type' => 'pm' ),
 							array( 'name' => 'Site Summary',  'type' => 'pm' ),
@@ -1682,7 +1682,7 @@ function aeopugmill_render_settings_page() {
 
 		// Fixed column order — all tracked resource types, grouped by category.
 		$col_order_by_cat = array(
-			'aeo'       => array( 1, 2, 3, 4, 8, 9, 7 ), // llms.txt, llms-full, Markdown, Summary, JSON-LD, RSS Feed, HTML+AEO
+			'aeo'       => array( 1, 2, 3, 4, 8, 9, 7 ), // llms.txt, llms-full, Markdown, Summary, JSON-LD, RSS+AEO, HTML+AEO
 			'discovery' => array( 5, 6, 10 ),            // Sitemap, Robots.txt, Well-Known
 			'crawl'     => array( 0 ),                   // HTML (plain, no AEO)
 		);
@@ -1715,7 +1715,7 @@ function aeopugmill_render_settings_page() {
 			8  => array( 'group' => 'aeo',       'name' => 'AEO JSON-LD',   'url' => '/aeo/*.jsonld' ),
 			5  => array( 'group' => 'discovery', 'name' => 'Sitemap',       'url' => '/sitemap.xml, /wp-sitemap-*.xml' ),
 			6  => array( 'group' => 'discovery', 'name' => 'Robots.txt',    'url' => '/robots.txt' ),
-			9  => array( 'group' => 'aeo',       'name' => 'AEO RSS',       'url' => '/feed/ — carries AEO summaries, entities, Q&amp;A' ),
+			9  => array( 'group' => 'aeo',       'name' => 'RSS+AEO',       'url' => '/feed/ — carries AEO summaries, entities, Q&amp;A' ),
 			7  => array( 'group' => 'aeo',       'name' => 'HTML + AEO',    'url' => __( 'Posts with AEO metadata', 'aeo-pugmill' ) ),
 			10 => array( 'group' => 'discovery', 'name' => 'Well-Known',    'url' => '/.well-known/*, /ads.txt, …' ),
 			0  => array( 'group' => 'crawl',     'name' => 'HTML',          'url' => __( 'Plain post/page crawl', 'aeo-pugmill' ) ),
@@ -2724,7 +2724,7 @@ function aeopugmill_render_settings_page() {
 				'current_val' => $disable_breadcrumbs,
 			),
 			array(
-				'label'       => __( 'AEO RSS Enrichment', 'aeo-pugmill' ),
+				'label'       => __( 'RSS+AEO Enrichment', 'aeo-pugmill' ),
 				'desc'        => __( 'xmlns:aeo namespace + summary, entity, Q&A elements per item', 'aeo-pugmill' ),
 				'option'      => 'aeopugmill_disable_rss_enrichment',
 				'current_val' => $disable_rss_enrichment,
