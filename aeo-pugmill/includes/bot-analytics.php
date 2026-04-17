@@ -105,7 +105,7 @@ function aeopugmill_resource_type_labels() {
 		6  => 'Robots.txt',
 		7  => 'AEO Post',
 		8  => 'AEO JSON-LD',
-		9  => 'RSS Feed',
+		9  => 'AEO RSS',
 		10 => 'Well-Known',
 	);
 }

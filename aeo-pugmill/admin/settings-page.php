@@ -1692,7 +1692,7 @@ function aeopugmill_render_settings_page() {
 			8  => array( 'group' => 'aeo',       'name' => 'AEO JSON-LD',   'url' => '/aeo/*.jsonld' ),
 			5  => array( 'group' => 'discovery', 'name' => 'Sitemap',       'url' => '/sitemap.xml, /wp-sitemap-*.xml' ),
 			6  => array( 'group' => 'discovery', 'name' => 'Robots.txt',    'url' => '/robots.txt' ),
-			9  => array( 'group' => 'aeo',       'name' => 'RSS Feed',      'url' => '/feed/ — carries AEO summaries, entities, Q&amp;A' ),
+			9  => array( 'group' => 'aeo',       'name' => 'AEO RSS',       'url' => '/feed/ — carries AEO summaries, entities, Q&amp;A' ),
 			7  => array( 'group' => 'aeo',       'name' => 'HTML + AEO',    'url' => __( 'Posts with AEO metadata', 'aeo-pugmill' ) ),
 			10 => array( 'group' => 'discovery', 'name' => 'Well-Known',    'url' => '/.well-known/*, /ads.txt, …' ),
 			0  => array( 'group' => 'crawl',     'name' => 'HTML',          'url' => __( 'Plain post/page crawl', 'aeo-pugmill' ) ),
