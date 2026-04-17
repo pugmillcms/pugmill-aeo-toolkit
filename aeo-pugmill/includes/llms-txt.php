@@ -576,10 +576,8 @@ function aeopugmill_serve_site_llm_txt() {
  * the structured AEO content index without having to guess the URL.
  */
 function aeopugmill_output_llms_link_tag() {
-	$llms_url      = esc_url( home_url( '/llms.txt' ) );
-	$llms_full_url = esc_url( home_url( '/llms-full.txt' ) );
-	echo '<link rel="alternate" type="text/plain" title="LLMs Index" href="' . $llms_url . '">' . "\n";
-	echo '<link rel="alternate" type="text/plain" title="LLMs Full Content" href="' . $llms_full_url . '">' . "\n";
+	echo '<link rel="alternate" type="text/plain" title="LLMs Index" href="' . esc_url( home_url( '/llms.txt' ) ) . '">' . "\n";
+	echo '<link rel="alternate" type="text/plain" title="LLMs Full Content" href="' . esc_url( home_url( '/llms-full.txt' ) ) . '">' . "\n";
 }
 add_action( 'wp_head', 'aeopugmill_output_llms_link_tag', 2 );
 
