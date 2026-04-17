@@ -522,7 +522,7 @@ function aeopugmill_render_settings_page() {
 				</div>
 			</div>
 			<div class="aeo-setup-body" style="border-top:1px solid #f0f0f0;">
-		<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; padding:16px;">
+		<div class="pugmill-prefs-grid">
 
 			<!-- Card 1 — AI Provider -->
 			<div style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:6px; padding:14px 16px;">
@@ -1235,6 +1235,29 @@ function aeopugmill_render_settings_page() {
 
 		<!-- ── 3-column Summary Row: Bot Activity | AEO Content Coverage | AEO Infrastructure ── -->
 		<style>
+		/* ── Mobile: Preferences cards ── */
+		.pugmill-prefs-grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+			gap: 16px;
+			padding: 16px;
+		}
+		/* ── Mobile: Audit table ── */
+		.pugmill-audit-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+		@media (max-width: 782px) {
+			.aeopugmill-audit-generate { font-size: 11px !important; padding: 3px 8px !important; }
+			.pugmill-audit-table th,
+			.pugmill-audit-table td { white-space: nowrap; }
+		}
+		/* ── Crawl Intelligence: sticky first column ── */
+		.ci-col-bot-th {
+			position: sticky; left: 0; z-index: 2;
+			background: #f6f7f7;
+		}
+		.ci-col-bot-td {
+			position: sticky; left: 0; z-index: 1;
+			background: inherit;
+		}
 		.pugmill-summary-row {
 			display: grid;
 			grid-template-columns: 1fr 1fr 1fr;
@@ -2026,7 +2049,7 @@ function aeopugmill_render_settings_page() {
 				<thead>
 					<!-- Group header row -->
 					<tr style="background:#f6f7f7;">
-						<th style="padding:8px 12px; text-align:left; font-weight:600; white-space:nowrap; width:160px; border-bottom:1px solid #e5e7eb; border-right:2px solid #e5e7eb;" rowspan="2">
+						<th class="ci-col-bot-th" style="padding:8px 12px; text-align:left; font-weight:600; white-space:nowrap; width:160px; border-bottom:1px solid #e5e7eb; border-right:2px solid #e5e7eb;" rowspan="2">
 							<?php esc_html_e( 'Bot', 'aeo-pugmill' ); ?>
 						</th>
 						<th colspan="3" style="padding:6px 12px; text-align:center; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#7c3aed; border-bottom:1px solid #e5e7eb;">
@@ -2113,7 +2136,7 @@ function aeopugmill_render_settings_page() {
 					}
 				?>
 				<tr style="background:<?php echo esc_attr( $ci_bg ); ?>;">
-					<td style="padding:8px 12px; white-space:nowrap; border-right:2px solid #e5e7eb;">
+					<td class="ci-col-bot-td" style="padding:8px 12px; white-space:nowrap; border-right:2px solid #e5e7eb;">
 						<span style="display:inline-flex; align-items:center; gap:6px; font-size:12px; color:#374151;">
 							<span style="width:8px; height:8px; border-radius:50%; background:<?php echo esc_attr( $bot_info['color'] ); ?>; flex-shrink:0;"></span>
 							<?php echo esc_html( $bot_info['label'] ); ?>
@@ -2329,7 +2352,13 @@ function aeopugmill_render_settings_page() {
 				btn.classList.add( 'aeopugmill-loading' );
 				btn.innerHTML = 'Analyzing…';
 				output.style.display = 'block';
-				text.innerHTML = '<span style="color:#9ca3af;font-size:13px;">Asking AI to analyze your bot traffic…</span>';
+				if ( isRefresh ) {
+					// Fade existing report instead of blanking it.
+					text.style.opacity = '0.35';
+					text.style.pointerEvents = 'none';
+				} else {
+					text.innerHTML = '<span style="color:#9ca3af;font-size:13px;">Asking AI to analyze your bot traffic…</span>';
+				}
 				if ( status ) { status.textContent = ''; }
 
 				var body = new URLSearchParams( {
@@ -2343,6 +2372,8 @@ function aeopugmill_render_settings_page() {
 					.then( function( data ) {
 						btn.disabled  = false;
 						btn.classList.remove( 'aeopugmill-loading' );
+						text.style.opacity = '';
+						text.style.pointerEvents = '';
 						if ( data.success ) {
 							btn.innerHTML = '✨ Refresh Analysis';
 							// Render ## headings as styled labels, paragraphs as <p> blocks.
@@ -2381,6 +2412,8 @@ function aeopugmill_render_settings_page() {
 					.catch( function() {
 						btn.disabled  = false;
 						btn.classList.remove( 'aeopugmill-loading' );
+						text.style.opacity = '';
+						text.style.pointerEvents = '';
 						btn.innerHTML = '✨ Generate AI Analysis';
 						text.innerHTML  = '<span style="color:#dc3232;font-size:13px;"><?php echo esc_js( __( 'Request failed. Please try again.', 'aeo-pugmill' ) ); ?></span>';
 					} );
@@ -3183,7 +3216,8 @@ function aeopugmill_render_settings_page() {
 				<p style="color:#666;"><?php esc_html_e( 'No published posts found.', 'aeo-pugmill' ); ?></p>
 			<?php else : ?>
 
-			<table class="wp-list-table widefat fixed striped" style="margin-top:0;">
+			<div class="pugmill-audit-wrap">
+			<table class="wp-list-table widefat fixed striped pugmill-audit-table" style="margin-top:0;">
 				<thead>
 					<tr>
 						<th style="width:30%;"><?php esc_html_e( 'Title', 'aeo-pugmill' ); ?></th>
@@ -3309,6 +3343,7 @@ function aeopugmill_render_settings_page() {
 				<?php endforeach; ?>
 				</tbody>
 			</table>
+			</div><!-- /.pugmill-audit-wrap -->
 
 			<?php if ( $total_pages > 1 ) :
 				// Preserve sort and filter state across pagination.

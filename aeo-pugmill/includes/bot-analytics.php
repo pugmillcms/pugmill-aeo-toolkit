@@ -1108,37 +1108,24 @@ function aeopugmill_intelligence_send() {
 	$yesterday     = (int) floor( ( time() - DAY_IN_SECONDS ) / DAY_IN_SECONDS );
 	$resource_slugs = aeopugmill_intelligence_resource_slugs();
 
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-	$rows = $wpdb->get_results( $wpdb->prepare(
-		"SELECT bot_name, resource_type, count
-		 FROM {$wpdb->prefix}aeopugmill_bot_daily
-		 WHERE day = %d",
-		$yesterday
-	), ARRAY_A );
+	// ── Backlog detection ─────────────────────────────────────────────────────
+	// Track the last day successfully sent. On missed cron runs (common in
+	// WordPress) we backfill up to 7 days so data is never silently lost.
+	$last_sent_day = (int) get_option( 'aeopugmill_last_sent_day', 0 );
 
-	if ( empty( $rows ) ) {
-		return;
+	if ( $last_sent_day > 0 ) {
+		// At most 7 days of backlog to avoid overwhelming the network.
+		$start_day = max( $last_sent_day + 1, $yesterday - 6 );
+	} else {
+		// First run — send yesterday only (no historical baseline to backfill).
+		$start_day = $yesterday;
 	}
 
-	// Build bots payload: { bot_name: { resource_slug: count } }.
-	// Every distinct captured bot_name is preserved verbatim — no 'Other'
-	// collapse, no whitelist filter. The network classifies on the server side.
-	$bots = array();
-	foreach ( $rows as $row ) {
-		$bot_name = (string) $row['bot_name'];
-		$resource = $resource_slugs[ (int) $row['resource_type'] ] ?? null;
-		if ( ! $resource || '' === $bot_name ) {
-			continue;
-		}
-		if ( ! isset( $bots[ $bot_name ] ) ) {
-			$bots[ $bot_name ] = array();
-		}
-		$bots[ $bot_name ][ $resource ] = (int) $row['count'];
+	if ( $start_day > $yesterday ) {
+		return; // already up to date
 	}
 
-	if ( empty( $bots ) ) {
-		return;
-	}
+	// ── Site-wide data — computed once, reused across all days in the loop ───
 
 	// AEO tier: how complete is this site's AEO data?
 	// 0 = no posts with AEO, 1 = 1-9 posts, 2 = 10+ posts
@@ -1187,7 +1174,6 @@ function aeopugmill_intelligence_send() {
 	// never transmitted). This prevents rainbow table attacks — even a full list of
 	// known domains cannot reverse the hash without each site's unique UUID.
 	$site_id       = hash( 'sha256', home_url() . aeopugmill_instance_id() );
-	$date          = gmdate( 'Y-m-d', $yesterday * DAY_IN_SECONDS );
 	$network_token = aeopugmill_get_encrypted_option( 'aeopugmill_network_token', '' );
 
 	// If opted in but not yet registered (e.g. first run after activation), try now.
@@ -1202,12 +1188,8 @@ function aeopugmill_intelligence_send() {
 		return;
 	}
 
-	// Submission HMAC — signs this specific day's payload with the site's token.
-	$submission_hmac = hash_hmac( 'sha256', "{$site_id}:{$date}:" . AEOPUGMILL_VERSION, $network_token );
-
-	// Per-bot crawl intelligence signals for yesterday.
-	// Structure: { BotName: { metric: { bucket: tally } } }
-	// Only included when the function exists (requires bot-intelligence.php v2+).
+	// Per-bot crawl intelligence signals (30-day aggregate — same for every
+	// day in the backlog; we send the most recent snapshot).
 	$signals = array();
 	if ( function_exists( 'aeopugmill_intel_get_signals_30d' ) ) {
 		$raw_signals = aeopugmill_intel_get_signals_30d( 1 ); // yesterday only
@@ -1229,107 +1211,157 @@ function aeopugmill_intelligence_send() {
 		}
 	}
 
-	// ── Schema v4 enrichment fields ───────────────────────────────────────
-	// All optional / backward-compatible. Server ignores unknown keys from
-	// older clients; older servers ignore new keys from newer clients.
-
 	// Detected SEO plugin (slug or null).
 	$seo_plugins     = function_exists( 'aeopugmill_detected_seo_plugins' ) ? aeopugmill_detected_seo_plugins() : array();
 	$seo_plugin_slug = ! empty( $seo_plugins ) ? array_key_first( $seo_plugins ) : null;
 
-	// Posts with full AEO data vs total published posts.
-	$posts_with_aeo = $aeo_count; // already computed above
-	$posts_total    = (int) wp_count_posts()->publish;
-
-	// Bot visits to markdown endpoints yesterday (resource_type 3).
-	$markdown_assets_served = 0;
-	foreach ( $rows as $row ) {
-		if ( (int) $row['resource_type'] === 3 ) {
-			$markdown_assets_served += (int) $row['count'];
-		}
-	}
-
-	// Which Pugmill output types are currently active (informational).
+	$posts_total            = (int) wp_count_posts()->publish;
 	$pugmill_outputs_active = function_exists( 'aeopugmill_active_outputs' ) ? aeopugmill_active_outputs() : array();
 
-	$payload = array(
-		'schema_ver'             => 4,
-		'site_id'                => $site_id,
-		'date'                   => $date,
-		'plugin_version'         => AEOPUGMILL_VERSION,
-		'aeo_tier'               => $aeo_tier,
-		'seo_plugin'             => $seo_plugin_slug,
-		'posts_with_aeo'         => $posts_with_aeo,
-		'posts_total'            => $posts_total,
-		'markdown_assets_served' => $markdown_assets_served,
-		'pugmill_outputs_active' => $pugmill_outputs_active,
-		'field_coverage'         => array(
-			'summary'          => $field_summary,
-			'summary_quality'  => $field_summary_quality,
-			'questions'        => $field_questions,
-			'questions_3plus'  => $field_questions_3plus,
-			'entities'         => $field_entities,
-			'keywords'         => $field_keywords,
-		),
-		'bots'                   => $bots,
-		'network_token'          => $network_token,
-	);
+	// ── Per-day send loop ─────────────────────────────────────────────────────
+	for ( $day = $start_day; $day <= $yesterday; $day++ ) {
 
-	if ( ! empty( $signals ) ) {
-		$payload['signals'] = $signals;
-	}
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$rows = $wpdb->get_results( $wpdb->prepare(
+			"SELECT bot_name, resource_type, count
+			 FROM {$wpdb->prefix}aeopugmill_bot_daily
+			 WHERE day = %d",
+			$day
+		), ARRAY_A );
 
-	/**
-	 * Filter the intelligence network payload before transmission.
-	 *
-	 * @param array $payload   Payload array.
-	 * @param int   $yesterday Unix-day integer for the reported day.
-	 */
-	$payload = apply_filters( 'aeopugmill_intelligence_payload', $payload, $yesterday );
+		// Advance the cursor even for quiet days so we never re-attempt them.
+		if ( empty( $rows ) ) {
+			update_option( 'aeopugmill_last_sent_day', $day, false );
+			continue;
+		}
 
-	$response = wp_remote_post(
-		'https://aeopugmill.com/api/ingest',
-		array(
-			'timeout'     => 10,
-			'sslverify'   => true,
-			'headers'     => array(
-				'Content-Type'  => 'application/json',
-				'Authorization' => 'Bearer ' . $submission_hmac,
-			),
-			'body'        => wp_json_encode( $payload ),
-			'blocking'    => true,
-		)
-	);
+		// Build bots payload: { bot_name: { resource_slug: count } }.
+		// Every distinct captured bot_name is preserved verbatim — no 'Other'
+		// collapse, no whitelist filter. The network classifies on the server side.
+		$bots = array();
+		foreach ( $rows as $row ) {
+			$bot_name = (string) $row['bot_name'];
+			$resource = $resource_slugs[ (int) $row['resource_type'] ] ?? null;
+			if ( ! $resource || '' === $bot_name ) {
+				continue;
+			}
+			if ( ! isset( $bots[ $bot_name ] ) ) {
+				$bots[ $bot_name ] = array();
+			}
+			$bots[ $bot_name ][ $resource ] = (int) $row['count'];
+		}
 
-	// Record successful send timestamp for dashboard display.
-	if ( ! is_wp_error( $response ) && 200 === (int) wp_remote_retrieve_response_code( $response ) ) {
-		update_option( 'aeopugmill_last_network_send', time(), false );
-	}
+		if ( empty( $bots ) ) {
+			update_option( 'aeopugmill_last_sent_day', $day, false );
+			continue;
+		}
 
-	// Auto-recover from stale or corrupted tokens: if the server returns 401,
-	// re-register to get a fresh token and retry once.
-	if ( ! is_wp_error( $response ) && 401 === (int) wp_remote_retrieve_response_code( $response ) ) {
-		if ( aeopugmill_intelligence_register() === true ) {
-			$fresh_token = aeopugmill_get_encrypted_option( 'aeopugmill_network_token', '' );
-			if ( ! empty( $fresh_token ) ) {
-				$retry_hmac               = hash_hmac( 'sha256', "{$site_id}:{$date}:" . AEOPUGMILL_VERSION, $fresh_token );
-				$payload['network_token'] = $fresh_token;
-
-				wp_remote_post(
-					'https://aeopugmill.com/api/ingest',
-					array(
-						'timeout'   => 10,
-						'sslverify' => true,
-						'headers'   => array(
-							'Content-Type'  => 'application/json',
-							'Authorization' => 'Bearer ' . $retry_hmac,
-						),
-						'body'      => wp_json_encode( $payload ),
-						'blocking'  => false,
-					)
-				);
+		// Bot visits to markdown endpoints for this day (resource_type 3).
+		$markdown_assets_served = 0;
+		foreach ( $rows as $row ) {
+			if ( (int) $row['resource_type'] === 3 ) {
+				$markdown_assets_served += (int) $row['count'];
 			}
 		}
+
+		$date            = gmdate( 'Y-m-d', $day * DAY_IN_SECONDS );
+		// Submission HMAC — signs this specific day's payload with the site's token.
+		$submission_hmac = hash_hmac( 'sha256', "{$site_id}:{$date}:" . AEOPUGMILL_VERSION, $network_token );
+
+		$payload = array(
+			'schema_ver'             => 4,
+			'site_id'                => $site_id,
+			'date'                   => $date,
+			'plugin_version'         => AEOPUGMILL_VERSION,
+			'aeo_tier'               => $aeo_tier,
+			'seo_plugin'             => $seo_plugin_slug,
+			'posts_with_aeo'         => $aeo_count,
+			'posts_total'            => $posts_total,
+			'markdown_assets_served' => $markdown_assets_served,
+			'pugmill_outputs_active' => $pugmill_outputs_active,
+			'field_coverage'         => array(
+				'summary'          => $field_summary,
+				'summary_quality'  => $field_summary_quality,
+				'questions'        => $field_questions,
+				'questions_3plus'  => $field_questions_3plus,
+				'entities'         => $field_entities,
+				'keywords'         => $field_keywords,
+			),
+			'bots'                   => $bots,
+			'network_token'          => $network_token,
+		);
+
+		if ( ! empty( $signals ) ) {
+			$payload['signals'] = $signals;
+		}
+
+		/**
+		 * Filter the intelligence network payload before transmission.
+		 *
+		 * @param array $payload Payload array.
+		 * @param int   $day     Unix-day integer for the reported day.
+		 */
+		$payload = apply_filters( 'aeopugmill_intelligence_payload', $payload, $day );
+
+		$response = wp_remote_post(
+			'https://aeopugmill.com/api/ingest',
+			array(
+				'timeout'     => 10,
+				'sslverify'   => true,
+				'headers'     => array(
+					'Content-Type'  => 'application/json',
+					'Authorization' => 'Bearer ' . $submission_hmac,
+				),
+				'body'        => wp_json_encode( $payload ),
+				'blocking'    => true,
+			)
+		);
+
+		$http_code = is_wp_error( $response ) ? 0 : (int) wp_remote_retrieve_response_code( $response );
+
+		// Record successful send.
+		if ( 200 === $http_code ) {
+			update_option( 'aeopugmill_last_sent_day', $day, false );
+			update_option( 'aeopugmill_last_network_send', time(), false );
+			continue;
+		}
+
+		// Auto-recover from stale or corrupted tokens: if the server returns 401,
+		// re-register to get a fresh token and retry once.
+		if ( 401 === $http_code ) {
+			if ( aeopugmill_intelligence_register() === true ) {
+				$fresh_token = aeopugmill_get_encrypted_option( 'aeopugmill_network_token', '' );
+				if ( ! empty( $fresh_token ) ) {
+					$network_token            = $fresh_token;
+					$retry_hmac               = hash_hmac( 'sha256', "{$site_id}:{$date}:" . AEOPUGMILL_VERSION, $fresh_token );
+					$payload['network_token'] = $fresh_token;
+
+					$retry_response = wp_remote_post(
+						'https://aeopugmill.com/api/ingest',
+						array(
+							'timeout'   => 10,
+							'sslverify' => true,
+							'headers'   => array(
+								'Content-Type'  => 'application/json',
+								'Authorization' => 'Bearer ' . $retry_hmac,
+							),
+							'body'      => wp_json_encode( $payload ),
+							'blocking'  => true,
+						)
+					);
+
+					if ( ! is_wp_error( $retry_response ) && 200 === (int) wp_remote_retrieve_response_code( $retry_response ) ) {
+						update_option( 'aeopugmill_last_sent_day', $day, false );
+						update_option( 'aeopugmill_last_network_send', time(), false );
+					}
+				}
+			}
+			// On persistent auth failure, stop the loop — token is broken.
+			break;
+		}
+
+		// Any other HTTP error: stop the loop and retry next cron run.
+		break;
 	}
 }
 add_action( 'aeopugmill_intelligence_send', 'aeopugmill_intelligence_send' );
