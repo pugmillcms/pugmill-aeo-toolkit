@@ -36,6 +36,7 @@ zip -r "$ZIP_NAME" "$PLUGIN_DIR" \
   --exclude "$PLUGIN_DIR/.distignore" \
   --exclude "$PLUGIN_DIR/.DS_Store" \
   --exclude "*/.DS_Store" \
-  --exclude "$PLUGIN_DIR/vitest.config.js"
+  --exclude "$PLUGIN_DIR/vitest.config.js" \
+  --exclude "$PLUGIN_DIR/includes/update-checker.php"
 
 echo "Done: $ZIP_NAME"

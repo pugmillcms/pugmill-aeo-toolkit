@@ -4,7 +4,7 @@ Tags: aeo, answer engine optimization, ai, structured data, bot analytics
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.1.1
+Stable tag: 1.1.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -166,6 +166,12 @@ Plus llms.txt, per-post Markdown endpoints, and a bot analytics dashboard.
 
 == Changelog ==
 
+= 1.1.2 =
+* **AEO RSS Feed**: The plugin now adds an `xmlns:aeo` namespace to your RSS 2.0 feed and injects `<aeo:summary>`, `<aeo:entity>`, and `<aeo:qa>` elements per post. AI crawlers consuming the feed receive the full AEO metadata alongside post content. Purely additive — does not modify `content:encoded` or existing feed elements. Can be disabled from the Compatibility tab.
+* **llms.txt autodiscovery**: Added `<link rel="alternate" type="text/plain">` tags in `<head>` for `/llms.txt` and `/llms-full.txt`, and an HTTP `Link:` header on every page load, so AI crawlers find the AEO content index without guessing the URL.
+* **Reclassified resource types**: RSS Feed and HTML+AEO (posts with embedded AEO metadata) are now grouped under AEO Endpoints in the Content Reach dashboard — both carry AEO content and are treated as AEO signals in bot analytics and the AI Insights report.
+* **Compatibility tab**: New "AEO RSS Enrichment" row in the Overlapping Outputs table with a disable toggle and informational notice when another plugin is also modifying the RSS feed.
+
 = 1.1.1 =
 * **Code quality**: WordPress.org Plugin Check compliance — output escaping, input sanitization, i18n translators comments, `wp_parse_url`/`wp_strip_all_tags` substitutions, and `error_log` calls gated on `WP_DEBUG`. No functional changes.
 
@@ -197,6 +203,9 @@ Plus llms.txt, per-post Markdown endpoints, and a bot analytics dashboard.
 * First public release — prepared for WordPress.org submission.
 
 == Upgrade Notice ==
+
+= 1.1.2 =
+AEO-enriched RSS feed, llms.txt autodiscovery, and resource type reclassification. Safe to upgrade — no database changes.
 
 = 1.1.1 =
 Code quality and escaping fixes for WordPress.org submission. Safe to upgrade — no functional changes, no database changes.
