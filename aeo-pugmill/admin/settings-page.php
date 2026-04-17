@@ -1653,9 +1653,9 @@ function aeopugmill_render_settings_page() {
 
 		// Fixed column order — all tracked resource types, grouped by category.
 		$col_order_by_cat = array(
-			'aeo'       => array( 1, 2, 3, 4, 8 ),      // llms.txt, llms-full, Markdown, Summary, JSON-LD
-			'discovery' => array( 5, 6, 9, 10 ),        // Sitemap, Robots.txt, RSS, Well-Known
-			'crawl'     => array( 0, 7 ),               // HTML, HTML+AEO
+			'aeo'       => array( 1, 2, 3, 4, 8, 9, 7 ), // llms.txt, llms-full, Markdown, Summary, JSON-LD, RSS Feed, HTML+AEO
+			'discovery' => array( 5, 6, 10 ),            // Sitemap, Robots.txt, Well-Known
+			'crawl'     => array( 0 ),                   // HTML (plain, no AEO)
 		);
 		$col_order_ordered = array();
 		foreach ( $col_order_by_cat as $_cat => $_ids ) {
@@ -1686,10 +1686,10 @@ function aeopugmill_render_settings_page() {
 			8  => array( 'group' => 'aeo',       'name' => 'AEO JSON-LD',   'url' => '/aeo/*.jsonld' ),
 			5  => array( 'group' => 'discovery', 'name' => 'Sitemap',       'url' => '/sitemap.xml, /wp-sitemap-*.xml' ),
 			6  => array( 'group' => 'discovery', 'name' => 'Robots.txt',    'url' => '/robots.txt' ),
-			9  => array( 'group' => 'discovery', 'name' => 'RSS Feed',      'url' => '/feed/ and sub-feeds' ),
+			9  => array( 'group' => 'aeo',       'name' => 'RSS Feed',      'url' => '/feed/ — carries AEO summaries, entities, Q&amp;A' ),
+			7  => array( 'group' => 'aeo',       'name' => 'HTML + AEO',    'url' => __( 'Posts with AEO metadata', 'aeo-pugmill' ) ),
 			10 => array( 'group' => 'discovery', 'name' => 'Well-Known',    'url' => '/.well-known/*, /ads.txt, …' ),
 			0  => array( 'group' => 'crawl',     'name' => 'HTML',          'url' => __( 'Plain post/page crawl', 'aeo-pugmill' ) ),
-			7  => array( 'group' => 'crawl',     'name' => 'HTML + AEO',    'url' => __( 'Posts with AEO metadata', 'aeo-pugmill' ) ),
 		);
 
 		// Aggregate totals per endpoint + identify top bot for each.
