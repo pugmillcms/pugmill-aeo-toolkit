@@ -1152,6 +1152,7 @@ function aeopugmill_render_settings_page() {
 		$defer_meta_g     = (bool) get_option( 'aeopugmill_disable_seo_meta', 0 );
 		$llms_off_g       = (bool) get_option( 'aeopugmill_disable_llms_txt', 0 );
 		$robots_off_g     = (bool) get_option( 'aeopugmill_disable_robots_append', 0 );
+		$rss_off_g        = (bool) get_option( 'aeopugmill_disable_rss_enrichment', 0 );
 
 		// Count features by owner
 		$gauge_pugmill  = 0; // Pugmill exclusive, active
@@ -1162,6 +1163,7 @@ function aeopugmill_render_settings_page() {
 		// Pugmill exclusive
 		if ( ! $llms_off_g )   { $gauge_pugmill++; } else { $gauge_disabled++; } // llms.txt
 		if ( ! $llms_off_g )   { $gauge_pugmill++; } else { $gauge_disabled++; } // llms-full.txt
+		if ( ! $rss_off_g )    { $gauge_pugmill++; } else { $gauge_disabled++; } // AEO RSS Feed
 		$gauge_pugmill += 4; // per-post markdown, site summary, bot analytics, FAQPage schema
 		if ( ! $robots_off_g ) { $gauge_pugmill++; } else { $gauge_disabled++; } // robots.txt
 		$gauge_pugmill += 2; // citations, entity graph
@@ -1425,6 +1427,8 @@ function aeopugmill_render_settings_page() {
 						array( 'label' => __( 'Q&A Pairs (3+)',      'aeo-pugmill' ), 'net_key' => 'questions_3plus', 'count' => $cov_field_questions_3,  'pct' => ( $cov_total > 0 ? (int) round( $cov_field_questions_3  / $cov_total * 100 ) : 0 ) ),
 						array( 'label' => __( 'Named Entities',      'aeo-pugmill' ), 'net_key' => 'entities',  'count' => $cov_field_entities,     'pct' => ( $cov_total > 0 ? (int) round( $cov_field_entities     / $cov_total * 100 ) : 0 ) ),
 						array( 'label' => __( 'Keywords (5+)',        'aeo-pugmill' ), 'net_key' => 'keywords',  'count' => $cov_field_keywords,     'pct' => ( $cov_total > 0 ? (int) round( $cov_field_keywords     / $cov_total * 100 ) : 0 ) ),
+						array( 'section' => __( 'AEO RSS Feed', 'aeo-pugmill' ) ),
+						array( 'label' => __( 'Posts emitting AEO feed elements', 'aeo-pugmill' ), 'net_key' => null, 'count' => $cov_any, 'pct' => $cov_any_pct, 'rss_disabled' => $rss_off_g ),
 					);
 					$opted_in_network = (bool) get_option( 'aeopugmill_analytics_opted_in' );
 					foreach ( $radar_fields as $rf ) :
@@ -1437,9 +1441,10 @@ function aeopugmill_render_settings_page() {
 							<?php
 							continue;
 						endif;
-						$rc          = $rf['pct'] >= 75 ? '#16a34a' : ( $rf['pct'] >= 40 ? '#d97706' : '#e11d48' );
-						$has_net_key = ! empty( $rf['net_key'] );
-						$net_pct     = null;
+						$rss_disabled = ! empty( $rf['rss_disabled'] );
+						$rc           = $rss_disabled ? '#9ca3af' : ( $rf['pct'] >= 75 ? '#16a34a' : ( $rf['pct'] >= 40 ? '#d97706' : '#e11d48' ) );
+						$has_net_key  = ! empty( $rf['net_key'] );
+						$net_pct      = null;
 						if ( $has_net_key ) {
 							$raw = $network_coverage['fields'][ $rf['net_key'] ]['pct'] ?? null;
 							if ( null !== $raw && '' !== $raw ) {
@@ -1448,8 +1453,8 @@ function aeopugmill_render_settings_page() {
 						}
 						$show_avg = $has_net_key && $opted_in_network;
 					?>
-					<div style="display:grid;grid-template-columns:minmax(0,1fr) 64px minmax(0,1.4fr);align-items:center;gap:6px;">
-						<span style="font-size:11px;color:#374151;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="<?php echo esc_attr( $rf['label'] ); ?>"><?php echo esc_html( $rf['label'] ); ?></span>
+					<div style="display:grid;grid-template-columns:minmax(0,1fr) 64px minmax(0,1.4fr);align-items:center;gap:6px;<?php echo $rss_disabled ? 'opacity:0.5;' : ''; ?>">
+						<span style="font-size:11px;color:#374151;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="<?php echo esc_attr( $rf['label'] ); ?>"><?php echo esc_html( $rf['label'] ); ?><?php if ( $rss_disabled ) : ?> <span style="font-weight:400;color:#9ca3af;">(<?php esc_html_e( 'feed enrichment off', 'aeo-pugmill' ); ?>)</span><?php endif; ?></span>
 						<span style="font-size:11px;text-align:right;color:<?php echo esc_attr( $rc ); ?>;font-weight:700;"><?php echo (int) $rf['pct']; ?>% <span style="color:#9ca3af;font-weight:400;font-size:10px;">(<?php echo esc_html( number_format_i18n( $rf['count'] ) ); ?>)</span></span>
 						<div style="position:relative;">
 							<div style="position:relative;height:16px;border-radius:3px;overflow:hidden;background:#f3f4f6;">
@@ -1590,9 +1595,10 @@ function aeopugmill_render_settings_page() {
 						'heading' => 'AEO Endpoints',
 						'color'   => '#7c3aed',
 						'items'   => array(
-							array( 'name' => 'llms.txt',      'type' => $llms_off_g    ? 'off' : 'pm' ),
-							array( 'name' => 'llms-full.txt', 'type' => $llms_off_g    ? 'off' : 'pm' ),
-							array( 'name' => 'robots.txt',    'type' => $robots_off_g  ? 'off' : 'pm' ),
+							array( 'name' => 'llms.txt',      'type' => $llms_off_g   ? 'off' : 'pm' ),
+							array( 'name' => 'llms-full.txt', 'type' => $llms_off_g   ? 'off' : 'pm' ),
+							array( 'name' => 'AEO RSS Feed',  'type' => $rss_off_g    ? 'off' : 'pm' ),
+							array( 'name' => 'robots.txt',    'type' => $robots_off_g ? 'off' : 'pm' ),
 							array( 'name' => 'Post Markdown', 'type' => 'pm' ),
 							array( 'name' => 'Site Summary',  'type' => 'pm' ),
 						),
