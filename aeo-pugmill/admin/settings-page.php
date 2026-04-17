@@ -1700,7 +1700,7 @@ function aeopugmill_render_settings_page() {
 			8  => 'JSON-LD',
 			5  => 'Sitemap',
 			6  => 'Robots',
-			9  => 'RSS',
+			9  => 'RSS+AEO',
 			10 => 'Well-Known',
 			0  => 'HTML',
 			7  => 'HTML+AEO',
