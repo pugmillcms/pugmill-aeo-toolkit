@@ -39,7 +39,7 @@ function aeopugmill_encrypt( $plaintext ) {
 
 	if ( ! function_exists( 'openssl_encrypt' ) ) {
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( 'AEO Pugmill: OpenSSL is not available on this server. API and license keys cannot be saved securely and will not be stored.' ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( 'Pugmill AEO Toolkit: OpenSSL is not available on this server. API and license keys cannot be saved securely and will not be stored.' ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 		}
 		add_action( 'admin_notices', 'aeopugmill_notice_openssl_unavailable' );
 		return '';
@@ -51,7 +51,7 @@ function aeopugmill_encrypt( $plaintext ) {
 
 	if ( false === $cipher ) {
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( 'AEO Pugmill: Encryption failed.' ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( 'Pugmill AEO Toolkit: Encryption failed.' ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 		}
 		return $plaintext;
 	}
@@ -131,7 +131,7 @@ function aeopugmill_get_encrypted_option( $option_name, $default = '' ) {
  */
 function aeopugmill_notice_openssl_unavailable() {
 	echo '<div class="notice notice-error"><p><strong>' .
-		esc_html__( 'AEO Pugmill requires OpenSSL to store API and license keys securely.', 'aeo-pugmill' ) .
+		esc_html__( 'Pugmill AEO Toolkit requires OpenSSL to store API and license keys securely.', 'aeo-pugmill' ) .
 		'</strong> ' .
 		esc_html__( 'OpenSSL is not available on this server. Keys cannot be saved until OpenSSL is enabled. Please contact your host.', 'aeo-pugmill' ) .
 		'</p></div>';

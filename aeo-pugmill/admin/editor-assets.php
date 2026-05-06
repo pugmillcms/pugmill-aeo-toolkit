@@ -30,36 +30,25 @@ function aeopugmill_enqueue_editor_assets() {
 		true
 	);
 
-	wp_localize_script(
-		'aeopugmill-editor',
-		'aeopugmill',
+	$editor_data = apply_filters(
+		'aeopugmill_editor_data',
 		array(
-			'mode'          => aeopugmill_mode(),
+			'isProActive'   => defined( 'AEOPUGMILL_PRO_ACTIVE' ) && AEOPUGMILL_PRO_ACTIVE,
 			'hasApiKey'     => ! empty( aeopugmill_get_encrypted_option( 'aeopugmill_ai_api_key', '' ) ),
 			'ajaxUrl'       => admin_url( 'admin-ajax.php' ),
-			'nonce'         => wp_create_nonce( 'aeopugmill_generate_aeo' ),
-			'toneNonce'          => wp_create_nonce( 'aeopugmill_tone_check' ),
-			'readingLevelNonce'  => wp_create_nonce( 'aeopugmill_reading_level' ),
-			'headlinesNonce'     => wp_create_nonce( 'aeopugmill_headline_variants' ),
-			'topicFocusNonce'    => wp_create_nonce( 'aeopugmill_topic_focus' ),
-	'refineFocusNonce'    => wp_create_nonce( 'aeopugmill_refine_focus' ),
-			'swapFocusNonce'      => wp_create_nonce( 'aeopugmill_swap_focus_passage' ),
-			'usageNonce'         => wp_create_nonce( 'aeopugmill_get_usage' ),
-			'excerptNonce'       => wp_create_nonce( 'aeopugmill_generate_excerpt' ),
-	'internalLinksNonce' => wp_create_nonce( 'aeopugmill_internal_links' ),
-			'socialDraftNonce'   => wp_create_nonce( 'aeopugmill_social_draft' ),
-			'summaryNonce'       => wp_create_nonce( 'aeopugmill_generate_summary' ),
-			'qaNonce'            => wp_create_nonce( 'aeopugmill_generate_qa' ),
-			'entitiesNonce'      => wp_create_nonce( 'aeopugmill_generate_entities' ),
-			'keywordsNonce'      => wp_create_nonce( 'aeopugmill_generate_keywords' ),
-			'fixKeywordsNonce'      => wp_create_nonce( 'aeopugmill_fix_keyword_coverage' ),
-			'suggestHeadingsNonce'  => wp_create_nonce( 'aeopugmill_suggest_headings' ),
-		'seoNonce'           => wp_create_nonce( 'aeopugmill_generate_seo' ),
-		'howtoNonce'         => wp_create_nonce( 'aeopugmill_generate_howto_steps' ),
-		'schemaAiNonce'      => wp_create_nonce( 'aeopugmill_suggest_schema' ),
+			// Free BYOK nonces — individual AEO field generators.
+			'usageNonce'    => wp_create_nonce( 'aeopugmill_get_usage' ),
+			'summaryNonce'  => wp_create_nonce( 'aeopugmill_generate_summary' ),
+			'qaNonce'       => wp_create_nonce( 'aeopugmill_generate_qa' ),
+			'entitiesNonce' => wp_create_nonce( 'aeopugmill_generate_entities' ),
+			'keywordsNonce' => wp_create_nonce( 'aeopugmill_generate_keywords' ),
+			'seoNonce'      => wp_create_nonce( 'aeopugmill_generate_seo' ),
+			'howtoNonce'    => wp_create_nonce( 'aeopugmill_generate_howto_steps' ),
 			'pricingUrl'    => esc_url( 'https://aeopugmill.com/pricing' ),
 		)
 	);
+
+	wp_localize_script( 'aeopugmill-editor', 'aeopugmill', $editor_data );
 
 	wp_enqueue_script(
 		'aeopugmill-editor-resize',

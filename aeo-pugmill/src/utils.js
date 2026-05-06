@@ -1,5 +1,5 @@
 /**
- * AEO Pugmill — Shared utilities.
+ * Pugmill AEO Toolkit — Shared utilities.
  *
  * @package WPPugmill
  */

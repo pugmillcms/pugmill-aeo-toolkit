@@ -10,20 +10,31 @@
 
 ## Overview
 
-AEO Pugmill is a WordPress plugin for Answer Engine Optimization (AEO) — structuring content so AI answer engines like ChatGPT, Perplexity, and Gemini can discover, understand, and cite it. It ships as a single plugin with three auto-detected operating modes.
+AEO Pugmill is a WordPress plugin for Answer Engine Optimization (AEO) — structuring content so AI answer engines like ChatGPT, Perplexity, and Gemini can discover, understand, and cite it. It is distributed as two components: a free plugin on WordPress.org and an optional Pro add-on distributed from aeopugmill.com.
 
 ---
 
-## Modes
+## Tiers
 
-### Free
-Full manual AEO toolkit. No account or API key required.
+### Free (WordPress.org)
+Full manual AEO toolkit — no account, API key, or license required. When an AI API key is configured in Settings, individual per-field AI generation (Summary, Q&A, Entities, Keywords) becomes available on each post. All other features are fully functional without any key.
 
-### AI Connector (BYOK)
-User supplies their own API key (Anthropic Claude, OpenAI GPT-4o, or Google Gemini). Unlocks all AI generation features. Requires a valid Lemon Squeezy license key from aeopugmill.com.
+**Gate:** individual AI field pills unlock with `HAS_API_KEY` (any configured API key). No license check.
 
-### Pro *(planned)*
-AI generation powered by AEO Pugmill token infrastructure — no API key needed. Includes bulk generation, site-wide AEO dashboard, author voice training. License key auto-activates.
+### Pro (add-on, aeopugmill.com only)
+Distributed as a separate plugin (`aeo-pugmill-pro`) from aeopugmill.com. Requires the free plugin to be active (`Requires Plugins: aeo-pugmill`). Validated by a license key from aeopugmill.com — the license gates access to the Pro add-on only, not to any code in the free plugin.
+
+Pro adds automation and convenience features on top of the free toolkit:
+- One-click **Generate AEO** (all fields in a single action)
+- **Refine Content** suite (Tone Check, Topic Focus, Reading Level, Headlines, Internal Links, Social Draft, Excerpt, Keyword Coverage)
+- **SEO Generate** (AI-written title + meta description)
+- **Schema Suggest** + HowTo Steps AI drafting
+- **Audit AEO** settings tab (site-wide coverage review with inline AI generation)
+- **Bulk AEO** settings tab (automated batch generation across all posts)
+- **AI Agent** (conversational editor assistant)
+- **AI Usage Meter**
+
+**Gate:** Pro features check for `defined( 'AEOPUGMILL_PRO_ACTIVE' )`, a constant the Pro add-on defines on load. The free plugin renders static upgrade placeholders at Pro hook points when the constant is absent.
 
 ---
 
@@ -193,7 +204,9 @@ Available in all modes. Implementation: `includes/bot-analytics.php`, admin UI l
 
 ### 8. AEO Audit
 
-Available in all modes. Triggered from the Audit panel in the block editor sidebar. Pre-saves the post before running (so audit reads current content). Implementation: `includes/audit.php` (REST endpoint `GET /wp-json/aeo-pugmill/v1/audit/{post_id}`).
+**Sidebar audit panel** — available in all tiers (free and Pro). Triggered from the Audit panel in the block editor sidebar. Pre-saves the post before running (so audit reads current content). Implementation: `includes/audit.php` (REST endpoint `GET /wp-json/aeo-pugmill/v1/audit/{post_id}`).
+
+**Settings → Audit AEO tab** — Pro add-on only. Site-wide table of all published posts with AEO coverage scores and inline per-field AI generation. See §9 for the generation endpoints it uses.
 
 **Audit checks (12 total):**
 
@@ -218,31 +231,37 @@ Notes:
 - `keywords_in_content`: keyword "covered" when ≥60% of its meaningful words (>3 chars, non-stopword) appear in content body
 - Score is weighted: `passed / total * 100`
 
-**AI fixes (AI Connector mode only):**
+**AI fixes — tier split:**
 
-- `keywords_in_content` → `aeopugmill_fix_keyword_coverage` — suggests revised passage; "Apply Fix" swaps it into the editor
-- `has_headings` → `aeopugmill_suggest_headings` — suggests a heading; "Insert Heading" adds it as a new Gutenberg block
-- `featured_image_alt` → "Generate Alt Text" — calls vision API; saves to media library or applies to block attribute
-- All other fixable checks have a "Generate" button (calls respective individual generator AJAX action)
+- Fixable checks that map to individual field generators (`summary_present`, `qa_present`, `entities_present`, `keywords_present`) → **Free with API key** (calls the same individual AJAX actions as the sidebar pills)
+- `keywords_in_content` → `aeopugmill_fix_keyword_coverage` — **Pro add-on only**
+- `has_headings` → `aeopugmill_suggest_headings` — **Pro add-on only**
+- `featured_image_alt` → "Generate Alt Text" — **Pro add-on only**
 
 ---
 
-### 9. AI Content Generation (AI Connector mode only)
+### 9. AI Content Generation
 
-All AI generation pre-saves the post before sending content to the AI provider. Implementation split across `includes/ai-*.php` modules.
+Implementation split across `includes/ai-*.php` modules. All AI generation pre-saves the post before sending content to the AI provider unless noted.
 
-#### Generate AEO Fields (individual)
-Separate AJAX actions for each field. All available in AI Connector mode (license required):
+#### Free tier — individual field generation (API key required, no license)
+
+Separate AJAX actions, one per field. Exposed as ✨ pill buttons next to each AEO field in the sidebar. Gate: `HAS_API_KEY`.
+
 - `aeopugmill_generate_summary` → returns `{summary}`
 - `aeopugmill_generate_qa` → returns `{questions: [{q, a}]}`
 - `aeopugmill_generate_entities` → returns `{entities: [{name, type, description}]}`
 - `aeopugmill_generate_keywords` → returns `{keywords: [...]}`
 
-#### Generate All AEO (combined)
-`aeopugmill_generate_aeo` AJAX action — one-click generation of all AEO fields in a single AI call.
+#### Pro add-on — Generate AEO (combined)
+`aeopugmill_generate_aeo` AJAX action — one-click generation of all AEO fields in a single AI call, followed by SEO, Excerpt, Topic Focus, and Internal Links in sequence. Rendered as the "✨ Generate AEO" button in the sidebar header.
 
-#### SEO Generate
-`aeopugmill_generate_seo` AJAX action — generates SEO title and meta description.
+#### Pro add-on — SEO Generate
+`aeopugmill_generate_seo` AJAX action — generates SEO title and meta description. Button in SeoPanel.
+
+#### Pro add-on — Refine Content suite
+
+All features below are Pro add-on only. Rendered as the Refine Content section in the sidebar. Gate: `defined( 'AEOPUGMILL_PRO_ACTIVE' )`. Free plugin shows a static informational CTA card (description + "Get AEO Pugmill Pro →" link) at this position — no disabled buttons or locked UI elements.
 
 #### Rewrite from Draft
 Rewrites post body into Answer Unit structure (Primary Question → Direct Answer → Context → Supporting Details). Populates AEO fields and replaces Gutenberg editor blocks. Auto-saves after apply.
@@ -278,17 +297,18 @@ Suggests internal links from existing site content. "Insert" wraps matched passa
 - External images (HTTP): fetched server-side, base64-encoded, then sent
 - After generation: `wp.data.dispatch('core').invalidateResolution('getMedia', [id])` to bust cache
 
-#### Suggest Schema
+#### Pro add-on — Schema AI
 `aeopugmill_suggest_schema` — AI analyses post content and suggests the most appropriate extended schema type with pre-filled fields. If no extended type is needed, returns a notice.
 
-#### HowTo Steps from Content
 `aeopugmill_generate_howto_steps` — AI drafts step list from post content for HowTo schema.
+
+Schema Builder manual entry (no AI) remains free in all tiers.
 
 ---
 
 ### 10. AI Agent (Pugmill Agent)
 
-Available in AI Connector mode. Conversational assistant in the editor sidebar. Implementation: `includes/agent.php`.
+**Pro add-on only.** Conversational assistant in the editor sidebar. Implementation: `includes/agent.php` (lives in Pro add-on codebase).
 
 - REST endpoint: `POST /wp-json/aeo-pugmill/v1/chat`
 - Request: `{ post_id: int, messages: [{role, content}, ...] }`
@@ -312,7 +332,7 @@ Available in all modes. `FeaturedImageAlt` component in the block editor sidebar
 
 ### 13. AI Usage Meter
 
-Available in AI Connector mode. Displays current hourly API call count vs. configured limit in the editor sidebar header.
+**Pro add-on only.** Displays current hourly API call count vs. configured limit in the editor sidebar header. Not rendered in free plugin.
 
 ---
 
@@ -391,13 +411,32 @@ All three registered via `register_post_meta` with `show_in_rest: true` on all p
 - Rate limit implemented via WordPress transients keyed to user ID
 
 ### License Validation
-- Lemon Squeezy API for license activation/validation (`includes/license.php`)
-- License key + unique site instance ID sent on activation only
-- Free mode users make zero external connections
+- License validated against `aeopugmill.com/api/validate-license` (`includes/license.php`, lives in Pro add-on)
+- License key + site domain sent on validation; cached 6 hours via transient
+- License gates access to the Pro add-on only — it does not gate any functionality in the free plugin
+- Free plugin users (no Pro add-on installed) make zero license-related external connections
+- API key storage and encryption (`includes/encryption.php`) remains in the free plugin — used by free-tier individual generators
 
 ### Distribution
-- Manual zip upload to WordPress sites; preparing for WordPress.org plugin directory submission
-- Build zip via `./build.sh` from the repo root — reads version from plugin header, runs `npm run build`, and packages distribution files
+
+**Free plugin (`aeo-pugmill`):**
+- WordPress.org plugin directory (pending slug confirmation from WP.org review)
+- Built via `./build.sh --free` — excludes all Pro add-on files, produces `aeo-pugmill-x.x.x.zip`
+
+**Pro add-on (`aeo-pugmill-pro`):**
+- Distributed from aeopugmill.com only; never submitted to WordPress.org
+- Declares `Requires Plugins: aeo-pugmill` in plugin header
+- Defines `AEOPUGMILL_PRO_ACTIVE` constant on load; free plugin checks this at Pro hook points
+- Built via `./build.sh --pro` — produces `aeo-pugmill-pro-x.x.x.zip`
+
+**Monorepo structure:**
+- Single git repository containing both `aeo-pugmill/` (free) and `aeo-pugmill-pro/` (add-on) directories
+- Shared utilities referenced by both (encryption, AI client, rate limiting) live in the free plugin; Pro add-on requires free plugin to be active and uses its functions directly
+
+**Pro hook points in the free plugin:**
+- Free plugin calls `do_action( 'aeopugmill_generate_aeo_panel', $post_id )` where the Generate AEO button slot is; renders a static upgrade placeholder when `AEOPUGMILL_PRO_ACTIVE` is not defined
+- Free plugin calls `do_action( 'aeopugmill_refine_content_panel', $post_id )` where Refine Content sits; same fallback
+- Free plugin renders static placeholder tab content for Audit AEO and Bulk AEO when Pro is not active
 
 ### Caching
 - llms.txt endpoints: 1-hour transient cache
@@ -405,11 +444,11 @@ All three registered via `register_post_meta` with `show_in_rest: true` on all p
 
 ---
 
-## Out of Scope (Current Version)
+## Out of Scope (Free Plugin / Current Version)
 
-- Bulk AI generation across multiple posts (planned for Pro)
-- Site-wide AEO dashboard (planned for Pro)
-- Author voice training (planned for Pro)
+- All Pro add-on features (Generate AEO, Refine Content, Bulk AEO, Audit AEO tab, AI Agent)
+- Author voice training (planned for future Pro version)
+- Site-wide AEO dashboard (planned for future Pro version)
 - Classic Editor support for block-editor-only features (Rewrite from Draft, passage swap, insert heading/link)
 
 ---
@@ -430,7 +469,7 @@ Add `citation` array to `BlogPosting` schema for external grounding.
 **Free tier (auto-extracted from post content, no UI):**
 - In `aeopugmill_output_singular_json_ld()`: scan `$post->post_content` for external `<a href>` tags; filter to off-domain links with meaningful anchor text; build `citation` array of `{@type: 'WebPage', name, url}` objects
 
-**AI Connector tier (manual + AI-suggested, planned):**
+**Pro add-on tier (manual + AI-suggested, planned):**
 - New `citations` array in `_aeopugmill_aeo` meta
 - Manual Citations panel in AEO editor
 - `aeopugmill_suggest_citations` AJAX action — AI identifies factual claims and suggests Wikipedia/authoritative URIs
@@ -439,12 +478,33 @@ Add `citation` array to `BlogPosting` schema for external grounding.
 
 ## Pre-Submission Checklist (WordPress.org)
 
-- [ ] Remove `AEOPUGMILL_DEV_MODE` bypass from `aeopugmill_mode()` in `aeo-pugmill.php` (lines 40-43)
-- [ ] Remove `define('AEOPUGMILL_DEV_MODE', true)` from Local Sites `wp-config.php`
-- [ ] Confirm `AEOPUGMILL_VERSION` constant matches plugin header (both should be `1.1.0`)
-- [ ] Confirm `readme.txt` stable tag matches current version (`1.1.0`)
-- [ ] Confirm build is current (`npm run build`) — `build/index.js` matches `src/`
-- [ ] Run full test suite — **250 tests must pass**: `php tests/test-plugin.php` (110), `php tests/test-encryption.php` (23), `npm test` (117)
+### Structural (blocking — must fix before resubmission)
+- [ ] **Plugin name/slug** — WP.org review queried distinctiveness of "AEO Pugmill". Decision pending: keep current name (with rationale) or pick a new slug
+- [ ] **Ownership verification** — gmail.com email is not a valid form of identification. Options: DNS TXT record `wordpressorg-janzenms-verification` at `aeopugmill.com` or `janzenworks.com` root, change WP.org account email to a domain-matching address, or transfer the plugin to a domain-matching account
+- [x] **Pro add-on split** — Pro feature code moved out of the free plugin (April 2026)
+  - [x] `aeopugmill_mode()` no longer performs license checks; returns 'ai' when API key set OR when Pro add-on defines `AEOPUGMILL_PRO_ACTIVE`
+  - [x] Pro PHP files moved to `aeo-pugmill-pro/` repo
+  - [x] Audit AEO + Bulk AEO tab content gated on `$is_pro_active` in free plugin (informational placeholders only)
+  - [x] Static informational CTA cards rendered at Generate AEO, Refine Content, Audit AEO, Bulk AEO positions — no disabled buttons or locked UI
+  - [x] Pro nonces removed from `admin/editor-assets.php`; Pro plugin injects its own via `apply_filters('aeopugmill_editor_data', $data)`
+- [x] **WP.org assets folder** — `build.sh` now excludes `assets/icon-*.png`, `assets/banner-*.png`, `assets/screenshot-*.png` from the WP.org zip; `pugmill-logo.svg` (runtime UI dependency) is kept; assets uploaded via SVN after approval
+
+### Security (blocking)
+- [x] **Nonce sanitization** — `admin/meta-box.php:151` wraps in `sanitize_text_field( wp_unslash( ... ) )` before `wp_verify_nonce()`
+- [x] **Inline scripts/styles** — all 11 `<script>` / `<style>` tags in `admin/settings-page.php` (10) and `admin/post-columns.php` (1) routed through `wp_add_inline_script()` / `wp_add_inline_style()` via two helper functions (`aeopugmill_inline_js`, `aeopugmill_inline_css`)
+- [x] **Output escaping** — every echoed variable in `includes/llms-txt.php` wrapped in `esc_html()` / `esc_url()` (cached buffers carry an explicit phpcs:ignore documenting why)
+- [x] **JSON-LD flags** — `includes/json-ld.php` already passes `JSON_HEX_TAG`; `JSON_HEX_APOS | JSON_HEX_QUOT` left out because output sits inside `<script type="application/ld+json">` where apostrophes/quotes are valid (re-evaluate if a reviewer flags this)
+
+### Documentation
+- [x] **readme.txt External Services** — Google sitemap ping, Bing sitemap ping, and IndexNow disclosed with what data is sent and links to terms/privacy. Pugmill License Server entry removed (no longer applicable to free plugin)
+- [x] **register_setting sanitize_callback** — `aeopugmill_sanitize_analytics_opt_in()` strictly returns `1` or `0`; no `absint`
+
+### Build & version hygiene
+- [ ] Remove `AEOPUGMILL_DEV_MODE` bypass from `aeo-pugmill.php` if still present
+- [ ] Confirm `AEOPUGMILL_VERSION` constant matches plugin header
+- [ ] Confirm `readme.txt` stable tag matches current version
+- [x] Confirm free build is current — `build/index.js` is regenerated by `build.sh` and contains no Pro feature code
+- [x] Run full test suite — JS (vitest) 117/117 pass; PHP encryption 23/23 pass; PHP bot/route 106/110 (4 pre-existing canonical-name failures from v1.1.1, unrelated to free/Pro split)
 
 ---
 
@@ -452,4 +512,4 @@ Add `citation` array to `BlogPosting` schema for external grounding.
 
 - External image alt text: updates the block attribute in the editor but does not persist to the media library (image has no attachment ID)
 - Classic Editor: "Write from Draft" shows reformatted body for manual paste instead of direct block injection
-- `schemaAiNonce` and `howtoNonce` nonces are wired in `constants.js` but Schema AI features (Suggest Schema, Draft Steps) are AI Connector-only — enforced server-side
+- `howtoNonce` is wired in `constants.js`; the HowTo Steps generator is free (BYOK API key required, gated on `IS_AI_MODE`). Schema Suggest is Pro-only and now renders an informational CTA card (no disabled button) — the Pro add-on injects `schemaAiNonce` via the `aeopugmill_editor_data` filter when active

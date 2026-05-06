@@ -1,5 +1,5 @@
 /**
- * AEO Pugmill — Constants and plugin configuration.
+ * Pugmill AEO Toolkit — Constants and plugin configuration.
  *
  * All values are injected via wp_localize_script in admin/editor-assets.php.
  *
@@ -7,60 +7,34 @@
  */
 
 const {
-	mode              = 'free',
-	hasApiKey         = false,
-	ajaxUrl           = '',
-	nonce             = '',
-	toneNonce         = '',
-	readingLevelNonce = '',
-	headlinesNonce    = '',
-	topicFocusNonce   = '',
-	refineFocusNonce  = '',
-	swapFocusNonce    = '',
-	excerptNonce      = '',
-	internalLinksNonce  = '',
-	socialDraftNonce  = '',
-	usageNonce        = '',
-	summaryNonce      = '',
-	qaNonce           = '',
-	entitiesNonce     = '',
-	keywordsNonce     = '',
-	fixKeywordsNonce  = '',
-	suggestHeadingsNonce = '',
-	seoNonce          = '',
-	howtoNonce        = '',
-	schemaAiNonce     = '',
-	pricingUrl        = 'https://aeopugmill.com/pricing',
+	mode       = 'free',
+	hasApiKey  = false,
+	ajaxUrl    = '',
+	usageNonce = '',
+	summaryNonce  = '',
+	qaNonce       = '',
+	entitiesNonce = '',
+	keywordsNonce = '',
+	seoNonce      = '',
+	howtoNonce    = '',
+	pricingUrl = 'https://aeopugmill.com/pricing',
 } = window.aeopugmill || {};
 
 export {
 	mode,
 	hasApiKey,
 	ajaxUrl,
-	nonce,
-	toneNonce,
-	readingLevelNonce,
-	headlinesNonce,
-	topicFocusNonce,
-	refineFocusNonce,
-	swapFocusNonce,
-	excerptNonce,
-	internalLinksNonce,
-	socialDraftNonce,
 	usageNonce,
 	summaryNonce,
 	qaNonce,
 	entitiesNonce,
 	keywordsNonce,
-	fixKeywordsNonce,
-	suggestHeadingsNonce,
 	seoNonce,
 	howtoNonce,
-	schemaAiNonce,
 	pricingUrl,
 };
 
-/** True when the plugin is in AEO Pugmill Pro or Pro mode. */
+/** True when the plugin is in Pugmill AEO Toolkit Pro or Pro mode. */
 export const IS_AI_MODE = mode === 'ai' || mode === 'pro';
 
 /** True when a BYOK API key is saved — unlocks basic AEO generation in free mode. */
@@ -223,16 +197,8 @@ export function getAuditFixActions() {
 		questions_natural:   { ajaxAction: 'aeopugmill_generate_qa',          actionNonce: cfg.qaNonce              || '', label: '✨ Regenerate Q&A'      },
 		entities_present:    { ajaxAction: 'aeopugmill_generate_entities',    actionNonce: cfg.entitiesNonce        || '', label: '✨ Generate Entities'   },
 		entity_specificity:  { ajaxAction: 'aeopugmill_generate_entities',    actionNonce: cfg.entitiesNonce        || '', label: '✨ Regenerate Entities' },
-		keywords_present:    { ajaxAction: 'aeopugmill_generate_keywords',    actionNonce: cfg.keywordsNonce        || '', label: '✨ Generate Keywords'   },
-		has_headings:        { ajaxAction: 'aeopugmill_suggest_headings',     actionNonce: cfg.suggestHeadingsNonce || '', label: '✨ Suggest Headings'    },
+		keywords_present:    { ajaxAction: 'aeopugmill_generate_keywords',    actionNonce: cfg.keywordsNonce || '', label: '✨ Generate Keywords'   },
 	};
 }
 
-/** Social platform metadata for the Social Media Draft panel. */
-export const SOCIAL_PLATFORMS = [
-	{ key: 'linkedin',  label: 'LinkedIn',  limit: 700 },
-	{ key: 'x',         label: 'X',         limit: 280 },
-	{ key: 'facebook',  label: 'Facebook',  limit: 500 },
-	{ key: 'substack',  label: 'Substack',  limit: 300 },
-];
 

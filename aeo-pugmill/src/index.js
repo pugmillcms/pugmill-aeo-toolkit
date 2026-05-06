@@ -1,5 +1,5 @@
 /**
- * AEO Pugmill — Gutenberg sidebar plugin entry point.
+ * Pugmill AEO Toolkit — Gutenberg sidebar plugin entry point.
  *
  * Registers the main document-settings panel and the pre-publish panel.
  * Compiled to build/index.js by @wordpress/scripts (webpack + Babel).
@@ -31,7 +31,7 @@ class PugmillErrorBoundary extends Component {
 		if ( this.state.error ) {
 			return (
 				<div style={ { padding: '12px 16px', color: '#dc3232', fontSize: '12px', lineHeight: '1.5' } }>
-					<strong>AEO Pugmill</strong> encountered an error and could not render.
+					<strong>Pugmill AEO Toolkit</strong> encountered an error and could not render.
 					Please reload the editor. If this persists, check the browser console for details.
 				</div>
 			);

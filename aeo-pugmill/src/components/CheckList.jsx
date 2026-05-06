@@ -1,5 +1,5 @@
 /**
- * AEO Pugmill — Score checklist component.
+ * Pugmill AEO Toolkit — Score checklist component.
  *
  * @package WPPugmill
  */

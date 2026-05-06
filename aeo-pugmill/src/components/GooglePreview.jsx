@@ -1,5 +1,5 @@
 /**
- * AEO Pugmill — Google SERP preview component.
+ * Pugmill AEO Toolkit — Google SERP preview component.
  *
  * @package WPPugmill
  */

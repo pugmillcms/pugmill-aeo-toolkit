@@ -31,7 +31,6 @@ EXCLUDES=(
   --exclude "$PLUGIN_DIR/package-lock.json"
   --exclude "$PLUGIN_DIR/requirements.md"
   --exclude "$PLUGIN_DIR/LICENSE"
-  --exclude "$PLUGIN_DIR/assets/pugmill-logo.svg"
   --exclude "$PLUGIN_DIR/public"
   --exclude "$PLUGIN_DIR/public/*"
   --exclude "$PLUGIN_DIR/.distignore"
@@ -40,13 +39,20 @@ EXCLUDES=(
   --exclude "$PLUGIN_DIR/vitest.config.js"
 )
 
-# ── WordPress.org zip (excludes update-checker.php — WP.org handles updates) ──
+# ── WordPress.org zip ─────────────────────────────────────────────────────────
+# Excludes update-checker.php (WP.org handles updates) and the WP.org directory
+# asset files — icons, banners, screenshots are uploaded via SVN after approval,
+# not bundled in the plugin zip (per WP.org plugin asset guidelines). The
+# pugmill-logo.svg is kept because the runtime UI uses it.
 rm -f "$ZIP_WPORG"
 zip -r "$ZIP_WPORG" "$PLUGIN_DIR" "${EXCLUDES[@]}" \
-  --exclude "$PLUGIN_DIR/includes/update-checker.php"
+  --exclude "$PLUGIN_DIR/includes/update-checker.php" \
+  --exclude "$PLUGIN_DIR/assets/icon-*.png" \
+  --exclude "$PLUGIN_DIR/assets/banner-*.png" \
+  --exclude "$PLUGIN_DIR/assets/screenshot-*.png"
 echo "Done: $ZIP_WPORG  (WordPress.org submission)"
 
-# ── Self-hosted zip (includes update-checker.php) ─────────────────────────────
+# ── Self-hosted zip (includes update-checker.php and assets/) ─────────────────
 rm -f "$ZIP_SELF"
 zip -r "$ZIP_SELF" "$PLUGIN_DIR" "${EXCLUDES[@]}"
 echo "Done: $ZIP_SELF  (self-hosted / website — fixed filename for updater)"

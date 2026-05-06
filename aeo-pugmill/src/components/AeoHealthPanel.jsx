@@ -1,5 +1,5 @@
 /**
- * AEO Pugmill — AEO Health panel component.
+ * Pugmill AEO Toolkit — AEO Health panel component.
  *
  * Displays the live AEO score and a per-check audit list with inline
  * AI "Generate" fix buttons for failing checks.

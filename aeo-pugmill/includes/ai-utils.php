@@ -1,6 +1,6 @@
 <?php
 /**
- * AEO Pugmill — AI utility functions (pure helpers, no side effects).
+ * Pugmill AEO Toolkit — AI utility functions (pure helpers, no side effects).
  *
  * These functions are stateless and have no WordPress AJAX registrations.
  * Kept separate so they can be require_once'd in tests without loading
@@ -61,7 +61,7 @@ function aeopugmill_decode_ai_json( $raw, $provider ) {
 	}
 	if ( ! is_array( $decoded ) ) {
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( 'AEO Pugmill: invalid JSON from ' . $provider . ': ' . substr( $raw, 0, 200 ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( 'Pugmill AEO Toolkit: invalid JSON from ' . $provider . ': ' . substr( $raw, 0, 200 ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 		}
 		return new WP_Error( 'invalid_json', __( 'AI returned an unexpected response format. Please try again.', 'aeo-pugmill' ) );
 	}
@@ -219,4 +219,22 @@ function aeopugmill_remap_passage_to_raw( $passage, $raw_content ) {
 	}
 
 	return $passage;
+}
+
+/**
+ * Return the author voice clause to append to AI system prompts.
+ *
+ * @return string
+ */
+function aeopugmill_voice_clause() {
+	$voice = get_option( 'aeopugmill_author_voice', '' );
+	if ( $voice ) {
+		return "
+
+Author voice and style guide — you MUST follow this when writing any text fields:
+" . $voice;
+	}
+	return "
+
+Maintain a clear, engaging, and professional tone throughout.";
 }

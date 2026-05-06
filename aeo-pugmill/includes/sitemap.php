@@ -4,7 +4,7 @@
  *
  * Design decisions (inspired by Rank Math's approach, implemented independently):
  *  - No static file written to disk — generated in-memory on request.
- *  - Respects AEO Pugmill's own noindex flag and third-party SEO plugin noindex meta.
+ *  - Respects Pugmill AEO Toolkit's own noindex flag and third-party SEO plugin noindex meta.
  *  - Covers all public, published post types.
  *  - Pings Google and Bing on post publish/update.
  *  - Appends a Sitemap: directive to the virtual robots.txt.
@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 // =========================================================================
 
 /**
- * Return true if this post has AEO Pugmill's own per-post noindex flag set.
+ * Return true if this post has Pugmill AEO Toolkit's own per-post noindex flag set.
  *
  * @param  int $post_id
  * @return bool
@@ -301,7 +301,7 @@ function aeopugmill_filter_robots_txt( $output, $public ) {
 		return $custom;
 	}
 
-	// User has chosen not to let AEO Pugmill append to robots.txt — leave it alone.
+	// User has chosen not to let Pugmill AEO Toolkit append to robots.txt — leave it alone.
 	if ( get_option( 'aeopugmill_disable_robots_append' ) ) {
 		return $output;
 	}

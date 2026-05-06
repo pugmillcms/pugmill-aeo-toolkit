@@ -1,8 +1,8 @@
 /**
- * AEO Pugmill — Schema type builder panel.
+ * Pugmill AEO Toolkit — Schema type builder panel.
  *
  * Renders the "Schema" PanelBody including the AI "Suggest Schema" button
- * (AEO Pugmill Pro mode only) and form fields for each structured data type.
+ * (Pugmill AEO Toolkit Pro mode only) and form fields for each structured data type.
  *
  * @package WPPugmill
  */
@@ -23,7 +23,7 @@ import {
 	REVIEW_ITEM_TYPE_OPTIONS,
 	ajaxUrl,
 	howtoNonce,
-	schemaAiNonce,
+	pricingUrl,
 } from '../constants';
 
 export function SchemaBuilder() {
@@ -60,81 +60,29 @@ export function SchemaBuilder() {
 	// "Draft Steps from Content" button state.
 	const [ howtoState, setHowtoState ] = useState( { loading: false, error: '' } );
 
-	// "Suggest Schema from Content" button state.
-	const [ suggestState, setSuggestState ] = useState( { loading: false, error: '', notice: '' } );
-
 	return (
 		<PanelBody title={ <span>Schema<Tick show={ schemaComplete } /></span> } initialOpen={ false }>
-			{ /* ── AI: Suggest Schema ───────────────────────────────────────── */ }
-			{ suggestState.error && (
-				<p style={ { fontSize: '11px', color: '#dc3232', margin: '0 0 8px' } }>
-					{ suggestState.error }
+			{ /* ── Suggest Schema (Pro CTA) ───────────────────────────────── */ }
+			<div style={ { margin: '0 0 12px', padding: '8px 10px', background: '#faf5ff', border: '1px solid #e9d5ff', borderRadius: '4px', textAlign: 'center' } }>
+				<p style={ { margin: '0 0 6px', fontSize: '11px', color: '#6b21a8', lineHeight: '1.5' } }>
+					✨ Let AI suggest the best schema type for your post.
 				</p>
-			) }
-			{ suggestState.notice && (
-				<p style={ {
-					fontSize:     '11px',
-					color:        '#555',
-					background:   '#f6f7f7',
-					border:       '1px solid #e0e0e0',
-					borderRadius: '4px',
-					padding:      '6px 8px',
-					margin:       '0 0 8px',
-					lineHeight:   '1.5',
-				} }>
-					{ suggestState.notice }
-				</p>
-			) }
-			<Button
-				variant="secondary"
-				isBusy={ suggestState.loading }
-				disabled={ ! IS_AI_MODE || suggestState.loading }
-				onClick={ async () => {
-					setSuggestState( { loading: true, error: '', notice: '' } );
-					try {
-						const res  = await fetch( ajaxUrl, {
-							method:      'POST',
-							credentials: 'same-origin',
-							headers:     { 'Content-Type': 'application/x-www-form-urlencoded' },
-							body:        new URLSearchParams( { action: 'aeopugmill_suggest_schema', nonce: schemaAiNonce, post_id: postId } ),
-						} );
-						const data = await res.json();
-						if ( ! data.success ) {
-							setSuggestState( { loading: false, error: data.data?.message || 'Suggestion failed.', notice: '' } );
-							return;
-						}
-						const suggestion = data.data;
-						if ( ! suggestion.type ) {
-							setSuggestState( { loading: false, error: '', notice: 'This post reads as a standard article — no additional schema type needed. Article + FAQ schema are already output automatically.' } );
-							return;
-						}
-						const updates = { type: suggestion.type };
-						if ( suggestion.howto )          updates.howto          = { ...schema.howto,          ...suggestion.howto          };
-						if ( suggestion.product )        updates.product        = { ...schema.product,        ...suggestion.product        };
-						if ( suggestion.event )          updates.event          = { ...schema.event,          ...suggestion.event          };
-						if ( suggestion.local_business ) updates.local_business = { ...schema.local_business, ...suggestion.local_business };
-						if ( suggestion.video )          updates.video          = { ...schema.video,          ...suggestion.video          };
-						if ( suggestion.review )         updates.review         = { ...schema.review,         ...suggestion.review         };
-						updateSchema( updates );
-						setSuggestState( { loading: false, error: '', notice: '' } );
-					} catch {
-						setSuggestState( { loading: false, error: 'Network error. Please check your connection.', notice: '' } );
-					}
-				} }
-				style={ { width: '100%', justifyContent: 'center', marginBottom: '12px', ...BUTTON_STYLE, ...( ! IS_AI_MODE ? { opacity: 0.4 } : {} ) } }
-			>
-				{ suggestState.loading ? 'Analysing…' : '✨ Suggest Schema from Content' }
-			</Button>
+				<a
+					href={ pricingUrl }
+					target="_blank"
+					rel="noopener noreferrer"
+					style={ { display: 'inline-block', fontSize: '12px', fontWeight: 600, color: '#fff', background: '#7c3aed', borderRadius: '4px', padding: '5px 16px', textDecoration: 'none' } }
+				>
+					Get Pugmill AEO Toolkit Pro →
+				</a>
+			</div>
 
 			{ /* ── Schema Type selector ─────────────────────────────────────── */ }
 			<SelectControl
 				label="Schema Type"
 				value={ schemaType }
 				options={ SCHEMA_TYPE_OPTIONS }
-				onChange={ ( val ) => {
-					updateSchema( { type: val } );
-					setSuggestState( { loading: false, error: '', notice: '' } );
-				} }
+				onChange={ ( val ) => updateSchema( { type: val } ) }
 			/>
 			<p style={ { fontSize: '11px', color: '#666', margin: '-8px 0 12px', lineHeight: '1.5' } }>
 				{ SCHEMA_TYPE_DESCRIPTIONS[ schemaType ] }

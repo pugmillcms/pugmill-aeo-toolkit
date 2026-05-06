@@ -1,6 +1,6 @@
 <?php
 /**
- * AEO Pugmill — Pugmill AEO Intelligence Network: rich signal capture.
+ * Pugmill AEO Toolkit — Pugmill AEO Intelligence Network: rich signal capture.
  *
  * Captures anonymized, server-side-only signals from known AI bot visits
  * and appends them to the daily intelligence payload sent to aeopugmill.com.

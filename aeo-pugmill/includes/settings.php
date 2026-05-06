@@ -272,7 +272,8 @@ add_action( 'admin_init', 'aeopugmill_register_settings' );
  * @return int
  */
 function aeopugmill_sanitize_analytics_opt_in( $value ) {
-	$new = absint( $value );
+	// Strictly normalise to 0 or 1 — any non-truthy input becomes 0.
+	$new = ( '1' === (string) $value || 1 === $value || true === $value ) ? 1 : 0;
 	$old = (int) get_option( 'aeopugmill_analytics_opted_in', 0 );
 	if ( 1 === $new && 0 === $old ) {
 		set_transient( 'aeopugmill_analytics_just_activated', 1, 5 * MINUTE_IN_SECONDS );

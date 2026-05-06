@@ -414,7 +414,7 @@ function aeopugmill_render_health_meta_box( $post ) {
 				<?php printf(
 					'<a href="%1$s" target="_blank">%2$s</a> %3$s',
 					esc_url( 'https://aeopugmill.com/pricing' ),
-					esc_html__( 'Get AEO Pugmill Pro', 'aeo-pugmill' ),
+					esc_html__( 'Get Pugmill AEO Toolkit Pro', 'aeo-pugmill' ),
 					esc_html__( 'to auto-complete these fields.', 'aeo-pugmill' )
 				); ?>
 			</p>

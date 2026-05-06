@@ -1,5 +1,5 @@
 /**
- * AEO Pugmill — Client-side AEO Health score.
+ * Pugmill AEO Toolkit — Client-side AEO Health score.
  *
  * Returns a 0–100 score reflecting how completely the AEO meta fields have
  * been filled in, combined with basic content structure checks. Used for the

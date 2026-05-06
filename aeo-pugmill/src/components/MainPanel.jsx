@@ -1,31 +1,31 @@
 /**
- * AEO Pugmill — Main sidebar panel component.
+ * Pugmill AEO Toolkit — Main sidebar panel component.
  *
  * Registers as a PluginDocumentSettingPanel (shown in the block editor's
  * Document sidebar). Contains all AEO and SEO editing controls, the score
- * bar, all AI generation buttons, and the Audit panel.
+ * bar, and AI generation buttons.
+ *
+ * Pro features (Generate AEO, Refine Content, Distribute) are handled by
+ * the Pugmill AEO Toolkit Pro add-on, which registers its own sidebar panels.
  *
  * @package WPPugmill
  */
 
 import { PluginDocumentSettingPanel } from '@wordpress/editor';
-import { PanelBody, Button, Notice, TextControl, TextareaControl, SelectControl } from '@wordpress/components';
-import { useSelect, useDispatch } from '@wordpress/data';
+import { PanelBody, Button, TextControl, TextareaControl, SelectControl } from '@wordpress/components';
+import { useSelect } from '@wordpress/data';
 import { useState, useCallback, useEffect } from '@wordpress/element';
 
 import { useAeoMeta }    from '../hooks';
 import { useSeoMeta }    from '../hooks';
 import { useSchemaData } from '../hooks';
-import { PugmillLogo }     from './Logo';
-import { SectionHeader }   from './SectionHeader';
-import { SchemaBuilder }   from './SchemaBuilder';
-import { AiPill } from './AiInput';
-import { Tick }            from './Tick';
-import { UsageMeter }      from './UsageMeter';
-import { AeoHealthPanel }  from './AeoHealthPanel';
-import { ToneCheckPanel }  from './ToneCheckPanel';
-import { SocialDraftPanel } from './SocialDraftPanel';
-import { saveIfDirty }     from '../utils';
+import { PugmillLogo }   from './Logo';
+import { SectionHeader } from './SectionHeader';
+import { SchemaBuilder } from './SchemaBuilder';
+import { AiPill }        from './AiInput';
+import { Tick }          from './Tick';
+import { UsageMeter }    from './UsageMeter';
+import { AeoHealthPanel } from './AeoHealthPanel';
 import {
 	IS_AI_MODE,
 	HAS_API_KEY,
@@ -33,40 +33,13 @@ import {
 	ENTITY_TYPE_OPTIONS,
 	getAuditFixActions,
 	ajaxUrl,
-	nonce,
-	toneNonce,
-	readingLevelNonce,
-	headlinesNonce,
-	topicFocusNonce,
-	refineFocusNonce,
-	swapFocusNonce,
-	excerptNonce,
-	internalLinksNonce,
-	socialDraftNonce,
 	usageNonce,
 	summaryNonce,
 	qaNonce,
 	entitiesNonce,
 	keywordsNonce,
-	seoNonce,
-	schemaAiNonce,
+	pricingUrl,
 } from '../constants';
-
-// ── Utility ───────────────────────────────────────────────────────────────────
-
-/**
- * Build a regex that matches `text` in raw block HTML while tolerating
- * inline tags (bold, italic, links, etc.) between words.
- *
- * E.g. passage "great post about widgets" will match
- * "great <strong>post</strong> about widgets" in raw block content.
- */
-function buildTagTolerantRegex( text ) {
-	const escapeRe = ( s ) => s.replace( /[.*+?^${}()|[\]\\]/g, '\\$&' );
-	const parts    = text.trim().split( /\s+/ );
-	// Between each word: allow optional inline tags and whitespace (at least one space).
-	return new RegExp( parts.map( escapeRe ).join( '(?:<[^>]*>)*\\s+(?:<[^>]*>)*' ) );
-}
 
 /**
  * Inline alt text editor for the featured image.
@@ -147,18 +120,12 @@ export function MainPanel() {
 	const { seo, updateSeo }                        = useSeoMeta();
 	const { schema, updateSchema }                  = useSchemaData();
 
-	const { resetEditorBlocks, editPost } = useDispatch( 'core/editor' );
-	const draftContent      = useSelect( ( s ) => s( 'core/editor' ).getEditedPostContent(), [] );
-	const postExcerpt       = useSelect( ( s ) => s( 'core/editor' ).getEditedPostAttribute( 'excerpt' ), [] );
-	const featuredImageId   = useSelect( ( s ) => s( 'core/editor' ).getEditedPostAttribute( 'featured_media' ), [] );
+	const draftContent        = useSelect( ( s ) => s( 'core/editor' ).getEditedPostContent(), [] );
+	const featuredImageId     = useSelect( ( s ) => s( 'core/editor' ).getEditedPostAttribute( 'featured_media' ), [] );
 	const featuredMediaRecord = useSelect( ( s ) => featuredImageId ? s( 'core' ).getMedia( featuredImageId ) : null, [ featuredImageId ] );
 	const featuredMediaAltText = featuredMediaRecord?.alt_text || '';
 
 	// ── State ─────────────────────────────────────────────────────────────────
-	const [ generateAllLoading, setGenerateAllLoading ] = useState( false );
-	const [ generateAllError,   setGenerateAllError   ] = useState( '' );
-	const [ generateAllSuccess, setGenerateAllSuccess ] = useState( false );
-
 
 	// Health score inline Fix buttons
 	const [ healthFixStates, setHealthFixStates ] = useState( {} );
@@ -178,53 +145,14 @@ export function MainPanel() {
 	useEffect( () => { setAeoOverride( null ); }, [ aeo ] );
 	const displayAeo = aeoOverride ?? aeo;
 
-	// Tone Check
-	const [ toneLoading,  setToneLoading  ] = useState( false );
-	const [ toneError,    setToneError    ] = useState( '' );
-	const [ toneResults,  setToneResults  ] = useState( null );
-	const [ toneSwapErrs, setToneSwapErrs ] = useState( {} );
-	const [ toneApplied,  setToneApplied  ] = useState( {} );
-
-	// Reading Level (analysis only; rewriting via Rewrite panel)
-	const [ readingState, setReadingState ] = useState( { loading: false, error: '', result: null } );
-
-	// Suggest Titles
-	const [ headlineState,   setHeadlineState   ] = useState( { loading: false, error: '', result: null } );
-	const [ headlineApplied, setHeadlineApplied ] = useState( {} );
-
-	// Topic Focus
-	const [ topicState,  setTopicState  ] = useState( { loading: false, error: '', result: null } );
-	const [ refineState, setRefineState ] = useState( { loading: false, error: '', result: null } );
-	const [ swapStates,  setSwapStates  ] = useState( {} );
-
-	// Excerpt Generator
-	const [ excerptState,   setExcerptState   ] = useState( { loading: false, error: '', result: null } );
-	const [ excerptApplied, setExcerptApplied ] = useState( false );
-
-	// Internal Links
-	const [ linksState,    setLinksState   ] = useState( { loading: false, error: '', result: null } );
-	const [ linkInserted,  setLinkInserted ] = useState( {} );
-
-	// Social Media Draft
-	const [ socialState, setSocialState ] = useState( { loading: false, error: '', platform: null, draft: '' } );
-
-	// Panel open state (controlled — allows AI Ask bar to open panels programmatically)
-	const [ toneOpen,    setToneOpen    ] = useState( false );
-	const [ readingOpen, setReadingOpen ] = useState( false );
-	const [ topicOpen,   setTopicOpen   ] = useState( false );
-	const [ linksOpen,   setLinksOpen   ] = useState( false );
-	const [ titlesOpen,  setTitlesOpen  ] = useState( false );
-	const [ excerptOpen, setExcerptOpen ] = useState( false );
-	const [ socialOpen,  setSocialOpen  ] = useState( false );
-
 	// AI usage meter
 	const [ usage, setUsage ] = useState( { count: 0, limit: 50 } );
 
 	// Per-field generate states
-	const [ summaryState,   setSummaryState   ] = useState( { loading: false, error: '' } );
-	const [ qaState,        setQaState        ] = useState( { loading: false, error: '' } );
-	const [ entitiesState,  setEntitiesState  ] = useState( { loading: false, error: '' } );
-	const [ keywordsState,  setKeywordsState  ] = useState( { loading: false, error: '' } );
+	const [ summaryState,  setSummaryState  ] = useState( { loading: false, error: '' } );
+	const [ qaState,       setQaState       ] = useState( { loading: false, error: '' } );
+	const [ entitiesState, setEntitiesState ] = useState( { loading: false, error: '' } );
+	const [ keywordsState, setKeywordsState ] = useState( { loading: false, error: '' } );
 
 	// ── Usage meter ───────────────────────────────────────────────────────────
 	const fetchUsage = useCallback( async () => {
@@ -285,7 +213,7 @@ export function MainPanel() {
 		}
 	}, [ postId, draftContent, aeo, updateAeo, fetchUsage ] );
 
-	// ── Shared AJAX helpers ───────────────────────────────────────────────────
+	// ── Shared AJAX helper ────────────────────────────────────────────────────
 
 	/** POST to AJAX, pass draft_content + post_id. Updates state, calls onSuccess with data. */
 	const ajaxGenerate = useCallback( async ( ajaxAction, actionNonce, setState, onSuccess ) => {
@@ -309,24 +237,6 @@ export function MainPanel() {
 		}
 	}, [ postId, draftContent, fetchUsage ] );
 
-	/** POST to AJAX with current draft_content — no save required. */
-	const ajaxFetch = useCallback( async ( ajaxAction, actionNonce, setState ) => {
-		setState( { loading: true, error: '', result: null } );
-		try {
-			const res  = await fetch( ajaxUrl, {
-				method:  'POST',
-				headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-				body:    new URLSearchParams( { action: ajaxAction, nonce: actionNonce, post_id: postId, draft_content: draftContent } ),
-			} );
-			const data = await res.json();
-			if ( ! data.success ) throw new Error( data.data?.message || data.data || 'Request failed. Please try again.' );
-			setState( { loading: false, error: '', result: data.data } );
-		} catch ( err ) {
-			setState( { loading: false, error: err.message, result: null } );
-		}
-		fetchUsage();
-	}, [ postId, draftContent, fetchUsage ] );
-
 	// ── Q&A / Entities field updaters ─────────────────────────────────────────
 	const updateQuestion = ( index, field, value ) =>
 		updateAeo( { questions: aeo.questions.map( ( q, i ) => i === index ? { ...q, [ field ]: value } : q ) } );
@@ -338,251 +248,31 @@ export function MainPanel() {
 
 	// ── Score ─────────────────────────────────────────────────────────────────
 
-	const summaryOk   = !! ( aeo.summary  && aeo.summary.trim() ) && aeo.summary.length >= 50;
-	const qaOk        = ( aeo.questions  || [] ).filter( ( q ) => q.q && q.a ).length >= 3;
-	const entitiesOk  = ( aeo.entities   || [] ).filter( ( e ) => e.name ).length >= 1;
-	const keywordsOk  = ( aeo.keywords   || [] ).filter( ( k ) => k.length > 0 ).length >= 5;
-
-	// ── Tone Check: apply a fix inline ────────────────────────────────────────
-	function applyToneFix( quote, suggestion, index ) {
-		const { getBlocks }             = wp.data.select( 'core/block-editor' );
-		const { updateBlockAttributes } = wp.data.dispatch( 'core/block-editor' );
-		const normalize = ( s ) => s.replace( /\s+/g, ' ' ).trim().toLowerCase();
-		const stripTags = ( s ) => s.replace( /<[^>]*>/g, '' );
-		const normQuote = normalize( quote );
-		const escapeRe  = ( s ) => s.replace( /[.*+?^${}()|[\]\\]/g, '\\$&' );
-		let applied = false;
-
-		for ( const block of getBlocks() ) {
-			if ( block.name !== 'core/paragraph' ) continue;
-			const raw = block.attributes.content;
-			if ( ! raw ) continue;
-
-			// 1. Exact match — fast path for unformatted text.
-			if ( raw.includes( quote ) ) {
-				updateBlockAttributes( block.clientId, { content: raw.replace( quote, suggestion ) } );
-				applied = true;
-				break;
-			}
-
-			// 2. Tag-tolerant match — quote words present but separated by inline tags
-			//    (bold, italic, links). Replaces the matched span (tags included) with suggestion.
-			const tagMatch = buildTagTolerantRegex( quote ).exec( raw );
-			if ( tagMatch ) {
-				updateBlockAttributes( block.clientId, { content: raw.replace( tagMatch[ 0 ], suggestion ) } );
-				applied = true;
-				break;
-			}
-
-			// 3. Case-insensitive fallback — handles minor case/punctuation differences.
-			//    Tries to replace in raw HTML first (preserving inline formatting);
-			//    only falls back to stripped content as a last resort.
-			const plain = stripTags( raw );
-			if ( normalize( plain ).includes( normQuote ) ) {
-				const caseRe = new RegExp( escapeRe( quote ), 'i' );
-				updateBlockAttributes( block.clientId, {
-					content: caseRe.test( raw ) ? raw.replace( caseRe, suggestion ) : plain.replace( caseRe, suggestion ),
-				} );
-				applied = true;
-				break;
-			}
-		}
-
-		if ( applied ) {
-			setToneApplied( ( prev ) => ( { ...prev, [ index ]: true } ) );
-			window.wp.data.dispatch( 'core/editor' ).savePost();
-		} else {
-			setToneSwapErrs( ( prev ) => ( { ...prev, [ index ]: 'Looks like this passage changed after the check ran — the anchor no longer matches. Re-run for fresh results.' } ) );
-		}
-	}
-
-	// ── Topic Focus: swap a passage ────────────────────────────────────────────
-	async function swapFocusPassage( issue, index ) {
-		setSwapStates( ( prev ) => ( { ...prev, [ index ]: 'loading' } ) );
-		try {
-			const res  = await fetch( ajaxUrl, {
-				method:  'POST',
-				headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-				body:    new URLSearchParams( { action: 'aeopugmill_swap_focus_passage', nonce: swapFocusNonce, post_id: postId, passage: issue.passage, recommendation: issue.recommendation } ),
-			} );
-			const data = await res.json();
-			if ( ! data.success ) throw new Error( data.data?.message || 'Swap failed.' );
-			const rewritten = data.data.rewritten;
-			const { getBlocks }           = wp.data.select( 'core/block-editor' );
-			const { updateBlockAttributes } = wp.data.dispatch( 'core/block-editor' );
-			const normalize   = ( s ) => s.replace( /\s+/g, ' ' ).trim().toLowerCase();
-			const strip       = ( s ) => s.replace( /<[^>]*>/g, '' );
-			const normPassage = normalize( issue.passage );
-			let applied = false;
-			for ( const block of getBlocks() ) {
-				if ( block.name !== 'core/paragraph' ) continue;
-				const raw   = block.attributes.content;
-				const plain = strip( raw );
-				// 1. Exact match — fast path for unformatted paragraphs.
-				if ( raw.includes( issue.passage ) ) {
-					updateBlockAttributes( block.clientId, { content: raw.replace( issue.passage, rewritten ) } ); applied = true; break;
-				}
-				// 2. Tag-tolerant match — passage words present but separated by inline tags
-				//    (bold, italic, links). Replaces the entire matched span (tags included)
-				//    with the rewritten text, preserving surrounding formatting.
-				const tagMatch = buildTagTolerantRegex( issue.passage ).exec( raw );
-				if ( tagMatch ) {
-					updateBlockAttributes( block.clientId, { content: raw.replace( tagMatch[ 0 ], rewritten ) } ); applied = true; break;
-				}
-				// 3. Normalised fallback — handles whitespace/case differences.
-				if ( normalize( plain ).includes( normPassage ) ) {
-					updateBlockAttributes( block.clientId, { content: rewritten } ); applied = true; break;
-				}
-			}
-			if ( ! applied ) throw new Error( 'Looks like this passage changed after the check ran — the anchor no longer matches. Re-run for fresh results.' );
-			window.wp.data.dispatch( 'core/editor' ).savePost();
-			fetchUsage();
-			setSwapStates( ( prev ) => ( { ...prev, [ index ]: 'done' } ) );
-		} catch ( err ) {
-			setSwapStates( ( prev ) => ( { ...prev, [ index ]: err.message } ) );
-		}
-	}
-
-	// ── Internal Links: insert anchor ─────────────────────────────────────────
-	function insertLink( link, index ) {
-		try {
-			const { getBlocks }           = wp.data.select( 'core/block-editor' );
-			const { updateBlockAttributes } = wp.data.dispatch( 'core/block-editor' );
-			const strip   = ( s ) => s.replace( /<[^>]*>/g, '' );
-			const normalize = ( s ) => s.replace( /\s+/g, ' ' ).trim().toLowerCase();
-			const anchor  = `<a href="${ link.url }">${ link.anchorText }</a>`;
-			for ( const block of getBlocks() ) {
-				if ( block.name !== 'core/paragraph' ) continue;
-				const raw   = block.attributes.content;
-				const plain = strip( raw );
-				if ( raw.includes( `">${ link.anchorText }</a>` ) ) continue; // already linked
-				// 1. Exact match.
-				if ( raw.includes( link.anchorText ) ) {
-					updateBlockAttributes( block.clientId, { content: raw.replace( link.anchorText, anchor ) } );
-					setLinkInserted( ( prev ) => ( { ...prev, [ index ]: 'done' } ) );
-					window.wp.data.dispatch( 'core/editor' ).savePost();
-					return;
-				}
-				// 2. Tag-tolerant match — anchor text words split by inline formatting.
-				const tagMatch = buildTagTolerantRegex( link.anchorText ).exec( raw );
-				if ( tagMatch ) {
-					updateBlockAttributes( block.clientId, { content: raw.replace( tagMatch[ 0 ], anchor ) } );
-					setLinkInserted( ( prev ) => ( { ...prev, [ index ]: 'done' } ) );
-					window.wp.data.dispatch( 'core/editor' ).savePost();
-					return;
-				}
-				// 3. Normalised anchor fallback — anchor text is present in stripped content
-				//    but capitalisation differs from the raw HTML (e.g. sentence-start).
-				//    Only replaces in raw HTML to preserve inline formatting.
-				if ( normalize( plain ).includes( normalize( link.anchorText ) ) ) {
-					const caseRe = new RegExp( link.anchorText.replace( /[.*+?^${}()|[\]\\]/g, '\\$&' ), 'i' );
-					if ( caseRe.test( raw ) ) {
-						updateBlockAttributes( block.clientId, { content: raw.replace( caseRe, anchor ) } );
-						setLinkInserted( ( prev ) => ( { ...prev, [ index ]: 'done' } ) );
-						window.wp.data.dispatch( 'core/editor' ).savePost();
-						return;
-					}
-				}
-			}
-			setLinkInserted( ( prev ) => ( { ...prev, [ index ]: 'Looks like this passage changed after the check ran — the anchor no longer matches. Re-run for fresh results.' } ) );
-		} catch ( err ) {
-			setLinkInserted( ( prev ) => ( { ...prev, [ index ]: err.message } ) );
-		}
-	}
-
-	// ── Named action runners (called by both buttons and AI Ask bar) ─────────
-
-	const runToneCheck = useCallback( async () => {
-		setToneOpen( true );
-		setToneLoading( true );
-		setToneError( '' );
-		setToneResults( null );
-		setToneApplied( {} );
-		setToneSwapErrs( {} );
-		try {
-			const res  = await fetch( ajaxUrl, {
-				method:  'POST',
-				headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-				body:    new URLSearchParams( { action: 'aeopugmill_tone_check', nonce: toneNonce, post_id: postId, draft_content: draftContent } ),
-			} );
-			const data = await res.json();
-			if ( ! data.success ) throw new Error( data.data?.message || data.data || 'Tone check failed. Please try again.' );
-			setToneResults( data.data.items || [] );
-		} catch ( err ) {
-			setToneError( err.message );
-		} finally {
-			setToneLoading( false );
-		}
-	}, [ postId, draftContent ] );
-
-	const runReadingLevel = useCallback( () => {
-		setReadingOpen( true );
-		ajaxFetch( 'aeopugmill_reading_level', readingLevelNonce, setReadingState );
-	}, [ ajaxFetch ] );
-
-	const runTopicFocus = useCallback( () => {
-		setTopicOpen( true );
-		setRefineState( { loading: false, error: '', result: null } );
-		ajaxFetch( 'aeopugmill_topic_focus', topicFocusNonce, setTopicState );
-	}, [ ajaxFetch ] );
-
-	const runInternalLinks = useCallback( () => {
-		setLinksOpen( true );
-		setLinkInserted( {} );
-		ajaxFetch( 'aeopugmill_internal_links', internalLinksNonce, setLinksState );
-	}, [ ajaxFetch ] );
-
-	const runSuggestTitles = useCallback( () => {
-		setTitlesOpen( true );
-		setHeadlineApplied( {} );
-		ajaxFetch( 'aeopugmill_headline_variants', headlinesNonce, setHeadlineState );
-	}, [ ajaxFetch ] );
-
-	const runSuggestExcerpt = useCallback( () => {
-		setExcerptOpen( true );
-		setExcerptApplied( false );
-		ajaxFetch( 'aeopugmill_generate_excerpt', excerptNonce, setExcerptState );
-	}, [ ajaxFetch ] );
-
-	const runSocialDraft = useCallback( async ( platform = 'twitter' ) => {
-		setSocialOpen( true );
-		setSocialState( { loading: true, error: '', platform, draft: '' } );
-		try {
-			await saveIfDirty();
-			const res  = await fetch( ajaxUrl, {
-				method:  'POST',
-				headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-				body:    new URLSearchParams( { action: 'aeopugmill_social_draft', nonce: socialDraftNonce, post_id: postId, platform } ),
-			} );
-			const data = await res.json();
-			if ( ! data.success ) throw new Error( data.data?.message || 'Draft failed. Please try again.' );
-			setSocialState( { loading: false, error: '', platform, draft: data.data.draft } );
-			fetchUsage();
-		} catch ( err ) {
-			setSocialState( { loading: false, error: err.message, platform, draft: '' } );
-		}
-	}, [ postId, fetchUsage ] );
+	const summaryOk  = !! ( aeo.summary && aeo.summary.trim() ) && aeo.summary.length >= 50;
+	const qaOk       = ( aeo.questions || [] ).filter( ( q ) => q.q && q.a ).length >= 3;
+	const entitiesOk = ( aeo.entities  || [] ).filter( ( e ) => e.name ).length >= 1;
+	const keywordsOk = ( aeo.keywords  || [] ).filter( ( k ) => k.length > 0 ).length >= 5;
 
 	// ── Render ────────────────────────────────────────────────────────────────
 	return (
 		<PluginDocumentSettingPanel
 			name="aeopugmill-panel"
-			title="AEO Pugmill AEO"
+			title="Pugmill AEO Toolkit"
 			className="aeopugmill-panel"
 		>
 			{ /* Header */ }
 			<div style={ {
-				display:        'flex',
-				flexDirection:  'column',
-				alignItems:     'center',
-				gap:            '4px',
-				margin:         '0 -16px 0',
-				padding:        '12px 16px',
-				background:     '#f5f0ff',
+				display:       'flex',
+				flexDirection: 'column',
+				alignItems:    'center',
+				gap:           '4px',
+				margin:        '0 -16px 0',
+				padding:       '12px 16px',
+				background:    '#f5f0ff',
 			} }>
 				<PugmillLogo />
 				<span style={ { fontSize: '15px', fontWeight: '700', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#7c3aed' } }>
-					AEO Pugmill
+					Pugmill AEO Toolkit
 				</span>
 				<span style={ { fontSize: '10px', color: '#a78bfa', letterSpacing: '0.04em', textTransform: 'uppercase', marginTop: '-2px' } }>
 					Search Engine + Answer Engine Optimization
@@ -599,152 +289,20 @@ export function MainPanel() {
 				onFix={ handleHealthFix }
 			/>
 
-			{ /* ── Generate AEO ───────────────────────────────────────────── */ }
-			{ IS_AI_MODE && generateAllError && (
-				<Notice status="error" isDismissible={ false } style={ { marginTop: '8px' } }>
-					{ generateAllError }
-				</Notice>
-			) }
-			{ IS_AI_MODE && generateAllSuccess && (
-				<Notice status="success" isDismissible={ false } style={ { marginTop: '8px' } }>
-					Fields generated — review and save.
-				</Notice>
-			) }
-			{ ! IS_AI_MODE ? (
-				<button
-					type="button"
-					disabled
-					style={ { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: '100%', marginTop: '12px', background: '#e5e7eb', color: '#9ca3af', border: '1px solid #d1d5db', borderRadius: '4px', padding: '0 18px', height: '36px', fontSize: '13px', cursor: 'not-allowed' } }
+			{ /* ── Generate AEO (Pro CTA) ─────────────────────────────────── */ }
+			<div style={ { margin: '12px 0 0', padding: '10px 12px', background: '#faf5ff', border: '1px solid #e9d5ff', borderRadius: '4px', textAlign: 'center' } }>
+				<p style={ { margin: '0 0 6px', fontSize: '11px', color: '#6b21a8', lineHeight: '1.5' } }>
+					✨ Auto-generate Summary, Q&amp;A, Entities &amp; Keywords in one click.
+				</p>
+				<a
+					href={ pricingUrl }
+					target="_blank"
+					rel="noopener noreferrer"
+					style={ { display: 'inline-block', fontSize: '12px', fontWeight: 600, color: '#fff', background: '#7c3aed', borderRadius: '4px', padding: '5px 16px', textDecoration: 'none' } }
 				>
-					✨ Generate AEO
-					<span style={ { fontSize: '9px', fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase', background: '#f3e8ff', color: '#7c3aed', padding: '1px 6px', borderRadius: '3px', lineHeight: '1.4' } }>Pro</span>
-				</button>
-			) : (
-			<Button
-				variant="primary"
-				isBusy={ generateAllLoading }
-				disabled={ generateAllLoading }
-				onClick={ async () => {
-					setGenerateAllLoading( true );
-					setGenerateAllError( '' );
-					setGenerateAllSuccess( false );
-					try {
-						// Step 1 — AEO
-						const aeoRes  = await fetch( ajaxUrl, {
-							method:  'POST',
-							headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-							body:    new URLSearchParams( { action: 'aeopugmill_generate_aeo', nonce, post_id: postId, draft_content: draftContent } ),
-						} );
-						const aeoData = await aeoRes.json();
-						if ( ! aeoData.success ) {
-							setGenerateAllError( aeoData.data?.message || aeoData.data || 'AEO generation failed. Please try again.' );
-							return;
-						}
-
-						// Step 2 — SEO
-						const seoRes  = await fetch( ajaxUrl, {
-							method:  'POST',
-							headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-							body:    new URLSearchParams( { action: 'aeopugmill_generate_seo', nonce: seoNonce, post_id: postId, draft_content: draftContent } ),
-						} );
-						const seoData = await seoRes.json();
-
-						// Apply AEO + SEO to post meta.
-						const newAeo = JSON.stringify( { ...aeo, ...aeoData.data } );
-						const newSeo = seoData.success
-							? JSON.stringify( { ...seo, title: seoData.data.title, meta_desc: seoData.data.meta_desc } )
-							: JSON.stringify( seo );
-						setMeta( { ...meta, _aeopugmill_aeo: newAeo, _aeopugmill_seo: newSeo } );
-
-						// Step 3 — Save so post-content-dependent steps read the latest content.
-						await saveIfDirty();
-
-						// Step 4 — Excerpt (auto-apply)
-						const excerptRes  = await fetch( ajaxUrl, {
-							method:  'POST',
-							headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-							body:    new URLSearchParams( { action: 'aeopugmill_generate_excerpt', nonce: excerptNonce, post_id: postId } ),
-						} );
-						const excerptData = await excerptRes.json();
-						if ( excerptData.success && excerptData.data?.excerpt ) {
-							editPost( { excerpt: excerptData.data.excerpt } );
-							setExcerptApplied( true );
-							setExcerptState( { loading: false, error: '', result: excerptData.data } );
-						}
-
-						// Step 5 — Topic Focus (populate panel)
-						const topicRes  = await fetch( ajaxUrl, {
-							method:  'POST',
-							headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-							body:    new URLSearchParams( { action: 'aeopugmill_topic_focus', nonce: topicFocusNonce, post_id: postId } ),
-						} );
-						const topicData = await topicRes.json();
-						if ( topicData.success ) {
-							setTopicState( { loading: false, error: '', result: topicData.data } );
-							setRefineState( { loading: false, error: '', result: null } );
-							setSwapStates( {} );
-						}
-
-						// Step 6 — Internal Links (populate panel)
-						const linksRes  = await fetch( ajaxUrl, {
-							method:  'POST',
-							headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-							body:    new URLSearchParams( { action: 'aeopugmill_internal_links', nonce: internalLinksNonce, post_id: postId, draft_content: draftContent } ),
-						} );
-						const linksData = await linksRes.json();
-						if ( linksData.success ) {
-							setLinksState( { loading: false, error: '', result: linksData.data } );
-							setLinkInserted( {} );
-						}
-
-						// Step 7 — Schema suggestion (apply only if AI returns a type)
-						const schemaRes  = await fetch( ajaxUrl, {
-							method:      'POST',
-							credentials: 'same-origin',
-							headers:     { 'Content-Type': 'application/x-www-form-urlencoded' },
-							body:        new URLSearchParams( { action: 'aeopugmill_suggest_schema', nonce: schemaAiNonce, post_id: postId } ),
-						} );
-						const schemaData = await schemaRes.json();
-						if ( schemaData.success && schemaData.data?.type ) {
-							const s = schemaData.data;
-							const updates = { type: s.type };
-							if ( s.howto )          updates.howto          = { ...schema.howto,          ...s.howto          };
-							if ( s.product )        updates.product        = { ...schema.product,        ...s.product        };
-							if ( s.event )          updates.event          = { ...schema.event,          ...s.event          };
-							if ( s.local_business ) updates.local_business = { ...schema.local_business, ...s.local_business };
-							if ( s.video )          updates.video          = { ...schema.video,          ...s.video          };
-							if ( s.review )         updates.review         = { ...schema.review,         ...s.review         };
-							// Use setMeta directly with explicit newAeo/newSeo rather than
-							// updateSchema(), which closes over stale meta and would clobber
-							// the AEO and SEO fields written earlier in this flow.
-							setMeta( { ...meta, _aeopugmill_aeo: newAeo, _aeopugmill_seo: newSeo, _aeopugmill_schema: JSON.stringify( { ...schema, ...updates } ) } );
-						}
-
-						fetchUsage();
-						setGenerateAllSuccess( true );
-						setTimeout( () => setGenerateAllSuccess( false ), 5000 );
-					} catch ( err ) {
-						setGenerateAllError( err?.message || 'Network error. Please check your connection and try again.' );
-					} finally {
-						setGenerateAllLoading( false );
-					}
-				} }
-				style={ { width: '100%', justifyContent: 'center', marginTop: '12px', ...BUTTON_STYLE } }
-			>
-				{ generateAllLoading ? 'Generating…' : '✨ Generate AEO' }
-			</Button>
-			) }
-			{ IS_AI_MODE && <UsageMeter usage={ usage } /> }
-			{ IS_AI_MODE && (
-				<p style={ { margin: '6px 0 0', fontSize: '11px', color: '#9ca3af', lineHeight: '1.5', textAlign: 'center' } }>
-					Finish editing your content before generating — the AI reads your current draft.
-				</p>
-			) }
-			{ ! IS_AI_MODE && (
-				<p style={ { margin: '6px 0 0', fontSize: '11px', color: '#9ca3af', lineHeight: '1.5', textAlign: 'center' } }>
-					Generate AEO is available with AEO Pugmill Pro.
-				</p>
-			) }
+					Get Pugmill AEO Toolkit Pro →
+				</a>
+			</div>
 
 			{ /* ── AEO section ───────────────────────────────────────────────── */ }
 			<SectionHeader label="AEO" />
@@ -904,347 +462,21 @@ export function MainPanel() {
 			{ /* Featured Image Alt Text */ }
 			{ featuredImageId ? <FeaturedImageAlt featuredImageId={ featuredImageId } initialAlt={ featuredMediaAltText } /> : null }
 
-			{ /* ── Refine Content section ────────────────────────────────── */ }
+			{ /* ── Refine Content & Distribute (Pro) ──────────────────────── */ }
 			<SectionHeader label="Refine Content" />
-
-			{ /* Tone Check */ }
-			<ToneCheckPanel
-				open={ toneOpen }
-				onToggle={ () => setToneOpen( ! toneOpen ) }
-				loading={ toneLoading }
-				error={ toneError }
-				results={ toneResults }
-				applied={ toneApplied }
-				swapErrs={ toneSwapErrs }
-				onCheck={ runToneCheck }
-				onApplyFix={ applyToneFix }
-				onDismissError={ () => setToneError( '' ) }
-				onDismissAll={ () => { setToneResults( null ); setToneApplied( {} ); setToneSwapErrs( {} ); } }
-				locked={ ! IS_AI_MODE }
-			/>
-
-			{ /* Topic Focus */ }
-			<PanelBody title="Topic Focus" opened={ topicOpen } onToggle={ () => setTopicOpen( ! topicOpen ) }>
-					{ topicState.error && (
-						<Notice status="error" isDismissible={ false } style={ { marginBottom: '8px' } }>{ topicState.error }</Notice>
-					) }
-					{ topicState.result && ( () => {
-						const s = topicState.result.score;
-						const c = s >= 4 ? '#46b450' : s >= 3 ? '#ffb900' : '#dc3232';
-						return (
-							<div style={ { marginBottom: '8px' } }>
-								<div style={ { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '6px' } }>
-									<span style={ { fontSize: '12px', color: '#555' } }>{ topicState.result.topic }</span>
-									<span style={ { fontSize: '13px', fontWeight: '700', color: c } }>
-										{ s }<span style={ { fontSize: '11px', fontWeight: '400', color: '#666' } }>/5</span>
-									</span>
-								</div>
-								<div style={ { background: '#e0e0e0', borderRadius: '3px', height: '6px', overflow: 'hidden', marginBottom: '6px' } }>
-									<div style={ { width: `${ 20 * s }%`, height: '100%', background: c, borderRadius: '3px' } } />
-								</div>
-								<p style={ { fontSize: '12px', color: '#555', margin: '0 0 8px' } }>{ topicState.result.note }</p>
-								{ s < 5 && (
-									<AiPill
-										label="Refine"
-										isActive={ refineState.loading }
-										anyPending={ refineState.loading }
-										locked={ ! IS_AI_MODE }
-										pillLabel="Pro"
-										onClick={ () => {
-											setSwapStates( {} );
-											ajaxFetch( 'aeopugmill_refine_focus', refineFocusNonce, setRefineState );
-										} }
-									/>
-								) }
-							</div>
-						);
-					} )() }
-					{ refineState.error && (
-						<Notice status="error" isDismissible={ false } style={ { marginBottom: '8px' } }>{ refineState.error }</Notice>
-					) }
-					{ refineState.result && (
-						<div style={ { marginBottom: '8px' } }>
-							{ ( refineState.result.issues || [] ).map( ( issue, i ) => {
-								const state = swapStates[ i ];
-								return (
-									<div key={ i } style={ {
-										padding:      '8px',
-										background:   '#fff8e1',
-										borderLeft:   '3px solid ' + ( state === 'done' ? '#46b450' : '#ffb900' ),
-										borderRadius: '0 3px 3px 0',
-										marginBottom: '6px',
-									} }>
-										<p style={ { fontSize: '12px', fontWeight: '600', color: '#1e1e1e', margin: '0 0 4px' } }>{ issue.label }</p>
-										{ issue.passage && (
-											<div style={ { display: 'flex', alignItems: 'flex-start', gap: '6px', margin: '0 0 4px' } }>
-												<p style={ { fontSize: '11px', color: '#555', fontStyle: 'italic', margin: 0, lineHeight: '1.4', flex: 1 } }>
-													"{ issue.passage }"
-												</p>
-												<button
-													onClick={ () => window.find( issue.passage, false, false, true ) }
-													style={ { fontSize: '10px', padding: '1px 6px', background: '#f0f0f0', border: '1px solid #ccc', borderRadius: '3px', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 } }
-												>
-													Find
-												</button>
-											</div>
-										) }
-										<p style={ { fontSize: '12px', color: '#1e1e1e', margin: '0 0 6px', lineHeight: '1.4' } }>
-											{ issue.recommendation }
-										</p>
-										{ state === 'done' ? (
-											<span style={ { fontSize: '11px', color: '#46b450', fontWeight: '600' } }>✓ Applied</span>
-										) : (
-											<Button
-												variant="secondary"
-												isBusy={ state === 'loading' }
-												disabled={ state === 'loading' }
-												onClick={ () => swapFocusPassage( issue, i ) }
-												style={ { fontSize: '11px', padding: '0 12px', ...BUTTON_STYLE } }
-											>
-												{ state === 'loading' ? 'Rewriting…' : '✏ Rewrite' }
-											</Button>
-										) }
-										{ state && state !== 'done' && state !== 'loading' && (
-											<p style={ { fontSize: '11px', color: '#dc3232', margin: '4px 0 0' } }>{ state }</p>
-										) }
-									</div>
-								);
-							} ) }
-						</div>
-					) }
-					<AiPill
-						label="Analyze"
-						isActive={ topicState.loading }
-						anyPending={ topicState.loading }
-						locked={ ! IS_AI_MODE }
-						pillLabel="Pro"
-						onClick={ runTopicFocus }
-					/>
-			</PanelBody>
-
-			{ /* Internal Links */ }
-			<PanelBody title="Internal Links" opened={ linksOpen } onToggle={ () => setLinksOpen( ! linksOpen ) }>
-					<p style={ { fontSize: '12px', color: '#555', margin: '0 0 10px' } }>
-						Suggests internal linking opportunities based on your published posts.
-					</p>
-					{ linksState.error && (
-						<Notice status="error" isDismissible={ false } style={ { marginBottom: '8px' } }>{ linksState.error }</Notice>
-					) }
-					{ linksState.result && linksState.result.links.length === 0 && (
-						<p style={ { fontSize: '12px', color: '#666', marginBottom: '8px' } }>
-							No strong internal linking opportunities found for this post.
-						</p>
-					) }
-					{ linksState.result?.links.length > 0 && (
-						<div style={ { marginBottom: '8px' } }>
-							{ linksState.result.links.map( ( link, i ) => {
-								const inserted = linkInserted[ i ];
-								return (
-									<div key={ i } style={ {
-										padding:      '8px',
-										background:   '#fff8e1',
-										borderLeft:   '3px solid ' + ( inserted === 'done' ? '#46b450' : '#ffb900' ),
-										borderRadius: '0 3px 3px 0',
-										marginBottom: '6px',
-									} }>
-										<p style={ { fontSize: '12px', fontWeight: '600', color: '#1e1e1e', margin: '0 0 4px' } }>
-											{ link.title } <span style={ { fontWeight: '400', color: '#555' } }>→ <em>{ link.anchorText }</em></span>
-										</p>
-										<div style={ { display: 'flex', alignItems: 'flex-start', gap: '6px', margin: '0 0 6px' } }>
-											<p style={ { fontSize: '11px', color: '#555', fontStyle: 'italic', margin: 0, lineHeight: '1.4', flex: 1 } }>
-												"{ link.context }"
-											</p>
-											<button
-												onClick={ () => window.find( link.context, false, false, true ) }
-												style={ { fontSize: '10px', padding: '1px 6px', background: '#f0f0f0', border: '1px solid #ccc', borderRadius: '3px', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 } }
-											>
-												Find
-											</button>
-										</div>
-										{ inserted === 'done' ? (
-											<span style={ { fontSize: '11px', color: '#46b450', fontWeight: '600' } }>✓ Inserted</span>
-										) : (
-											<div style={ { display: 'flex', gap: '10px', alignItems: 'center' } }>
-												<Button
-													variant="secondary"
-													onClick={ () => insertLink( link, i ) }
-													style={ { fontSize: '11px', padding: '0 12px', ...BUTTON_STYLE } }
-												>
-													⇄ Insert Link
-												</Button>
-												<button type="button" onClick={ () => navigator.clipboard?.writeText( `<a href="${ link.url }">${ link.anchorText }</a>` ) }
-													style={ { fontSize: '11px', color: '#555', background: 'none', border: 'none', padding: 0, cursor: 'pointer', textDecoration: 'underline' } }>
-													Copy HTML
-												</button>
-											</div>
-										) }
-										{ inserted && inserted !== 'done' && (
-											<p style={ { fontSize: '11px', color: '#dc3232', margin: '4px 0 0' } }>{ inserted }</p>
-										) }
-									</div>
-								);
-							} ) }
-						</div>
-					) }
-					<AiPill
-						label="Find Links"
-						isActive={ linksState.loading }
-						anyPending={ linksState.loading }
-						locked={ ! IS_AI_MODE }
-						pillLabel="Pro"
-						onClick={ runInternalLinks }
-					/>
-			</PanelBody>
-
-			{ /* Reading Level */ }
-			<PanelBody title="Reading Level" opened={ readingOpen } onToggle={ () => setReadingOpen( ! readingOpen ) }>
-					{ readingState.error && (
-						<Notice status="error" isDismissible={ false } style={ { marginBottom: '8px' } }>{ readingState.error }</Notice>
-					) }
-					{ readingState.result && (
-						<div style={ { marginBottom: '8px' } }>
-							<p style={ { margin: '0 0 4px', fontSize: '13px' } }>
-								<strong>{ readingState.result.level }</strong>
-								<span style={ { color: '#888', fontSize: '11px', marginLeft: '6px' } }>
-									Grade { readingState.result.gradeLevel }
-								</span>
-							</p>
-							<p style={ { margin: '0 0 4px', fontSize: '12px', color: '#555' } }>{ readingState.result.note }</p>
-							{ readingState.result.fit && (
-								<p style={ { margin: '0 0 4px', fontSize: '11px', color: '#777' } }>
-									{ readingState.result.fit }
-								</p>
-							) }
-							<p style={ { margin: '0', fontSize: '11px', color: '#999' } }>
-								To adjust the reading level, use the Tone Check or Topic Focus panels to refine specific passages.
-							</p>
-						</div>
-					) }
-					<AiPill
-						label="Analyze"
-						isActive={ readingState.loading }
-						anyPending={ readingState.loading }
-						locked={ ! IS_AI_MODE }
-						pillLabel="Pro"
-						onClick={ runReadingLevel }
-					/>
-			</PanelBody>
-
-			{ /* Suggest Titles */ }
-			<PanelBody title="Suggest Titles" opened={ titlesOpen } onToggle={ () => setTitlesOpen( ! titlesOpen ) }>
-					<p style={ { fontSize: '12px', color: '#555', margin: '0 0 10px' } }>
-						Generate a curiosity-driven and a utility-driven alternative to your current title.
-					</p>
-					{ headlineState.error && (
-						<Notice status="error" isDismissible={ false } style={ { marginBottom: '8px' } }>{ headlineState.error }</Notice>
-					) }
-					{ headlineState.result && (
-						<div style={ { marginBottom: '8px' } }>
-							{ [ { key: 'curiosity', label: 'Curiosity' }, { key: 'utility', label: 'Utility' } ].map( ( { key, label } ) => (
-								<div key={ key } style={ { border: '1px solid #e0e0e0', borderRadius: '4px', padding: '8px 10px', marginBottom: '8px', background: '#fff' } }>
-									<p style={ { fontSize: '11px', color: '#999', margin: '0 0 3px', textTransform: 'uppercase', letterSpacing: '0.05em' } }>{ label }</p>
-									<p style={ { fontSize: '12px', color: '#333', margin: '0 0 6px' } }>{ headlineState.result[ key ] }</p>
-									{ headlineApplied[ key ] ? (
-										<span style={ { fontSize: '11px', color: '#46b450', fontWeight: '600' } }>✓ Applied</span>
-									) : (
-										<Button
-											variant="secondary"
-											onClick={ () => {
-												editPost( { title: headlineState.result[ key ] } );
-												window.wp.data.dispatch( 'core/editor' ).savePost();
-												setHeadlineApplied( ( prev ) => ( { ...prev, [ key ]: true } ) );
-											} }
-											style={ { fontSize: '11px', padding: '0 12px', ...BUTTON_STYLE } }
-										>
-											Use this title →
-										</Button>
-									) }
-								</div>
-							) ) }
-						</div>
-					) }
-					<div style={ { marginTop: '8px' } }>
-						<AiPill
-							label="Generate"
-							isActive={ headlineState.loading }
-							anyPending={ headlineState.loading }
-							locked={ ! IS_AI_MODE }
-							pillLabel="Pro"
-							onClick={ runSuggestTitles }
-						/>
-					</div>
-			</PanelBody>
-
-			{ /* Excerpt Generator */ }
-			<PanelBody
-					title={
-						postExcerpt && postExcerpt.trim()
-							? <span>Excerpt Generator <span style={ { color: '#46b450', fontWeight: '700' } }>✓</span></span>
-							: 'Excerpt Generator'
-					}
-					opened={ excerptOpen }
-					onToggle={ () => setExcerptOpen( ! excerptOpen ) }
+			<div style={ { padding: '12px 0 16px', textAlign: 'center' } }>
+				<p style={ { fontSize: '12px', color: '#555', margin: '0 0 10px', lineHeight: '1.5' } }>
+					Tone Check, Topic Focus, Reading Level, Suggest Titles, Excerpt Generator, Internal Links, and Social Media Drafts.
+				</p>
+				<a
+					href={ pricingUrl }
+					target="_blank"
+					rel="noopener noreferrer"
+					style={ { display: 'inline-block', padding: '6px 18px', background: '#7c3aed', color: '#fff', borderRadius: '4px', textDecoration: 'none', fontSize: '13px', fontWeight: 600 } }
 				>
-					{ excerptState.error && (
-						<Notice status="error" isDismissible={ false } style={ { marginBottom: '8px' } }>{ excerptState.error }</Notice>
-					) }
-					{ excerptState.result && (
-						<div style={ { marginBottom: '8px' } }>
-							<p style={ {
-								fontSize:     '12px',
-								color:        '#333',
-								background:   '#f6f7f7',
-								border:       '1px solid #e0e0e0',
-								borderRadius: '4px',
-								padding:      '8px',
-								margin:       '0 0 6px',
-							} }>
-								{ excerptState.result.excerpt }
-							</p>
-							<p style={ { fontSize: '11px', color: '#999', margin: '0 0 6px' } }>
-								{ excerptState.result.excerpt.length } chars
-							</p>
-							{ excerptApplied ? (
-								<span style={ { fontSize: '11px', color: '#46b450', fontWeight: '600' } }>✓ Applied</span>
-							) : (
-								<Button
-									variant="secondary"
-									onClick={ () => {
-										editPost( { excerpt: excerptState.result.excerpt } );
-										window.wp.data.dispatch( 'core/editor' ).savePost();
-										setExcerptApplied( true );
-									} }
-									style={ { fontSize: '11px', padding: '0 12px', ...BUTTON_STYLE } }
-								>
-									Apply to excerpt →
-								</Button>
-							) }
-						</div>
-					) }
-					<div style={ { marginTop: '8px' } }>
-						<AiPill
-							label="Generate"
-							isActive={ excerptState.loading }
-							anyPending={ excerptState.loading }
-							locked={ ! IS_AI_MODE }
-							pillLabel="Pro"
-							onClick={ runSuggestExcerpt }
-						/>
-					</div>
-			</PanelBody>
-
-			{ /* ── Distribute section ───────────────────────────────────── */ }
-			<SectionHeader label="Distribute" />
-
-			{ /* Social Media Draft */ }
-			<SocialDraftPanel
-				open={ socialOpen }
-				onToggle={ () => setSocialOpen( ! socialOpen ) }
-				state={ socialState }
-				onStateChange={ setSocialState }
-				onGenerate={ runSocialDraft }
-				locked={ ! IS_AI_MODE }
-			/>
+					Get Pugmill AEO Toolkit Pro →
+				</a>
+			</div>
 
 		</PluginDocumentSettingPanel>
 	);

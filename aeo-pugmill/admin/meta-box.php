@@ -55,7 +55,7 @@ function aeopugmill_render_meta_box( $post ) {
 					<?php printf(
 						'<a href="%1$s">%2$s</a> %3$s',
 						esc_url( admin_url( 'options-general.php?page=aeo-pugmill' ) ),
-						esc_html__( 'Get an AEO Pugmill Pro license', 'aeo-pugmill' ),
+						esc_html__( 'Get an Pugmill AEO Toolkit Pro license', 'aeo-pugmill' ),
 						esc_html__( 'to auto-generate these fields.', 'aeo-pugmill' )
 					); ?>
 				<?php endif; ?>
@@ -148,7 +148,7 @@ function aeopugmill_save_meta_box( $post_id ) {
 	}
 	// wp_unslash() before nonce verification — nonce is alphanumeric so slashes
 	// won't affect validity, but this is correct per WPCS for all $_POST access.
-	if ( ! wp_verify_nonce( wp_unslash( $_POST['aeopugmill_nonce'] ), 'aeopugmill_save_aeo' ) ) { // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Nonce is validated via wp_verify_nonce; sanitization would corrupt it.
+	if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['aeopugmill_nonce'] ) ), 'aeopugmill_save_aeo' ) ) {
 		return;
 	}
 	if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {

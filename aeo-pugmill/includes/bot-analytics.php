@@ -27,6 +27,23 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/**
+ * Returns a stable UUID for this WordPress installation.
+ * Used as a salt when hashing the site_id for the intelligence network.
+ * Defined here (free plugin) because bot-analytics.php is the sole caller.
+ */
+if ( ! function_exists( 'aeopugmill_instance_id' ) ) {
+	function aeopugmill_instance_id() {
+		$stored = get_option( 'aeopugmill_instance_id', '' );
+		if ( $stored ) {
+			return $stored;
+		}
+		$id = wp_generate_uuid4();
+		update_option( 'aeopugmill_instance_id', $id, false );
+		return $id;
+	}
+}
+
 define( 'AEOPUGMILL_BOT_DB_VERSION', '4' );
 
 // ── Bot name normalization ───────────────────────────────────────────────────
@@ -105,8 +122,9 @@ function aeopugmill_resource_type_labels() {
 		6  => 'Robots.txt',
 		7  => 'AEO Post',
 		8  => 'AEO JSON-LD',
-		9  => 'RSS+AEO',
+		9  => 'RSS Feed',
 		10 => 'Well-Known',
+		11 => 'RSS+AEO',
 	);
 }
 
@@ -126,8 +144,9 @@ function aeopugmill_resource_type_categories() {
 		6  => 'discovery',  // Robots.txt
 		7  => 'aeo',        // HTML+AEO — crawl of an AEO-enriched post (secondary AEO signal)
 		8  => 'aeo',        // AEO JSON-LD
-		9  => 'aeo',        // RSS Feed — now carries AEO content (summary, entities, Q&A via xmlns:aeo)
+		9  => 'crawl',      // RSS Feed (plain — enrichment disabled or not yet active)
 		10 => 'discovery',  // Well-Known / ads.txt / security.txt — site metadata discovery
+		11 => 'aeo',        // RSS+AEO — feed confirmed to carry AEO namespace (enrichment enabled)
 	);
 }
 
@@ -143,11 +162,20 @@ function aeopugmill_resource_type_categories() {
  */
 function aeopugmill_bot_fingerprints() {
 	return array(
-		// ── AI companies ─────────────────────────────────────────────────
-		// Checked before search engines so Google-Extended beats Googlebot.
-		'ChatGPT'    => array( 'GPTBot', 'ChatGPT-User', 'OAI-SearchBot' ),
-		'Claude'     => array( 'ClaudeBot', 'Claude-User', 'anthropic-ai' ),
-		'Perplexity' => array( 'PerplexityBot', 'Perplexity-User' ),
+		// ── OpenAI — three distinct crawlers with different purposes ──────
+		// More-specific strings first; OAI-SearchBot checked before GPTBot.
+		'OAI-SearchBot'   => array( 'OAI-SearchBot' ),   // Real-time search grounding
+		'ChatGPT-User'    => array( 'ChatGPT-User' ),    // Live user browsing via ChatGPT
+		'GPTBot'          => array( 'GPTBot' ),          // Training / web index
+		// ── Anthropic/Claude — three distinct crawlers ────────────────────
+		'ClaudeBot'       => array( 'ClaudeBot' ),               // Training / web index
+		'Claude-User'     => array( 'Claude-User', 'claude-web' ), // Live user browsing
+		'anthropic-ai'    => array( 'anthropic-ai' ),            // Direct API access
+		// ── Perplexity — index vs live ────────────────────────────────────
+		'PerplexityBot'   => array( 'PerplexityBot' ),   // Index crawler
+		'Perplexity-User' => array( 'Perplexity-User' ), // Live user search
+		// ── Other AI companies ────────────────────────────────────────────
+		// Gemini checked before Googlebot so Google-Extended matches first.
 		'Gemini'     => array( 'Google-Extended' ),
 		'Amazonbot'  => array( 'Amazonbot', 'Amzn-User' ),
 		'Meta'       => array( 'meta-externalagent', 'Meta-ExternalFetcher' ),
@@ -157,14 +185,15 @@ function aeopugmill_bot_fingerprints() {
 		'CCBot'      => array( 'CCBot' ),
 		'Mistral'    => array( 'MistralAI-User', 'MistralBot', 'mistralai' ),
 		// ── Search engines ────────────────────────────────────────────────
-		'GoogleOther' => array( 'GoogleOther' ),
-		'Googlebot'   => array( 'Googlebot' ),
-		'Bingbot'     => array( 'bingbot' ),
-		'Applebot'    => array( 'Applebot-Extended', 'Applebot' ),
-		'DuckDuckBot' => array( 'DuckDuckBot', 'DuckAssistBot' ),
-		'Bytespider'  => array( 'Bytespider' ),
-		'YandexBot'   => array( 'YandexBot', 'YaDirectFetcher' ),
-		'BaiduBot'    => array( 'Baiduspider', 'BaiduSpider' ),
+		'GoogleOther'       => array( 'GoogleOther' ),
+		'Googlebot'         => array( 'Googlebot' ),
+		'Bingbot'           => array( 'bingbot' ),
+		'Applebot-Extended' => array( 'Applebot-Extended' ), // Apple Intelligence training
+		'Applebot'          => array( 'Applebot' ),          // Siri / Spotlight search
+		'DuckDuckBot'       => array( 'DuckDuckBot', 'DuckAssistBot' ),
+		'Bytespider'        => array( 'Bytespider' ),
+		'YandexBot'         => array( 'YandexBot', 'YaDirectFetcher' ),
+		'BaiduBot'          => array( 'Baiduspider', 'BaiduSpider' ),
 		// ── Commercial SEO / analytics bots ──────────────────────────────
 		'SemrushBot'  => array( 'SemrushBot' ),
 		'AhrefsBot'   => array( 'AhrefsBot' ),
@@ -307,8 +336,10 @@ function aeopugmill_detect_resource_type() {
 	}
 	// RSS/Atom feeds: /feed/, /feed, /tag/foo/feed/, /category/bar/feed/, etc.
 	// Also covers ?feed=rss2 query-based requests.
+	// Type 11 (RSS+AEO) when enrichment is enabled — the feed carries xmlns:aeo namespace
+	// and AEO elements per item. Type 9 (RSS Feed) when enrichment is disabled.
 	if ( preg_match( '#/feed/?$#', $path ) || isset( $_GET['feed'] ) ) { // phpcs:ignore
-		return 9;
+		return function_exists( 'aeopugmill_rss_enrichment_enabled' ) && aeopugmill_rss_enrichment_enabled() ? 11 : 9;
 	}
 	// Well-Known / discovery files: /.well-known/*, ads.txt family, trust.txt,
 	// security.txt, apple-app-site-association, humans.txt.
@@ -398,10 +429,6 @@ add_action( 'plugins_loaded', 'aeopugmill_bot_analytics_maybe_install' );
  * @param int    $resource_type Resource type ID (see aeopugmill_resource_type_labels()).
  */
 function aeopugmill_log_bot_visit( $bot_name, $resource_type = 0 ) {
-	if ( ! get_option( 'aeopugmill_analytics_opted_in' ) ) {
-		return;
-	}
-
 	$bot_name = aeopugmill_normalize_bot_name( $bot_name );
 	if ( '' === $bot_name ) {
 		return;
@@ -450,9 +477,6 @@ function aeopugmill_capture_bot_visit() {
 		return;
 	}
 	if ( defined( 'WP_CLI' ) && WP_CLI ) {
-		return;
-	}
-	if ( ! get_option( 'aeopugmill_analytics_opted_in' ) ) {
 		return;
 	}
 
@@ -643,13 +667,22 @@ function aeopugmill_bot_analytics_total() {
  * @return array|false
  */
 function aeopugmill_get_network_report() {
+	// Opt-in check first — never return cached network data when the user
+	// has not consented to participate in the intelligence network. Also
+	// proactively clear any stale cache from a previous opt-in session.
+	if ( ! get_option( 'aeopugmill_analytics_opted_in' ) ) {
+		if ( false !== get_transient( 'aeopugmill_network_report' ) ) {
+			delete_transient( 'aeopugmill_network_report' );
+		}
+		if ( false !== get_transient( 'aeopugmill_network_report_failed' ) ) {
+			delete_transient( 'aeopugmill_network_report_failed' );
+		}
+		return false;
+	}
+
 	$cached = get_transient( 'aeopugmill_network_report' );
 	if ( is_array( $cached ) ) {
 		return $cached;
-	}
-
-	if ( ! get_option( 'aeopugmill_analytics_opted_in' ) ) {
-		return false;
 	}
 
 	// Respect a recent failure to avoid thrashing aeopugmill.com during an outage.
@@ -705,9 +738,9 @@ function aeopugmill_bot_analytics_insights_context() {
 
 	// ── AEO conversion rate ──────────────────────────────────────────────────
 	// AEO endpoints: llms.txt (1), llms-full.txt (2), Post Markdown (3),
-	// Site Summary (4), AEO JSON-LD (8). HTML+AEO (7) is a crawl, not an AEO
-	// endpoint hit, so it is excluded from the conversion numerator.
-	$aeo_types   = array( 1, 2, 3, 4, 8 );
+	// Site Summary (4), AEO JSON-LD (8), RSS+AEO (11). HTML+AEO (7) is a crawl,
+	// not a dedicated AEO endpoint hit, so it is excluded from the numerator.
+	$aeo_types   = array( 1, 2, 3, 4, 8, 11 );
 	$total_30    = 0;
 	$aeo_hits_30 = 0;
 	foreach ( $by_resource as $types ) {
@@ -894,7 +927,7 @@ function aeopugmill_ajax_analytics_insights() {
 	$api_key  = aeopugmill_get_encrypted_option( 'aeopugmill_ai_api_key', '' );
 
 	if ( empty( $api_key ) ) {
-		wp_send_json_error( __( 'No API key configured. Add your key in Settings → AEO Pugmill.', 'aeo-pugmill' ) );
+		wp_send_json_error( __( 'No API key configured. Add your key in Settings → Pugmill AEO Toolkit.', 'aeo-pugmill' ) );
 	}
 
 	$cache_key = 'aeopugmill_ai_analytics_insights';
@@ -910,7 +943,7 @@ function aeopugmill_ajax_analytics_insights() {
 	$context  = aeopugmill_bot_analytics_insights_context();
 	$ctx_json = wp_json_encode( $context, JSON_PRETTY_PRINT );
 
-	$system = "You are an expert in AI search and Answer Engine Optimization (AEO). You receive bot traffic data from a WordPress site using the AEO Pugmill AEO plugin. Analyze the data and write a concise, insightful report in plain text — no markdown except the section headings below.
+	$system = "You are an expert in AI search and Answer Engine Optimization (AEO). You receive bot traffic data from a WordPress site using the Pugmill AEO Toolkit AEO plugin. Analyze the data and write a concise, insightful report in plain text — no markdown except the section headings below.
 
 Structure your response with exactly these six section headings, each on its own line preceded by '## ':
 
@@ -1068,6 +1101,11 @@ function aeopugmill_on_analytics_opt_in( $old_value, $new_value ) {
 	if ( (int) $new_value === 1 && (int) $old_value !== 1 ) {
 		aeopugmill_intelligence_register(); // return value intentionally ignored
 	}
+	// On opt-out, clear cached network data so stale benchmarks don't leak.
+	if ( (int) $new_value !== 1 && (int) $old_value === 1 ) {
+		delete_transient( 'aeopugmill_network_report' );
+		delete_transient( 'aeopugmill_network_report_failed' );
+	}
 }
 add_action( 'update_option_aeopugmill_analytics_opted_in', 'aeopugmill_on_analytics_opt_in', 10, 2 );
 
@@ -1091,6 +1129,7 @@ function aeopugmill_intelligence_resource_slugs() {
 		8  => 'aeo_jsonld',
 		9  => 'rss_feed',
 		10 => 'well_known',
+		11 => 'rss_aeo',
 	);
 }
 

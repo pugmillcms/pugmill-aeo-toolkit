@@ -1,5 +1,5 @@
 /**
- * AEO Pugmill — Bulk AEO queue runner.
+ * Pugmill AEO Toolkit — Bulk AEO queue runner.
  *
  * Reads window.aeopugmillBulk (localized by PHP) and drives the
  * generate-all-posts flow on the Bulk AEO settings tab.

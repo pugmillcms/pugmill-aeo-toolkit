@@ -1,15 +1,18 @@
 <?php
 /**
- * Plugin Name: AEO Pugmill
- * Plugin URI:  https://aeopugmill.com
- * Description: The AEO plugin for WordPress. Structures your content for AI answer engines — FAQPage schema, entity graph, citations, bot analytics, and llms.txt. Works alongside Yoast, RankMath, and AIOSEO.
- * Version:     1.1.2
- * Author:      Janzen Works
- * Author URI:  https://janzenworks.com
- * License:     GPL-2.0-or-later
- * License URI: https://www.gnu.org/licenses/gpl-2.0.html
- * Text Domain: aeo-pugmill
- * Domain Path: /languages
+ * Plugin Name:       Pugmill AEO Toolkit
+ * Plugin URI:        https://aeopugmill.com
+ * Description:       The AEO plugin for WordPress. Structures your content for AI answer engines — FAQPage schema, entity graph, citations, bot analytics, and llms.txt. Works alongside Yoast, RankMath, and AIOSEO.
+ * Version:           1.1.5
+ * Requires at least: 6.3
+ * Tested up to:      6.9
+ * Requires PHP:      8.1
+ * Author:            Janzen Works
+ * Author URI:        https://janzenworks.com
+ * License:           GPL-2.0-or-later
+ * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
+ * Text Domain:       aeo-pugmill
+ * Domain Path:       /languages
  *
  * @package WPPugmill
  */
@@ -22,7 +25,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 // the full PHP generation time for bot requests.
 define( 'AEOPUGMILL_REQUEST_START', microtime( true ) );
 
-define( 'AEOPUGMILL_VERSION',         '1.1.2' );
+define( 'AEOPUGMILL_VERSION',         '1.1.5' );
 define( 'AEOPUGMILL_PLUGIN_DIR',      plugin_dir_path( __FILE__ ) );
 define( 'AEOPUGMILL_PLUGIN_URL',      plugin_dir_url( __FILE__ ) );
 define( 'AEOPUGMILL_PLUGIN_FILE',     __FILE__ );
@@ -39,27 +42,25 @@ define( 'AEOPUGMILL_NETWORK_SECRET',   'pugmill-network-v1' );
 /**
  * Detect which mode the plugin is running in.
  *
- * - 'free' : no license key, or key present but invalid
- * - 'ai'   : valid license — unlocks BYOK AI generation
- * - 'pro'  : future tier — reserved for token infrastructure
+ * - 'free' : no API key and Pro add-on not active
+ * - 'ai'   : API key configured or Pro add-on active
  *
- * @return string 'free' | 'ai' | 'pro'
+ * @return string 'free' | 'ai'
  */
 function aeopugmill_mode() {
-	// Developer mode: define( 'AEOPUGMILL_DEV_MODE', true ) in wp-config.php
-	// to bypass license validation and force AI mode on local/staging installs.
-	// Inert unless explicitly defined. Never enable on a production site.
-	if ( defined( 'AEOPUGMILL_DEV_MODE' ) && AEOPUGMILL_DEV_MODE ) {
+	if ( defined( 'AEOPUGMILL_PRO_ACTIVE' ) && AEOPUGMILL_PRO_ACTIVE ) {
 		return 'ai';
 	}
+	return ! empty( aeopugmill_get_encrypted_option( 'aeopugmill_ai_api_key', '' ) ) ? 'ai' : 'free';
+}
 
-	$license_key = aeopugmill_get_encrypted_option( 'aeopugmill_license_key', '' );
-
-	if ( ! empty( $license_key ) ) {
-		return aeopugmill_is_licensed() ? 'ai' : 'free';
-	}
-
-	return 'free';
+/**
+ * Whether an AI API key is configured.
+ *
+ * @return bool
+ */
+function aeopugmill_has_api_key() {
+	return ! empty( aeopugmill_get_encrypted_option( 'aeopugmill_ai_api_key', '' ) );
 }
 
 // Load core includes
@@ -79,7 +80,6 @@ require_once AEOPUGMILL_PLUGIN_DIR . 'includes/ai.php';
 require_once AEOPUGMILL_PLUGIN_DIR . 'includes/health.php';
 require_once AEOPUGMILL_PLUGIN_DIR . 'includes/bot-analytics.php';
 require_once AEOPUGMILL_PLUGIN_DIR . 'includes/bot-intelligence.php';
-require_once AEOPUGMILL_PLUGIN_DIR . 'includes/bulk-aeo.php';
 
 // Self-hosted update checker — checks aeopugmill.com for new versions.
 // This file is included ONLY in the direct-download distribution and is

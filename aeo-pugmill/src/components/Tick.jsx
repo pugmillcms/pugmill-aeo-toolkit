@@ -1,5 +1,5 @@
 /**
- * AEO Pugmill — Tick checkmark component.
+ * Pugmill AEO Toolkit — Tick checkmark component.
  *
  * Renders a green checkmark next to a panel title when the field is complete.
  *

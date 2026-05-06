@@ -1,5 +1,5 @@
 /**
- * AEO Pugmill — AI action pill component.
+ * Pugmill AEO Toolkit — AI action pill component.
  *
  * Compact inline button used for individual AI generate actions throughout
  * the sidebar panels. Matches the Pugmill CMS AiBtn visual language.

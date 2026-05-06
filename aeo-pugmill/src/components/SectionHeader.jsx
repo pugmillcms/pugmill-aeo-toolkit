@@ -1,5 +1,5 @@
 /**
- * AEO Pugmill — Section header divider component.
+ * Pugmill AEO Toolkit — Section header divider component.
  *
  * Renders a thin purple-tinted band used to separate SEO / AEO / Content /
  * Distribute / Audit sections inside the main panel.

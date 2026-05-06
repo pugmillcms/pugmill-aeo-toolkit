@@ -1,5 +1,5 @@
 /**
- * AEO Pugmill — Custom React hooks for reading/writing post meta.
+ * Pugmill AEO Toolkit — Custom React hooks for reading/writing post meta.
  *
  * @package WPPugmill
  */

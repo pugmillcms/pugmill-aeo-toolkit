@@ -1,5 +1,5 @@
 /**
- * AEO Pugmill — Score progress bar component.
+ * Pugmill AEO Toolkit — Score progress bar component.
  *
  * @package WPPugmill
  */

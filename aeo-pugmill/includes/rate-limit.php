@@ -3,7 +3,7 @@
  * Rate limiting for admin AJAX endpoints.
  *
  * Uses WordPress transients keyed by user ID.
- * The hourly limit is configurable in Settings → AEO Pugmill → AI Provider.
+ * The hourly limit is configurable in Settings → Pugmill AEO Toolkit → AI Provider.
  *
  * @package WPPugmill
  */

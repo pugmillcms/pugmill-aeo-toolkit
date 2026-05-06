@@ -1,5 +1,5 @@
 /**
- * AEO Pugmill — Logo SVG component.
+ * Pugmill AEO Toolkit — Logo SVG component.
  *
  * @package WPPugmill
  */

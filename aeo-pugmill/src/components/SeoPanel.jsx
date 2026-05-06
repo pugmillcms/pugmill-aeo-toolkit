@@ -1,5 +1,5 @@
 /**
- * AEO Pugmill — SEO panel component.
+ * Pugmill AEO Toolkit — SEO panel component.
  *
  * Renders the "SEO" PanelBody with SERP preview, title, meta description,
  * canonical URL, robots flags, OG image, and the AI generate button.

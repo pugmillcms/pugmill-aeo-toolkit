@@ -95,7 +95,7 @@ function aeopugmill_plugin_info( $result, $action, $args ) {
 	}
 
 	return (object) array(
-		'name'          => 'AEO Pugmill',
+		'name'          => 'Pugmill AEO Toolkit',
 		'slug'          => 'aeo-pugmill',
 		'version'       => $body['version'],
 		'author'        => '<a href="https://janzenworks.com">Janzen Works</a>',

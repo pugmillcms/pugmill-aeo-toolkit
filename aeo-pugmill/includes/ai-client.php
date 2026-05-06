@@ -1,6 +1,6 @@
 <?php
 /**
- * AEO Pugmill — AI transport layer.
+ * Pugmill AEO Toolkit — AI transport layer.
  *
  * Everything that touches external AI providers or orchestrates a request:
  *   - aeopugmill_ai_request_setup()   — nonce/cap/rate-limit/key preamble
@@ -44,19 +44,6 @@ function aeopugmill_ai_request_setup( $nonce_action, $feature_label, $require_li
 		wp_send_json_error( array( 'message' => $rate_check->get_error_message() ), 429 );
 	}
 
-	if ( $require_license ) {
-		$mode = aeopugmill_mode();
-		if ( 'free' === $mode ) {
-			wp_send_json_error( array(
-				/* translators: %1$s: feature name */
-				'message' => sprintf( __( '%1$s requires AEO Pugmill Pro. <a href="https://aeopugmill.com/pricing" target="_blank">Get your license →</a>', 'aeo-pugmill' ), $feature_label ),
-			), 403 );
-		}
-		if ( 'pro' === $mode ) {
-			wp_send_json_error( array( 'message' => __( 'Pro mode coming soon.', 'aeo-pugmill' ) ), 501 );
-		}
-	}
-
 	$post_id = absint( wp_unslash( $_POST['post_id'] ?? 0 ) );
 	if ( ! $post_id ) {
 		wp_send_json_error( array( 'message' => __( 'Missing post ID.', 'aeo-pugmill' ) ), 400 );
@@ -73,7 +60,7 @@ function aeopugmill_ai_request_setup( $nonce_action, $feature_label, $require_li
 	$provider = get_option( 'aeopugmill_ai_provider', 'anthropic' );
 	$api_key  = aeopugmill_get_encrypted_option( 'aeopugmill_ai_api_key', '' );
 	if ( empty( $api_key ) ) {
-		wp_send_json_error( array( 'message' => __( 'No API key configured. Add your key in Settings → AEO Pugmill.', 'aeo-pugmill' ) ), 400 );
+		wp_send_json_error( array( 'message' => __( 'No API key configured. Add your key in Settings → Pugmill AEO Toolkit.', 'aeo-pugmill' ) ), 400 );
 	}
 
 	$title = get_the_title( $post );
@@ -175,7 +162,7 @@ function aeopugmill_call_ai( $provider, $api_key, $system, $user, $max_tokens = 
 
 	if ( is_wp_error( $response ) ) {
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( 'AEO Pugmill AI error (' . $provider . '): ' . $response->get_error_message() ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( 'Pugmill AEO Toolkit AI error (' . $provider . '): ' . $response->get_error_message() ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 		}
 		return new WP_Error( 'request_failed', __( 'Could not reach AI provider. Please check your connection and try again.', 'aeo-pugmill' ) );
 	}
@@ -187,9 +174,9 @@ function aeopugmill_call_ai( $provider, $api_key, $system, $user, $max_tokens = 
 	if ( 200 !== $code ) {
 		$detail = $data['error']['message'] ?? $body;
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( 'AEO Pugmill AI provider error (' . $provider . ' ' . $code . '): ' . $detail ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( 'Pugmill AEO Toolkit AI provider error (' . $provider . ' ' . $code . '): ' . $detail ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 		}
-		if ( 401 === $code ) return new WP_Error( 'provider_error', __( 'Invalid API key. Please check your key in Settings → AEO Pugmill.', 'aeo-pugmill' ) );
+		if ( 401 === $code ) return new WP_Error( 'provider_error', __( 'Invalid API key. Please check your key in Settings → Pugmill AEO Toolkit.', 'aeo-pugmill' ) );
 		if ( 429 === $code ) return new WP_Error( 'provider_error', __( 'AI provider rate limit reached. Please wait and try again.', 'aeo-pugmill' ) );
 		if ( 402 === $code ) return new WP_Error( 'provider_error', __( 'Insufficient credits on your AI provider account. Please top up and try again.', 'aeo-pugmill' ) );
 		if ( 529 === $code ) return new WP_Error( 'provider_error', __( 'AI provider is momentarily overloaded. Please try again in a few seconds.', 'aeo-pugmill' ) );
@@ -321,7 +308,7 @@ function aeopugmill_call_ai_vision( $provider, $api_key, $image_url, $prompt, $m
 
 	if ( is_wp_error( $response ) ) {
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( 'AEO Pugmill vision error (' . $provider . '): ' . $response->get_error_message() ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( 'Pugmill AEO Toolkit vision error (' . $provider . '): ' . $response->get_error_message() ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 		}
 		return new WP_Error( 'request_failed', __( 'Could not reach AI provider. Please check your connection and try again.', 'aeo-pugmill' ) );
 	}
@@ -333,7 +320,7 @@ function aeopugmill_call_ai_vision( $provider, $api_key, $image_url, $prompt, $m
 	if ( 200 !== $code ) {
 		$detail = $data['error']['message'] ?? $body;
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( 'AEO Pugmill vision provider error (' . $provider . ' ' . $code . '): ' . $detail ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( 'Pugmill AEO Toolkit vision provider error (' . $provider . ' ' . $code . '): ' . $detail ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 		}
 		if ( 401 === $code ) return new WP_Error( 'provider_error', __( 'Invalid API key.', 'aeo-pugmill' ) );
 		if ( 429 === $code ) return new WP_Error( 'provider_error', __( 'AI provider rate limit reached. Please wait and try again.', 'aeo-pugmill' ) );

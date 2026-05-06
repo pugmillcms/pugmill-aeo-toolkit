@@ -2,7 +2,7 @@
 /**
  * Plugin Compatibility — SEO plugin detection helpers.
  *
- * AEO Pugmill is an AEO plugin, not an SEO plugin. The outputs it shares
+ * Pugmill AEO Toolkit is an AEO plugin, not an SEO plugin. The outputs it shares
  * with SEO plugins (meta description, Open Graph, Twitter Cards, Breadcrumb
  * JSON-LD) are secondary features. When a dedicated SEO plugin is active, the
  * admin can suppress these overlapping outputs and let the SEO plugin own them.

@@ -1,6 +1,6 @@
 <?php
 /**
- * AEO Pugmill — standalone unit tests
+ * Pugmill AEO Toolkit — standalone unit tests
  *
  * Tests pure-PHP utility functions without a live WordPress environment.
  * WordPress API stubs are defined below.
@@ -364,12 +364,12 @@ assert_equal( 'Unmatched passage returned as-is',
 section( '3e. Fuzzy match — normalised whitespace' );
 
 // AI normalises double-space to single; block preserves double-space.
-$block_dbl_space = 'AEO Pugmill  scores  posts.';  // double spaces in block
-$ai_sngl_space   = 'AEO Pugmill scores posts.';    // single spaces from AI
+$block_dbl_space = 'Pugmill AEO Toolkit  scores  posts.';  // double spaces in block
+$ai_sngl_space   = 'Pugmill AEO Toolkit scores posts.';    // single spaces from AI
 $result = aeopugmill_remap_passage_to_raw( $ai_sngl_space, $block_dbl_space );
 // Fuzzy match should extract the original from the block (double-space version)
 assert_contains( 'Fuzzy match extracts text with original spacing from block',
-	'AEO Pugmill', $result
+	'Pugmill AEO Toolkit', $result
 );
 
 // ── 4. Block text extraction ──────────────────────────────────────────────
@@ -465,7 +465,7 @@ section( '5. End-to-end: block text extraction → passage remapping' );
 
 $post_content = <<<'HTML'
 <!-- wp:paragraph -->
-<p>AEO Pugmill is a WordPress plugin designed to score posts on both SEO and AEO health.</p>
+<p>Pugmill AEO Toolkit is a WordPress plugin designed to score posts on both SEO and AEO health.</p>
 <!-- /wp:paragraph -->
 
 <!-- wp:heading {"level":2} -->
@@ -497,7 +497,7 @@ foreach ( $para_texts as $block_text ) {
 assert_true( 'AI passage successfully matched to a paragraph block', $matched );
 
 // Simulate first paragraph — no special chars, should match verbatim
-$ai_p1    = 'AEO Pugmill is a WordPress plugin designed to score posts on both SEO and AEO health.';
+$ai_p1    = 'Pugmill AEO Toolkit is a WordPress plugin designed to score posts on both SEO and AEO health.';
 $matched2 = false;
 foreach ( $para_texts as $block_text ) {
 	$remapped2 = aeopugmill_remap_passage_to_raw( $ai_p1, $block_text );
@@ -510,7 +510,7 @@ foreach ( $para_texts as $block_text ) {
 assert_true( 'Plain ASCII passage matched verbatim', $matched2 );
 
 // Simulate a multi-paragraph passage (should NOT match any single block)
-$ai_multi = 'AEO Pugmill is a WordPress plugin designed to score posts on both SEO and AEO health. Answer Engine Optimisation (AEO) is the practice of structuring web content';
+$ai_multi = 'Pugmill AEO Toolkit is a WordPress plugin designed to score posts on both SEO and AEO health. Answer Engine Optimisation (AEO) is the practice of structuring web content';
 $matched3 = false;
 foreach ( $para_texts as $block_text ) {
 	$remapped3 = aeopugmill_remap_passage_to_raw( $ai_multi, $block_text );

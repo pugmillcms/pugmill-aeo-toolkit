@@ -1,6 +1,6 @@
 <?php
 /**
- * AEO Pugmill — AEO generation AJAX handlers and support functions.
+ * Pugmill AEO Toolkit — AEO generation AJAX handlers and support functions.
  *
  * Covers:
  *   - aeopugmill_ajax_generate_summary()    — individual summary generator

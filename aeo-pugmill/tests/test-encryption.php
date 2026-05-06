@@ -1,6 +1,6 @@
 <?php
 /**
- * AEO Pugmill — encryption integration tests.
+ * Pugmill AEO Toolkit — encryption integration tests.
  *
  * Loads the real encryption.php (not stubs) and exercises the full
  * OpenSSL encrypt → store → retrieve → decrypt path. This is the

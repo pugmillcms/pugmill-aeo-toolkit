@@ -1,5 +1,5 @@
 /**
- * AEO Pugmill — Classic editor meta box script.
+ * Pugmill AEO Toolkit — Classic editor meta box script.
  *
  * Handles dynamic Q&A / entity row management, the Generate with AI button,
  * and the Write from Draft button on classic-editor post screens.

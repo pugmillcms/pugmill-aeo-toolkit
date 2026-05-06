@@ -1,10 +1,10 @@
-=== AEO Pugmill ===
+=== Pugmill AEO Toolkit ===
 Contributors: janzenms
 Tags: aeo, answer engine optimization, ai, structured data, bot analytics
 Requires at least: 6.3
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.1.2
+Stable tag: 1.1.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -12,7 +12,7 @@ AEO metadata, bot analytics, and llms.txt for WordPress. Tracks AI crawler visit
 
 == Description ==
 
-**AEO Pugmill** adds Answer Engine Optimization (AEO) infrastructure to WordPress. It structures your content for AI answer engines, tracks which AI crawlers are visiting your site, and — if you opt in — contributes anonymized daily counts to the Pugmill Network, where that data powers the crawler intelligence dashboard at aeopugmill.com.
+**Pugmill AEO Toolkit** adds Answer Engine Optimization (AEO) infrastructure to WordPress. It structures your content for AI answer engines, tracks which AI crawlers are visiting your site, and — if you opt in — contributes anonymized daily counts to the Pugmill Network, where that data powers the crawler intelligence dashboard at aeopugmill.com.
 
 The two features are independent. Bot analytics, AEO outputs, and llms.txt are all available without ever contributing to the network.
 
@@ -20,7 +20,7 @@ The two features are independent. Bot analytics, AEO outputs, and llms.txt are a
 
 In a ceramics studio, a pugmill reclaims overworked clay — compressing it, forcing out the air, and extruding it as wedged, ready-to-use material. This plugin does the same for content: takes what is already published, removes the filler, and structures it into signal that AI answer engines can read and cite.
 
-= What AEO Pugmill Does =
+= What Pugmill AEO Toolkit Does =
 
 **Bot analytics**
 On every incoming request, the plugin checks the user-agent against a list of known AI crawlers and search bots. When a match is found, it records the bot name, resource type, and date — stored locally in a daily summary table. The WordPress admin shows which bots are visiting, what they are fetching, and how counts trend over time.
@@ -53,16 +53,18 @@ All AEO metadata is included in WordPress REST API responses, making content AI-
 
 = Modes =
 
-**Free** — Full manual AEO toolkit. The metadata editor, llms.txt, JSON-LD schema, health score, bot analytics, and REST API integration. No account or API key required.
+**Free (this plugin)** — Full manual AEO toolkit. The metadata editor, llms.txt, JSON-LD schema, health score, bot analytics, and REST API integration. No account, license, or API key required.
 
-**AI Connector** — Activate with a license key from aeopugmill.com and connect your own Claude, GPT-4o, or Gemini API key. Generates all AEO metadata for any post in one click, and writes rough drafts into full Answer Unit structure.
+**Free + Bring Your Own Key (BYOK)** — Add your own Anthropic / OpenAI / Google API key in **Settings → Pugmill AEO Toolkit** and individual AI generators unlock for Summary, Q&A, Entities, and Keywords on each post. No license check, no payment to Pugmill AEO Toolkit.
+
+**Pugmill AEO Toolkit Pro (separate add-on, distributed from aeopugmill.com)** — A separate plugin you install alongside this one. Adds one-click Generate AEO, Tone Check, Bulk AEO, Internal Links, Social Drafts, Schema Suggest, AI Agent, and the site-wide Audit AEO and Bulk AEO settings tabs. Not hosted on WordPress.org. The free plugin works fully without it.
 
 = External Services =
 
 This plugin connects to the following external services:
 
 **Pugmill AEO Intelligence Network** (anonymous bot traffic benchmarking)
-When you opt in to Bot Analytics (Settings → AEO Pugmill → Bot Analytics), the plugin:
+When you opt in to Bot Analytics (Settings → Pugmill AEO Toolkit → Bot Analytics), the plugin:
 
 - Registers your site with a one-way hashed site ID (SHA-256 of your home URL + a randomly generated instance ID). Your URL is never transmitted directly.
 - Submits anonymized daily bot traffic counts (bot name, resource type, visit count) to aeopugmill.com once per day via a scheduled background task.
@@ -75,16 +77,23 @@ No visitor data, IP addresses, post content, or personally identifiable informat
 - Terms of Service: [https://aeopugmill.com/terms](https://aeopugmill.com/terms)
 - This connection only occurs after explicit opt-in. Free mode users who have not opted in make no connections to aeopugmill.com.
 
-**Pugmill License Server** (license validation)
-When a license key is entered in Settings → AEO Pugmill, the plugin contacts the aeopugmill.com API to validate the license. This sends your license key and your site's domain to the license server.
+**Search Engine Sitemap Ping** (Google, Bing)
+When a post is published or updated, the plugin notifies search engines that the sitemap has changed. This is throttled to once every 30 minutes per post.
 
-- Service: [https://aeopugmill.com](https://aeopugmill.com)
-- Privacy Policy: [https://aeopugmill.com/privacy](https://aeopugmill.com/privacy)
-- Terms of Service: [https://aeopugmill.com/terms](https://aeopugmill.com/terms)
-- This connection only occurs when a license key is entered. Free mode users make no external connections.
+Data sent: only your site's sitemap URL (e.g. `https://example.com/sitemap.xml`). No post content, user data, or visitor data is sent.
 
-**AI Providers** (AI Connector mode only)
-When an AI API key is configured and either "Generate with AI" or "Write from Draft" is clicked by an admin, the plugin sends data to the chosen AI provider. No connection is made automatically — only on explicit admin action.
+- Google: [https://www.google.com](https://www.google.com) — [Privacy Policy](https://policies.google.com/privacy) — [Terms](https://policies.google.com/terms)
+- Bing: [https://www.bing.com](https://www.bing.com) — [Privacy Policy](https://privacy.microsoft.com/privacystatement) — [Terms](https://www.microsoft.com/servicesagreement)
+
+**IndexNow** (instant indexing for Bing / Microsoft ecosystem)
+When a post is published or updated, the plugin sends a notification to IndexNow so participating search engines can re-index the URL immediately. This is throttled to once every 30 minutes per post.
+
+Data sent: the published post URL and a randomly generated IndexNow key for your site. No post content, user data, or visitor data is sent.
+
+- Service: [https://www.indexnow.org](https://www.indexnow.org) — [Privacy Policy](https://www.indexnow.org/privacy) — [Documentation](https://www.indexnow.org/documentation)
+
+**AI Providers** (only when a BYOK API key is configured)
+When an AI API key is configured and an admin clicks an AI generator pill (Summary, Q&A, Entities, Keywords) on a post, the plugin sends data directly to the chosen AI provider. No connection is made automatically — only on explicit admin action. Pugmill AEO Toolkit never proxies these calls; data goes straight from your WordPress server to the provider you selected.
 
 Data sent to the AI provider:
 
@@ -104,23 +113,30 @@ No visitor data, user data, or personally identifiable information is ever trans
 - Bot Analytics network participation requires explicit opt-in; no data is sent before consent is given
 - Bot traffic data submitted to the network is anonymized — the site URL is never transmitted; only a one-way hash is used
 - AI API keys are encrypted at rest using AES-256-CBC
-- License keys are encrypted at rest using AES-256-CBC
 - All external connections use HTTPS with SSL verification
 
 == Installation ==
 
 1. Upload the `aeo-pugmill` folder to `/wp-content/plugins/`
 2. Activate the plugin through the **Plugins** menu in WordPress
-3. Go to **Settings → AEO Pugmill** to configure
+3. Go to **Settings → Pugmill AEO Toolkit** to configure
 4. Edit any post or page — the AEO metadata editor and health score appear in the sidebar
 5. Visit `yoursite.com/llms.txt` to confirm the endpoint is active
 
-= AI Connector Setup =
+= Bring Your Own AI Key (Optional) =
 
-1. Purchase a license at [aeopugmill.com/pricing](https://aeopugmill.com/pricing)
-2. Enter your license key in **Settings → AEO Pugmill**
-3. Select your AI provider and enter your API key
-4. Open any post and click **Generate with AI**
+To unlock the per-field AI generators (Summary, Q&A, Entities, Keywords) on each post:
+
+1. Get an API key from your provider — Anthropic ([Claude](https://console.anthropic.com/)), OpenAI ([GPT](https://platform.openai.com/)), or Google ([Gemini](https://aistudio.google.com/))
+2. Open **Settings → Pugmill AEO Toolkit → Preferences**
+3. Select your provider and paste the key
+4. Edit any post — small ✨ generator pills now appear next to the AEO fields
+
+No license, no payment to Pugmill AEO Toolkit, and no data flows through aeopugmill.com — your WordPress server talks to your AI provider directly.
+
+== Support ==
+
+Support is provided on a best-effort basis through the WordPress.org plugin support forum and on [aeopugmill.com](https://aeopugmill.com). Bug reports and feature requests are welcome.
 
 == Frequently Asked Questions ==
 
@@ -131,24 +147,24 @@ In a ceramics studio, a pugmill is a machine that reclaims clay. When clay gets 
 AEO (Answer Engine Optimization) is the practice of structuring content so AI answer engines — ChatGPT, Perplexity, Gemini, and others — can retrieve, cite, and surface it in response to user questions.
 
 = What is llms.txt? =
-llms.txt is an emerging open standard (similar to robots.txt) that gives AI crawlers a structured index of a site's content. AEO Pugmill generates and maintains this file automatically.
+llms.txt is an emerging open standard (similar to robots.txt) that gives AI crawlers a structured index of a site's content. Pugmill AEO Toolkit generates and maintains this file automatically.
 
 = Do I need an AI API key to use this plugin? =
-No. The free version includes all manual AEO tools — the metadata editor, llms.txt, JSON-LD schema, health score, bot analytics, and REST API integration. An AI API key is only needed for one-click AI generation in AI Connector mode.
+No. The plugin includes all manual AEO tools — the metadata editor, llms.txt, JSON-LD schema, health score, bot analytics, and REST API integration. An AI API key is optional and unlocks the per-field generators (Summary, Q&A, Entities, Keywords) on each post.
 
 = Which AI providers are supported? =
-Anthropic (Claude), OpenAI (GPT-4o), and Google (Gemini). All three work with your own API key in AI Connector mode.
+Anthropic (Claude), OpenAI (GPT-4o), and Google (Gemini). Bring your own key for any of them — there is no license check, no payment, and no proxy.
 
 = Is my API key secure? =
-API keys and license keys are encrypted at rest using AES-256-CBC, keyed to the WordPress installation. They are stored server-side only and never exposed to site visitors.
+API keys are encrypted at rest using AES-256-CBC, keyed to the WordPress installation. They are stored server-side only and never exposed to site visitors.
 
 = Will this slow down my site? =
-AEO Pugmill adds no frontend JavaScript. JSON-LD is generated server-side. The llms.txt endpoints are cached with a one-hour TTL and are requested by bots, not visitors.
+Pugmill AEO Toolkit adds no frontend JavaScript. JSON-LD is generated server-side. The llms.txt endpoints are cached with a one-hour TTL and are requested by bots, not visitors.
 
 = Does this work with my existing SEO plugin? =
-AEO Pugmill detects common SEO plugins and suppresses any outputs they already handle — no duplicate meta tags or JSON-LD nodes. The Compatibility tab on the settings page shows exactly which outputs are active and which are deferred.
+Pugmill AEO Toolkit detects common SEO plugins and suppresses any outputs they already handle — no duplicate meta tags or JSON-LD nodes. The Compatibility tab on the settings page shows exactly which outputs are active and which are deferred.
 
-= What does AEO Pugmill cover that a standard SEO plugin does not? =
+= What does Pugmill AEO Toolkit cover that a standard SEO plugin does not? =
 Three outputs standard SEO plugins do not generate:
 
 1. **FAQPage JSON-LD** — Q&A pairs structured for AI answer engines and rich results
@@ -161,10 +177,25 @@ Plus llms.txt, per-post Markdown endpoints, and a bot analytics dashboard.
 
 1. AEO metadata editor on the post edit screen
 2. AEO Health Score sidebar widget
-3. Settings page showing license and AI provider configuration
+3. Settings page showing the AI provider configuration
 4. Example llms.txt output
 
 == Changelog ==
+
+= 1.1.5 =
+* **Free / Pro split**: Pro features (one-click Generate AEO, Tone Check, Bulk AEO, Internal Links, Social Drafts, Schema Suggest, AI Agent, site-wide Audit AEO, site-wide Bulk AEO) moved into a separate Pugmill AEO Toolkit Pro add-on distributed from aeopugmill.com. The free plugin now contains only the BYOK AI generators (Summary, Q&A, Entities, Keywords per post) and shows informational CTA cards where Pro features sit — no disabled buttons, no locked UI.
+* **No license check on free**: BYOK AI generators run on your own API key with no aeopugmill.com round-trip. License validation lives entirely in the Pro add-on.
+* **Bot Analytics consent split**: Local bot capture now runs by default. Network benchmarking (sending aggregate counts to aeopugmill.com in exchange for network averages) is a separate, granular opt-in. Activating one no longer activates the other.
+* **Cleaner consent UX**: Replaced the previous "blurred preview + bundled activation" overlay with a clean local-only report and a clearly-labeled "Join the Network" card top and bottom. Network-comparison overlays (avg dots, percentile arrows, benchmark section) only render once you have explicitly joined.
+* **Network data hygiene**: Cached network report is cleared on opt-out and the cache check now happens after the opt-in check, so no stale benchmarks can render once a site leaves the network.
+* **WordPress.org compliance pass**: Output escaping in `llms-txt.php` (`esc_html` / `esc_url` on every echoed variable), inline `<script>` and `<style>` tags converted to `wp_add_inline_script()` / `wp_add_inline_style()`, strict 0/1 sanitize callback for the analytics opt-in, IndexNow + Bing + Google sitemap pings documented in the External Services section.
+* **RSS split tracking**: Bot visits to the RSS feed are now split into two distinct resource types — "RSS Feed" (plain, enrichment disabled) and "RSS+AEO" (enrichment enabled, feed carries `xmlns:aeo` namespace with summary, entities, and Q&A per item). Previously all feed hits were recorded as a single undifferentiated type. Existing data is unaffected; new visits are classified correctly going forward.
+
+= 1.1.3 =
+* **Cron reliability**: Intelligence data is now also sent whenever the admin visits the Settings page, catching any days wp-cron didn't fire on low-traffic sites. A stale-data notice appears on the Dashboard tab if data is 2+ days behind, with a one-click "Send now" link.
+* **AI provider links**: The AI Provider card now shows a dynamic "Get a key / Manage account" link that routes to the correct provider console (Anthropic, OpenAI, or Google Gemini) based on the selected provider.
+* **AEO JSON-LD naming**: "Standalone JSON-LD" renamed to "AEO JSON-LD" for consistency with the HTML+AEO and RSS+AEO naming pattern across all plugin UI and documentation.
+* **Bot Analytics preview**: Users who haven't opted into the network now see a blurred preview of their Bot Activity and Content Reach data with a centered join CTA, rather than a plain activation screen.
 
 = 1.1.2 =
 * **RSS+AEO Feed**: The plugin now adds an `xmlns:aeo` namespace to your RSS 2.0 feed and injects `<aeo:summary>`, `<aeo:entity>`, and `<aeo:qa>` elements per post. AI crawlers consuming the feed receive the full AEO metadata alongside post content. Purely additive — does not modify `content:encoded` or existing feed elements. Can be disabled from the Compatibility tab.
@@ -203,6 +234,12 @@ Plus llms.txt, per-post Markdown endpoints, and a bot analytics dashboard.
 * First public release — prepared for WordPress.org submission.
 
 == Upgrade Notice ==
+
+= 1.1.5 =
+Plugin renamed to Pugmill AEO Toolkit. Pro features moved to a separate add-on; free plugin is fully functional with no locked UI. WordPress.org compliance pass (escaping, inline scripts, consent architecture). Safe to upgrade — no database changes.
+
+= 1.1.3 =
+Cron reliability improvements, AI provider account links, AEO JSON-LD naming consistency, and blurred bot analytics preview for non-network members. Safe to upgrade — no database changes.
 
 = 1.1.2 =
 AEO-enriched RSS feed, llms.txt autodiscovery, and resource type reclassification. Safe to upgrade — no database changes.

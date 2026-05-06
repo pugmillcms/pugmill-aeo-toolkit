@@ -1,5 +1,5 @@
 /**
- * AEO Pugmill — unit tests for computeScore().
+ * Pugmill AEO Toolkit — unit tests for computeScore().
  *
  * Metrics are kept in sync with Pugmill CMS (calcAeoHealth in PostForm.tsx).
  * Pure function, no WordPress globals required.
@@ -46,7 +46,7 @@ const FULL_KEYWORDS = [ 'pugmill', 'seo', 'aeo', 'content', 'optimization' ];
 const fullAeo = aeoWith( {
 	summary:   'A'.repeat( 80 ),
 	questions: [ { q: 'Q1', a: 'A1' }, { q: 'Q2', a: 'A2' }, { q: 'Q3', a: 'A3' } ],
-	entities:  [ { name: 'AEO Pugmill', type: 'Product' } ],
+	entities:  [ { name: 'Pugmill AEO Toolkit', type: 'Product' } ],
 	keywords:  FULL_KEYWORDS,
 } );
 const fullOpts = optsWith( {
@@ -323,7 +323,7 @@ describe( 'computeScore — Q&A pairs (10 + 5 pts)', () => {
 
 describe( 'computeScore — Named entities (10 pts)', () => {
 	test( 'passes with one entity that has a name', () => {
-		const { items } = computeScore( aeoWith( { entities: [ { name: 'AEO Pugmill', type: 'Product' } ] } ), emptySeo );
+		const { items } = computeScore( aeoWith( { entities: [ { name: 'Pugmill AEO Toolkit', type: 'Product' } ] } ), emptySeo );
 		expect( items.find( ( i ) => i.id === 'entities_present' ).pass ).toBe( true );
 	} );
 

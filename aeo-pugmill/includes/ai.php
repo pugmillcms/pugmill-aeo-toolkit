@@ -1,18 +1,20 @@
 <?php
 /**
- * AI orchestrator — loads all AI feature modules and handles AEO field generation.
+ * AI orchestrator — loads AI infrastructure and free BYOK field generation modules.
  *
  * Supports: Anthropic (Claude), OpenAI (GPT), Google (Gemini)
  *
  * Modules loaded here:
  * - ai-utils.php        — Pure utility functions (JSON decode, paragraph helpers)
  * - ai-client.php       — Transport layer (aeopugmill_call_ai, request setup, token tracking)
- * - ai-content.php      — Content rewriting, tone check, reading level, headline variants
- * - ai-focus.php        — Topic focus, passage swap, keyword coverage, heading suggestions
- * - ai-distribute.php   — Excerpt, internal links, social draft
- * - ai-generate-aeo.php — AEO field generators, prompts, providers, parser
- * - ai-generate-seo.php — SEO title/meta, HowTo steps, schema suggestion
- * - ai-admin.php        — Site summary, API key test
+ * - ai-generate-aeo.php — Individual AEO field generators (summary, Q&A, entities, keywords)
+ * - ai-generate-seo.php — SEO title/meta, HowTo steps
+ *
+ * Pro add-on (Pugmill AEO Toolkit Pro) registers additional handlers:
+ * - Generate AEO (one-click combined)
+ * - Refine Content suite (Tone Check, Topic Focus, Reading Level, Headline Variants,
+ *   Internal Links, Excerpt Generator, Social Draft, Keyword Coverage)
+ * - Bulk AEO, Audit AEO, Schema Suggest, Site Summary
  *
  * Security (applies to all modules):
  * - Nonce verified on every request
@@ -36,82 +38,7 @@ require_once __DIR__ . '/ai-utils.php';
 // Transport layer (aeopugmill_call_ai, aeopugmill_ai_request_setup, token tracking) → ai-client.php
 require_once __DIR__ . '/ai-client.php';
 
-add_action( 'wp_ajax_aeopugmill_generate_aeo', 'aeopugmill_ajax_generate_aeo' );
-
-/**
- * AJAX handler — generate AEO metadata for a post using AI.
- */
-function aeopugmill_ajax_generate_aeo() {
-	$r = aeopugmill_ai_request_setup( 'aeopugmill_generate_aeo', 'AEO generation' );
-
-	if ( empty( $r['content'] ) ) {
-		wp_send_json_error( array( 'message' => __( 'Post has no content to analyze. Add some content and try again.', 'aeo-pugmill' ) ), 400 );
-	}
-
-	$raw = aeopugmill_call_ai(
-		$r['provider'],
-		$r['api_key'],
-		aeopugmill_aeo_system_prompt(),
-		aeopugmill_aeo_user_prompt( $r['title'], $r['content'] ),
-		2048
-	);
-
-	if ( is_wp_error( $raw ) ) {
-		wp_send_json_error( array( 'message' => $raw->get_error_message() ), 500 );
-	}
-
-	$aeo = aeopugmill_decode_ai_json( $raw, $r['provider'] );
-	if ( is_wp_error( $aeo ) ) {
-		wp_send_json_error( array( 'message' => $aeo->get_error_message() ), 500 );
-	}
-
-	$allowed_types = array( 'Thing', 'Person', 'Organization', 'Product', 'Place', 'Event', 'Technology', 'DefinedTerm' );
-
-	$result = array(
-		'summary'   => sanitize_textarea_field( $aeo['summary'] ?? '' ),
-		'questions' => array_values( array_filter(
-			array_map( function( $qa ) {
-				return array(
-					'q' => sanitize_text_field( $qa['q'] ?? '' ),
-					'a' => sanitize_textarea_field( $qa['a'] ?? '' ),
-				);
-			}, is_array( $aeo['questions'] ?? null ) ? $aeo['questions'] : array() ),
-			function( $qa ) { return ! empty( $qa['q'] ) && ! empty( $qa['a'] ); }
-		) ),
-		'entities'  => array_values( array_filter(
-			array_map( function( $entity ) use ( $allowed_types ) {
-				$type   = sanitize_text_field( $entity['type'] ?? 'Thing' );
-				$mapped = array(
-					'name'        => sanitize_text_field( $entity['name'] ?? '' ),
-					'type'        => in_array( $type, $allowed_types, true ) ? $type : 'Thing',
-					'description' => sanitize_text_field( $entity['description'] ?? '' ),
-				);
-				$same_as = aeopugmill_validate_same_as_url( $entity['same_as'] ?? '' );
-				if ( $same_as ) {
-					$mapped['same_as'] = $same_as;
-				}
-				return $mapped;
-			}, is_array( $aeo['entities'] ?? null ) ? $aeo['entities'] : array() ),
-			function( $e ) { return ! empty( $e['name'] ); }
-		) ),
-		'keywords'  => array_values( array_filter(
-			array_map( 'sanitize_text_field', is_array( $aeo['keywords'] ?? null ) ? $aeo['keywords'] : array() )
-		) ),
-	);
-
-	if ( ! empty( $_POST['autosave'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
-		aeopugmill_save_aeo( $r['post']->ID, $result );
-		$health = aeopugmill_health_score( $r['post']->ID );
-		update_post_meta( $r['post']->ID, '_aeopugmill_score', (int) $health['score'] );
-	}
-
-	wp_send_json_success( $result );
-}
-
-require_once __DIR__ . '/ai-content.php';
-require_once __DIR__ . '/ai-focus.php';
-require_once __DIR__ . '/ai-distribute.php';
+// Individual AEO field generators (free BYOK)
 require_once __DIR__ . '/ai-generate-aeo.php';
 require_once __DIR__ . '/ai-generate-seo.php';
-require_once __DIR__ . '/ai-admin.php';
 

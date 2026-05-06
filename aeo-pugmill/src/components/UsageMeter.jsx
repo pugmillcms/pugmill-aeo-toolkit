@@ -1,5 +1,5 @@
 /**
- * AEO Pugmill — AI usage meter component.
+ * Pugmill AEO Toolkit — AI usage meter component.
  *
  * Displays a colour-coded progress bar showing how many AI calls have been
  * made this hour against the configured rate-limit cap.

@@ -1,5 +1,5 @@
 /**
- * AEO Pugmill — Pre-publish AEO health check panel.
+ * Pugmill AEO Toolkit — Pre-publish AEO health check panel.
  *
  * Shows a compact version of the completeness score in the Gutenberg
  * pre-publish flow. Expands automatically when the score is < 100.
@@ -47,7 +47,7 @@ export function PrePublishPanel() {
 					<CheckList items={ failing } failingOnly={ true } />
 
 					<p style={ { fontSize: '11px', color: '#666', marginTop: '10px', marginBottom: 0 } }>
-						Go back and complete these in the <strong>AEO Pugmill</strong> panel.
+						Go back and complete these in the <strong>Pugmill AEO Toolkit</strong> panel.
 					</p>
 				</>
 			) }

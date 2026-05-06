@@ -1,6 +1,6 @@
 <?php
 /**
- * Uninstall — clean up all AEO Pugmill data when the plugin is deleted.
+ * Uninstall — clean up all Pugmill AEO Toolkit data when the plugin is deleted.
  *
  * Removes:
  * - All plugin options from wp_options
